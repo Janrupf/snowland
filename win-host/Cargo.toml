@@ -1,0 +1,19 @@
+[package]
+name = "snowland-win-host"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+thiserror = "1.0.30"
+log = "0.4.14"
+pretty_env_logger = "0.4.0"
+
+[dependencies.windows]
+version = "0.28.0"
+features = [
+    "alloc",
+    "Win32_Foundation",
+    "Win32_UI_WindowsAndMessaging",
+    "Win32_System_Diagnostics_Debug",
+    "Win32_System_Memory"
+]
