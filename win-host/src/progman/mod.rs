@@ -19,7 +19,7 @@ pub struct ProgMan {
 impl ProgMan {
     /// Attempts to create a new ProgMan instance by finding the window for management.
     pub fn new() -> Result<ProgMan, Error> {
-        let prog_man_window = unsafe { FindWindowA("Progman", PSTR::default()) };
+        let prog_man_window = unsafe { FindWindowA("Progman", None) };
 
         if prog_man_window.0 == 0 {
             Err(Error::NotFound)
@@ -37,8 +37,8 @@ impl ProgMan {
             SendMessageTimeoutA(
                 self.window,
                 PROG_MAN_CREATE_WORKER_W_MSG,
-                WPARAM(0),
-                LPARAM(0),
+                None,
+                None,
                 SMTO_NORMAL,
                 1000,
                 &mut message_result,
@@ -71,11 +71,11 @@ impl ProgMan {
     extern "system" fn enum_windows_callback(window: HWND, out: LPARAM) -> BOOL {
         let worker_w: &mut Option<HWND> = unsafe { std::mem::transmute(out) };
         let def_view_window =
-            unsafe { FindWindowExA(window, HWND(0), "SHELLDLL_DefView", PSTR::default()) };
+            unsafe { FindWindowExA(window, None, "SHELLDLL_DefView", None) };
 
         if def_view_window.0 != 0 {
             let maybe_worker_w =
-                unsafe { FindWindowExA(HWND(0), window, "WorkerW", PSTR::default()) };
+                unsafe { FindWindowExA(None, window, "WorkerW", None) };
 
             if maybe_worker_w.0 != 0 {
                 worker_w.replace(maybe_worker_w);

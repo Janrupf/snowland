@@ -54,12 +54,12 @@ impl WinApiError {
 
         Ok(message.into())
     }
-
+    
     /// Retrieves the underlying error code
     pub fn code(&self) -> WIN32_ERROR {
         self.code
     }
-
+    
     /// Tests whether this error is of a certain type
     pub fn is(&self, other: WIN32_ERROR) -> bool {
         self.code == other

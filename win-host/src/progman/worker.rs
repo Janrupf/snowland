@@ -1,5 +1,8 @@
+use crate::graphics::Graphics;
 use crate::WinApiError;
+use thiserror::Error;
 use windows::Win32::Foundation::HWND;
+use windows::Win32::Graphics::Gdi::{GetDCEx, DCX_CACHE, DCX_LOCKWINDOWUPDATE, DCX_WINDOW};
 use windows::Win32::UI::WindowsAndMessaging::DestroyWindow;
 
 /// Represents a ProgMan worker window.
@@ -17,16 +20,9 @@ impl Worker {
     pub unsafe fn new(window: HWND) -> Self {
         Self { window }
     }
-}
 
-impl Drop for Worker {
-    fn drop(&mut self) {
-        let destroy_result = unsafe { DestroyWindow(self.window) }.as_bool();
-        if !destroy_result {
-            log::warn!(
-                "Failed to destroy worker window when dropping worker: {}",
-                WinApiError::last()
-            );
-        }
+    /// Retrieves the handle of the worker window.
+    pub fn get_handle(&self) -> HWND {
+        self.window
     }
 }

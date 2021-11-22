@@ -1,6 +1,8 @@
+use crate::graphics::{Error, Graphics};
 use crate::progman::ProgMan;
 use crate::util::WinApiError;
 
+mod graphics;
 mod progman;
 mod util;
 
@@ -30,5 +32,19 @@ fn main() {
         }
     };
 
-    log::debug!("prog_man = {:?}, worker = {:?}", prog_man, worker);
+    log::debug!("Creating graphics...");
+    let graphics = match Graphics::from_window(worker.get_handle()) {
+        Ok(v) => v,
+        Err(err) => {
+            log::error!("Failed to create graphics: {}", err);
+            std::process::exit(1)
+        }
+    };
+
+    log::debug!(
+        "prog_man = {:?}, worker = {:?}, graphics = {:?}",
+        prog_man,
+        worker,
+        graphics
+    );
 }
