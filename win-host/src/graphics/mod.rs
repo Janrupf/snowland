@@ -1,8 +1,15 @@
+mod wgl;
+pub use wgl::*;
+
 use crate::WinApiError;
 use thiserror::Error;
 use windows::Win32::Foundation::HWND;
 use windows::Win32::Graphics::Gdi::{
-    GetDCEx, ReleaseDC, DCX_CACHE, DCX_LOCKWINDOWUPDATE, DCX_WINDOW, HDC,
+    GetDCEx, ReleaseDC, DCX_CACHE, DCX_LOCKWINDOWUPDATE, DCX_WINDOW, HDC, PFD_DOUBLEBUFFER,
+    PFD_DRAW_TO_WINDOW, PFD_MAIN_PLANE, PFD_SUPPORT_OPENGL, PFD_TYPE_RGBA,
+};
+use windows::Win32::Graphics::OpenGL::{
+    wglCreateContext, ChoosePixelFormat, SetPixelFormat, PIXELFORMATDESCRIPTOR,
 };
 
 /// Represents a graphics context centered around a [`HDC`]
@@ -24,6 +31,55 @@ impl Graphics {
             Ok(Graphics { window, handle })
         }
     }
+
+    pub fn create_wgl_context(&self) -> Result<WGLContext, Error> {
+        let descriptor = PIXELFORMATDESCRIPTOR {
+            nSize: std::mem::size_of::<PIXELFORMATDESCRIPTOR>() as u16,
+            nVersion: 1,
+            dwFlags: PFD_DRAW_TO_WINDOW | PFD_SUPPORT_OPENGL | PFD_DOUBLEBUFFER,
+            iPixelType: PFD_TYPE_RGBA as u8,
+            cColorBits: 24,
+            cRedBits: 0,
+            cRedShift: 0,
+            cGreenBits: 0,
+            cGreenShift: 0,
+            cBlueBits: 0,
+            cBlueShift: 0,
+            cAlphaBits: 0,
+            cAlphaShift: 0,
+            cAccumBits: 0,
+            cAccumRedBits: 0,
+            cAccumGreenBits: 0,
+            cAccumBlueBits: 0,
+            cAccumAlphaBits: 0,
+            cDepthBits: 32,
+            cStencilBits: 0,
+            cAuxBuffers: 0,
+            iLayerType: PFD_MAIN_PLANE as u8,
+            bReserved: 0,
+            dwLayerMask: 0,
+            dwVisibleMask: 0,
+            dwDamageMask: 0,
+        };
+
+        let pixel_format = unsafe { ChoosePixelFormat(self.handle, &descriptor) };
+
+        if pixel_format == 0 {
+            return Err(Error::NoPixelFormat(WinApiError::last()));
+        }
+
+        if !unsafe { SetPixelFormat(self.handle, pixel_format, &descriptor) }.as_bool() {
+            return Err(Error::PixelFormatNotChanged(WinApiError::last()));
+        }
+
+        let gl = unsafe { wglCreateContext(self.handle) };
+
+        if gl.0 == 0 {
+            return Err(Error::WGLCreationFailed(WinApiError::last()));
+        }
+
+        Ok(unsafe { WGLContext::new(self.handle, gl) })
+    }
 }
 
 impl Drop for Graphics {
@@ -36,4 +92,13 @@ impl Drop for Graphics {
 pub enum Error {
     #[error("failed to get device context: {0}")]
     DCRetrievalFailed(WinApiError),
+
+    #[error("failed to choose a pixel format: {0}")]
+    NoPixelFormat(WinApiError),
+
+    #[error("failed to set the pixel format: {0}")]
+    PixelFormatNotChanged(WinApiError),
+
+    #[error("failed to create WGL context: {0}")]
+    WGLCreationFailed(WinApiError),
 }

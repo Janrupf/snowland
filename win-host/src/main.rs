@@ -1,12 +1,12 @@
 use crate::graphics::{Error, Graphics};
 use crate::progman::ProgMan;
 use crate::util::WinApiError;
-use crate::window::RenderWindow;
+// use crate::window::RenderWindow;
 
 mod graphics;
 mod progman;
 mod util;
-mod window;
+// mod window;
 
 fn main() {
     pretty_env_logger::init();
@@ -39,18 +39,30 @@ fn main() {
         Ok(v) => v,
         Err(err) => {
             log::error!("Failed to create graphics: {}", err);
-            std::process::exit(1)
+            std::process::exit(1);
+        }
+    };
+
+    log::debug!("Creating WGL context...");
+    let gl = match graphics.create_wgl_context() {
+        Ok(v) => v,
+        Err(err) => {
+            log::error!("Failed to create WGL context: {}", err);
+            std::process::exit(1);
         }
     };
 
     log::debug!(
-        "prog_man = {:?}, worker = {:?}, graphics = {:?}",
+        "prog_man = {:?}, worker = {:?}, graphics = {:?}, gl = {:?}",
         prog_man,
         worker,
-        graphics
+        graphics,
+        gl
     );
 
-    let mut window = match RenderWindow::new() {
+    gl.test_draw();
+
+    /* let mut window = match RenderWindow::new() {
         Ok(v) => v,
         Err(err) => {
             log::error!("Failed to create window: {}", err);
@@ -61,4 +73,5 @@ fn main() {
     worker.reparent_other_as_child(window.get_window_handle());
 
     window.run();
+    */
 }

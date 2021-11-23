@@ -7,7 +7,9 @@ edition = "2021"
 thiserror = "1.0.30"
 log = "0.4.14"
 pretty_env_logger = "0.4.0"
-skulpin = { version = "0.14.1", features = ["winit-25"] }
+# skulpin = { version = "0.14.1", features = ["winit-25"] }
+skia-safe = { version = "0.45.0", features = ["gl"] }
+glium = "0.30.2"
 winit = "0.25.0"
 raw-window-handle = "0.4.1"
 rand = "0.8.4"
@@ -17,8 +19,10 @@ version = "0.28.0"
 features = [
     "alloc",
     "Win32_Foundation",
+    "Win32_System_LibraryLoader",
     "Win32_UI_WindowsAndMessaging",
     "Win32_System_Diagnostics_Debug",
     "Win32_System_Memory",
-    "Win32_Graphics_Gdi"
+    "Win32_Graphics_Gdi",
+    "Win32_Graphics_OpenGL"
 ]
