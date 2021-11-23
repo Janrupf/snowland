@@ -1,84 +1,83 @@
-use glium::backend::Backend;
-use glium::index::PrimitiveType;
-use glium::{Surface as _, SwapBuffersError};
-use skia_safe::gpu::gl::FramebufferInfo;
-use skia_safe::gpu::{BackendRenderTarget, DirectContext, SurfaceOrigin};
-use skia_safe::{Budgeted, Color4f, ColorSpace, ColorType, ImageInfo, Paint, Rect, Surface};
-use std::ffi::c_void;
-use windows::Win32::Foundation::{HANDLE, HINSTANCE};
+use crate::WinApiError;
+use thiserror::Error;
+use windows::Win32::Foundation::HINSTANCE;
 use windows::Win32::Graphics::Gdi::{HDC, WGL_SWAP_MAIN_PLANE};
 use windows::Win32::Graphics::OpenGL::{
-    wglDeleteContext, wglGetCurrentContext, wglGetProcAddress, wglMakeCurrent, wglSwapLayerBuffers,
-    GL_RGBA8, HGLRC,
+    wglCreateContext, wglDeleteContext, wglGetCurrentContext, wglGetProcAddress, wglMakeCurrent,
+    wglSwapLayerBuffers, HGLRC,
 };
 use windows::Win32::System::LibraryLoader::{FreeLibrary, GetProcAddress, LoadLibraryA};
-
-struct GliumWGLBackend {
-    dc: HDC,
-    gl: HGLRC,
-    opengl32: HINSTANCE,
-}
-
-impl GliumWGLBackend {
-    pub unsafe fn new(dc: HDC, gl: HGLRC) -> Self {
-        let opengl32 = unsafe { LoadLibraryA("OpenGL32") };
-
-        Self { dc, gl, opengl32 }
-    }
-}
-
-impl Drop for GliumWGLBackend {
-    fn drop(&mut self) {
-        unsafe { FreeLibrary(self.opengl32) };
-    }
-}
-
-unsafe impl Backend for GliumWGLBackend {
-    fn swap_buffers(&self) -> Result<(), SwapBuffersError> {
-        let ok = unsafe { wglSwapLayerBuffers(self.dc, WGL_SWAP_MAIN_PLANE) }.as_bool();
-
-        if ok {
-            Ok(())
-        } else {
-            Err(SwapBuffersError::ContextLost)
-        }
-    }
-
-    unsafe fn get_proc_address(&self, symbol: &str) -> *const c_void {
-        let result = wglGetProcAddress(symbol)
-            .or_else(|| GetProcAddress(self.opengl32, symbol))
-            .map_or(std::ptr::null(), |proc| proc as _);
-
-        log::debug!("GL function {} = {:p}", symbol, result);
-
-        result
-    }
-
-    fn get_framebuffer_dimensions(&self) -> (u32, u32) {
-        (400, 400)
-    }
-
-    fn is_current(&self) -> bool {
-        self.gl == unsafe { wglGetCurrentContext() }
-    }
-
-    unsafe fn make_current(&self) {
-        wglMakeCurrent(self.dc, self.gl);
-    }
-}
 
 #[derive(Debug)]
 pub struct WGLContext {
     dc: HDC,
     gl: HGLRC,
+    opengl32: HINSTANCE,
 }
 
 impl WGLContext {
-    pub unsafe fn new(dc: HDC, gl: HGLRC) -> Self {
-        Self { dc, gl }
+    /// Creates a new WGL context for a given DC.
+    pub fn for_dc(dc: HDC) -> Result<Self, Error> {
+        let opengl32 = unsafe { LoadLibraryA("OpenGL32") };
+
+        if opengl32.0 == 0 {
+            return Err(Error::WinApi(WinApiError::last()));
+        }
+
+        let gl = unsafe { wglCreateContext(dc) };
+
+        if gl.0 == 0 {
+            unsafe { FreeLibrary(opengl32) };
+            return Err(Error::WinApi(WinApiError::last()));
+        }
+
+        Ok(Self { dc, gl, opengl32 })
     }
 
-    pub fn test_draw(&self) {
+    /// Attempts to find a WGL function by first querying WGL and then the OpenGL32 library.
+    pub fn lookup_wgl_proc(&self, name: &str) -> *const std::ffi::c_void {
+        debug_assert!(self.is_current());
+        if !self.is_current() {
+            return std::ptr::null();
+        }
+
+        let proc =
+            unsafe { wglGetProcAddress(name).or_else(|| GetProcAddress(self.opengl32, name)) };
+
+        match proc {
+            None => std::ptr::null(),
+            Some(v) => v as _,
+        }
+    }
+
+    /// Makes the context current for this thread.
+    pub fn make_current(&self) -> Result<(), Error> {
+        let result = unsafe { wglMakeCurrent(self.dc, self.gl) }.as_bool();
+
+        if result {
+            Ok(())
+        } else {
+            Err(Error::WinApi(WinApiError::last()))
+        }
+    }
+
+    /// Presents the surface by swapping the front and back buffer.
+    pub fn swap_buffers(&self) -> Result<(), Error> {
+        let result = unsafe { wglSwapLayerBuffers(self.dc, WGL_SWAP_MAIN_PLANE) }.as_bool();
+
+        if result {
+            Ok(())
+        } else {
+            Err(Error::WinApi(WinApiError::last()))
+        }
+    }
+
+    /// Determines whether the current context is this context.
+    pub fn is_current(&self) -> bool {
+        self.gl == unsafe { wglGetCurrentContext() }
+    }
+
+    /* pub fn test_draw(&self) {
         assert!(unsafe { wglMakeCurrent(self.dc, self.gl).as_bool() });
 
         let wgl_backend = unsafe { GliumWGLBackend::new(self.dc, self.gl) };
@@ -130,11 +129,20 @@ impl WGLContext {
 
             wgl_backend.swap_buffers();
         }
-    }
+    } */
 }
 
 impl Drop for WGLContext {
     fn drop(&mut self) {
-        unsafe { wglDeleteContext(self.gl) };
+        unsafe {
+            FreeLibrary(self.opengl32);
+            wglDeleteContext(self.gl);
+        }
     }
+}
+
+#[derive(Debug, Error)]
+pub enum Error {
+    #[error("error while calling Win32: {0}")]
+    WinApi(WinApiError),
 }

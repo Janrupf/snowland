@@ -1503,6 +1503,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "snowland-universal"
+version = "0.1.0"
+dependencies = [
+ "log",
+ "skia-safe",
+ "thiserror",
+]
+
+[[package]]
 name = "snowland-win-host"
 version = "0.1.0"
 dependencies = [
@@ -1512,6 +1521,7 @@ dependencies = [
  "rand",
  "raw-window-handle 0.4.1",
  "skia-safe",
+ "snowland-universal",
  "thiserror",
  "windows",
  "winit",
@@ -1669,14 +1679,6 @@ name = "unicode-xid"
 version = "0.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8ccb82d61f80a663efe1f787a51b16b5a51e3314d6ac365b08639f52387b33f3"
-
-[[package]]
-name = "universal"
-version = "0.1.0"
-dependencies = [
- "log",
- "skia-safe",
-]
 
 [[package]]
 name = "untrusted"

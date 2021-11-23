@@ -1,5 +1,5 @@
 [package]
-name = "universal"
+name = "snowland-universal"
 version = "0.1.0"
 edition = "2021"
 
@@ -8,3 +8,4 @@ edition = "2021"
 [dependencies]
 log = "0.4.14"
 skia-safe = "0.45.0"
+thiserror = "1.0.30"

@@ -1,9 +1,6 @@
-use crate::graphics::Graphics;
 use crate::WinApiError;
-use thiserror::Error;
 use windows::Win32::Foundation::HWND;
-use windows::Win32::Graphics::Gdi::{GetDCEx, DCX_CACHE, DCX_LOCKWINDOWUPDATE, DCX_WINDOW};
-use windows::Win32::UI::WindowsAndMessaging::{DestroyWindow, SetParent};
+use windows::Win32::UI::WindowsAndMessaging::{GetWindowRect, SetParent};
 
 /// Represents a ProgMan worker window.
 #[derive(Debug)]
@@ -24,6 +21,20 @@ impl Worker {
     /// Retrieves the handle of the worker window.
     pub fn get_handle(&self) -> HWND {
         self.window
+    }
+
+    /// Retrieves the size of the window.
+    pub fn get_size(&self) -> Result<(u64, u64), WinApiError> {
+        let mut rect = Default::default();
+
+        if !unsafe { GetWindowRect(self.window, &mut rect) }.as_bool() {
+            Err(WinApiError::last())
+        } else {
+            Ok((
+                (rect.right - rect.left) as u64,
+                (rect.bottom - rect.top) as u64,
+            ))
+        }
     }
 
     /// Sets another window as a child of the worker window.

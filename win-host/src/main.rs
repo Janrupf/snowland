@@ -1,12 +1,12 @@
-use crate::graphics::{Error, Graphics};
-use crate::progman::ProgMan;
+use crate::graphics::{Graphics, SkiaWGLSnowlandRender};
+use crate::progman::{ProgMan, Worker};
 use crate::util::WinApiError;
-// use crate::window::RenderWindow;
+use snowland_universal::rendering::SnowlandRenderer;
+use snowland_universal::Snowland;
 
 mod graphics;
 mod progman;
 mod util;
-// mod window;
 
 fn main() {
     pretty_env_logger::init();
@@ -52,26 +52,42 @@ fn main() {
         }
     };
 
-    log::debug!(
-        "prog_man = {:?}, worker = {:?}, graphics = {:?}, gl = {:?}",
-        prog_man,
-        worker,
-        graphics,
-        gl
-    );
-
-    gl.test_draw();
-
-    /* let mut window = match RenderWindow::new() {
+    log::debug!("Creating renderer...");
+    let renderer = match SkiaWGLSnowlandRender::from_context(gl) {
         Ok(v) => v,
         Err(err) => {
-            log::error!("Failed to create window: {}", err);
+            log::error!("Failed to create renderer: {}", err);
             std::process::exit(1);
         }
     };
 
-    worker.reparent_other_as_child(window.get_window_handle());
+    log::debug!(
+        "prog_man = {:?}, worker = {:?}, graphics = {:?}",
+        prog_man,
+        worker,
+        graphics,
+    );
 
-    window.run();
-    */
+    let snowland = Snowland::new(renderer);
+    match run_render_loop(worker, snowland) {
+        Ok(()) => std::process::exit(0),
+        Err(err) => {
+            log::error!("Encountered error while rendering: {0}", err);
+            std::process::exit(1);
+        }
+    };
+}
+
+fn run_render_loop<R>(
+    worker: Worker,
+    mut snowland: Snowland<R>,
+) -> Result<(), Box<dyn std::error::Error>>
+where
+    R: SnowlandRenderer,
+{
+    loop {
+        let (width, height) = worker.get_size()?;
+        snowland.resize(width, height)?;
+        snowland.render_frame()?;
+    }
 }

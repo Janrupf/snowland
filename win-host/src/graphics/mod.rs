@@ -1,5 +1,8 @@
 mod wgl;
+mod skia_wgl;
+
 pub use wgl::*;
+pub use skia_wgl::*;
 
 use crate::WinApiError;
 use thiserror::Error;
@@ -12,7 +15,7 @@ use windows::Win32::Graphics::OpenGL::{
     wglCreateContext, ChoosePixelFormat, SetPixelFormat, PIXELFORMATDESCRIPTOR,
 };
 
-/// Represents a graphics context centered around a [`HDC`]
+/// Represents a graphics context centered around a [`HDC`].
 #[derive(Debug)]
 pub struct Graphics {
     window: HWND,
@@ -32,6 +35,7 @@ impl Graphics {
         }
     }
 
+    /// Creates a WGL context on this graphics device context.
     pub fn create_wgl_context(&self) -> Result<WGLContext, Error> {
         let descriptor = PIXELFORMATDESCRIPTOR {
             nSize: std::mem::size_of::<PIXELFORMATDESCRIPTOR>() as u16,
@@ -72,13 +76,7 @@ impl Graphics {
             return Err(Error::PixelFormatNotChanged(WinApiError::last()));
         }
 
-        let gl = unsafe { wglCreateContext(self.handle) };
-
-        if gl.0 == 0 {
-            return Err(Error::WGLCreationFailed(WinApiError::last()));
-        }
-
-        Ok(unsafe { WGLContext::new(self.handle, gl) })
+        Ok(WGLContext::for_dc(self.handle)?)
     }
 }
 
@@ -100,5 +98,5 @@ pub enum Error {
     PixelFormatNotChanged(WinApiError),
 
     #[error("failed to create WGL context: {0}")]
-    WGLCreationFailed(WinApiError),
+    WGLCreationFailed(#[from] wgl::Error),
 }
