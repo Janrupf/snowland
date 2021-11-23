@@ -1,10 +1,12 @@
 use crate::graphics::{Error, Graphics};
 use crate::progman::ProgMan;
 use crate::util::WinApiError;
+use crate::window::RenderWindow;
 
 mod graphics;
 mod progman;
 mod util;
+mod window;
 
 fn main() {
     pretty_env_logger::init();
@@ -47,4 +49,16 @@ fn main() {
         worker,
         graphics
     );
+
+    let mut window = match RenderWindow::new() {
+        Ok(v) => v,
+        Err(err) => {
+            log::error!("Failed to create window: {}", err);
+            std::process::exit(1);
+        }
+    };
+
+    worker.reparent_other_as_child(window.get_window_handle());
+
+    window.run();
 }
