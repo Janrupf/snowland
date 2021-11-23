@@ -52,6 +52,11 @@ fn main() {
         }
     };
 
+    match gl.change_swap_interval(1) {
+        Ok(()) => log::info!("Successfully changed swap interval"),
+        Err(err) => log::warn!("Failed to change swap interval: {0}", err),
+    }
+
     log::debug!("Creating renderer...");
     let renderer = match SkiaWGLSnowlandRender::from_context(gl) {
         Ok(v) => v,

@@ -1,8 +1,13 @@
+#![feature(drain_filter)]
+
 use crate::rendering::SnowlandRenderer;
+use crate::scene::{SnowlandScene, XMasCountdown};
 use skia_safe::{Color4f, Paint, Rect, Surface};
+use std::time::{Instant, SystemTime, SystemTimeError, UNIX_EPOCH};
 use thiserror::Error;
 
 pub mod rendering;
+mod scene;
 
 /// The heart of Snowland, application manager and central controller.
 pub struct Snowland<R>
@@ -11,6 +16,8 @@ where
 {
     renderer: R,
     surface: Option<Surface>,
+    last_frame_time: Option<f32>,
+    scene: Box<dyn SnowlandScene>,
 }
 
 impl<R> Snowland<R>
@@ -22,6 +29,8 @@ where
         Self {
             renderer,
             surface: None,
+            last_frame_time: None,
+            scene: Box::new(XMasCountdown::new()),
         }
     }
 
@@ -46,14 +55,25 @@ where
     pub fn render_frame(&mut self) -> Result<(), Error> {
         let surface = self.surface.as_mut().ok_or(Error::NoSurface)?;
 
+        let width = surface.width();
+        let height = surface.height();
+
         let canvas = surface.canvas();
-        canvas.draw_rect(
-            Rect::new(100.0, 100.0, 200.0, 200.0),
-            &Paint::new(Color4f::new(1.0, 1.0, 1.0, 1.0), None),
+
+        let pre_frame_time = Instant::now();
+
+        self.scene.update(
+            canvas,
+            width as u64,
+            height as u64,
+            self.last_frame_time.unwrap_or(0.0),
         );
 
         surface.flush_and_submit();
         self.renderer.present().map_err(Error::PresentFailed)?;
+
+        self.last_frame_time
+            .replace((pre_frame_time.elapsed().as_nanos() as f32) / 1000000.0);
 
         Ok(())
     }
@@ -69,4 +89,7 @@ pub enum Error {
 
     #[error("failed to present surface: {0}")]
     PresentFailed(Box<dyn std::error::Error>),
+
+    #[error("failed to calculate frame time: {0}")]
+    TimeError(#[from] SystemTimeError),
 }
