@@ -1,3 +1,5 @@
+pub mod fonts;
+
 use std::error::Error;
 
 use skia_safe::Surface;
