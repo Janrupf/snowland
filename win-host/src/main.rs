@@ -1,3 +1,5 @@
+#![windows_subsystem = "windows"]
+
 use windows::Win32::Graphics::Dwm::DwmFlush;
 
 use snowland_universal::rendering::SnowlandRenderer;
@@ -72,8 +74,8 @@ fn main() {
     );
 
     let snowland = Snowland::new(renderer);
-    match run_render_loop(worker, snowland) {
-        Ok(()) => std::process::exit(0),
+    match run_render_loop(&worker, snowland) {
+        Ok(()) => (),
         Err(err) => {
             log::error!("Encountered error while rendering: {0}", err);
             std::process::exit(1);
@@ -82,7 +84,7 @@ fn main() {
 }
 
 fn run_render_loop<R>(
-    worker: Worker,
+    worker: &Worker,
     mut snowland: Snowland<R>,
 ) -> Result<(), Box<dyn std::error::Error>>
 where

@@ -1,2 +1,6 @@
 [workspace]
 members = ["win-host", "universal"]
+
+[profile.release]
+lto = true
+codegen-units = 1

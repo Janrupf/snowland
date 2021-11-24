@@ -1,5 +1,5 @@
 use thiserror::Error;
-use windows::Win32::Foundation::{BOOL, HWND, LPARAM, LRESULT};
+use windows::Win32::Foundation::{BOOL, HWND, LPARAM, LRESULT, WPARAM};
 use windows::Win32::UI::WindowsAndMessaging::{
     EnumWindows, FindWindowA, FindWindowExA, SendMessageTimeoutA, SMTO_NORMAL,
 };
@@ -84,6 +84,24 @@ impl ProgMan {
         }
 
         true.into()
+    }
+}
+
+impl Drop for ProgMan {
+    fn drop(&mut self) {
+        let mut message_result = 0usize;
+
+        unsafe {
+            SendMessageTimeoutA(
+                self.window,
+                PROG_MAN_CREATE_WORKER_W_MSG,
+                WPARAM(7),
+                None,
+                SMTO_NORMAL,
+                1000,
+                &mut message_result,
+            )
+        };
     }
 }
 
