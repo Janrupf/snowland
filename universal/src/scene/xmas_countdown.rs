@@ -1,9 +1,7 @@
-use std::time::SystemTime;
-
-use chrono::{Datelike, Local, NaiveDate, NaiveDateTime, NaiveTime, Utc};
+use chrono::{Datelike, Local, NaiveTime};
 use rand::rngs::ThreadRng;
 use rand::Rng;
-use skia_safe::{scalar, Canvas, Color4f, Font, Paint, Typeface};
+use skia_safe::{scalar, Canvas, Color4f, Font, Paint};
 
 use crate::rendering::fonts;
 use crate::scene::SnowlandScene;
@@ -11,7 +9,7 @@ use crate::scene::SnowlandScene;
 pub struct XMasCountdown {
     flakes: Vec<Snowflake>,
     random: ThreadRng,
-    target_flake_count: u32,
+    target_flake_count: u64,
     noto_sans_mono: Font,
 }
 
@@ -92,9 +90,14 @@ impl XMasCountdown {
     }
 }
 
+/// 400 flakes look good on 1920 * 1080, which is 5184 pixels per flake.
+const PIXEL_FLAKE_RATIO: u64 = 5184;
+
 impl SnowlandScene for XMasCountdown {
     fn update(&mut self, canvas: &mut Canvas, width: u64, height: u64, delta: f32) {
         canvas.clear(Color4f::new(0.102, 0.102, 0.102, 1.0));
+
+        self.target_flake_count = (width * height) / PIXEL_FLAKE_RATIO;
 
         if (self.target_flake_count as usize) != self.flakes.len() {
             self.flakes
@@ -182,8 +185,7 @@ impl Snowflake {
         let mut paint = Paint::new(Color4f::new(1.0, 1.0, 1.0, self.calculate_opacity()), None);
         paint.set_anti_alias(true);
 
-        let tumble =
-            ((self.time_alive / 1000.0).sin() - 0.5) * self.tumbling_multiplier * (delta / 20.0);
+        let tumble = (self.time_alive / 1000.0).sin() * self.tumbling_multiplier * (delta / 20.0);
         let fall = self.falling_speed * (delta / 20.0);
 
         self.x += tumble;

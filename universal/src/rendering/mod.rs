@@ -1,8 +1,8 @@
-pub mod fonts;
-
 use std::error::Error;
 
 use skia_safe::Surface;
+
+pub mod fonts;
 
 /// Abstraction for Snowland renderer backends.
 pub trait SnowlandRenderer {
