@@ -1,5 +1,6 @@
-use skia_safe::Surface;
 use std::error::Error;
+
+use skia_safe::Surface;
 
 /// Abstraction for Snowland renderer backends.
 pub trait SnowlandRenderer {

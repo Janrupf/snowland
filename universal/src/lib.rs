@@ -1,10 +1,12 @@
 #![feature(drain_filter)]
 
+use std::time::{Instant, SystemTimeError};
+
+use skia_safe::Surface;
+use thiserror::Error;
+
 use crate::rendering::SnowlandRenderer;
 use crate::scene::{SnowlandScene, XMasCountdown};
-use skia_safe::{Color4f, Paint, Rect, Surface};
-use std::time::{Instant, SystemTime, SystemTimeError, UNIX_EPOCH};
-use thiserror::Error;
 
 pub mod rendering;
 mod scene;

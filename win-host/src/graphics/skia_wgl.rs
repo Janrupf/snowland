@@ -1,10 +1,12 @@
-use crate::graphics::WGLContext;
 use skia_safe::gpu::gl::FramebufferInfo;
 use skia_safe::gpu::{BackendRenderTarget, DirectContext, SurfaceOrigin};
 use skia_safe::*;
-use snowland_universal::rendering::SnowlandRenderer;
 use thiserror::Error;
 use windows::Win32::Graphics::OpenGL::GL_RGBA8;
+
+use snowland_universal::rendering::SnowlandRenderer;
+
+use crate::graphics::WGLContext;
 
 /// Snowland renderer based on WGL.
 #[derive(Debug)]

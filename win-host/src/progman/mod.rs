@@ -1,12 +1,14 @@
-mod worker;
+use thiserror::Error;
+use windows::Win32::Foundation::{BOOL, HWND, LPARAM, LRESULT};
+use windows::Win32::UI::WindowsAndMessaging::{
+    EnumWindows, FindWindowA, FindWindowExA, SendMessageTimeoutA, SMTO_NORMAL,
+};
+
 pub use worker::*;
 
 use crate::WinApiError;
-use thiserror::Error;
-use windows::Win32::Foundation::{BOOL, HWND, LPARAM, LRESULT, PSTR, WPARAM};
-use windows::Win32::UI::WindowsAndMessaging::{
-    EnumWindows, FindWindowA, FindWindowExA, SendMessageTimeoutA, SMTO_NORMAL, WNDENUMPROC,
-};
+
+mod worker;
 
 const PROG_MAN_CREATE_WORKER_W_MSG: u32 = 0x052C;
 
@@ -70,12 +72,10 @@ impl ProgMan {
 
     extern "system" fn enum_windows_callback(window: HWND, out: LPARAM) -> BOOL {
         let worker_w: &mut Option<HWND> = unsafe { std::mem::transmute(out) };
-        let def_view_window =
-            unsafe { FindWindowExA(window, None, "SHELLDLL_DefView", None) };
+        let def_view_window = unsafe { FindWindowExA(window, None, "SHELLDLL_DefView", None) };
 
         if def_view_window.0 != 0 {
-            let maybe_worker_w =
-                unsafe { FindWindowExA(None, window, "WorkerW", None) };
+            let maybe_worker_w = unsafe { FindWindowExA(None, window, "WorkerW", None) };
 
             if maybe_worker_w.0 != 0 {
                 worker_w.replace(maybe_worker_w);

@@ -1,19 +1,18 @@
-mod wgl;
-mod skia_wgl;
-
-pub use wgl::*;
-pub use skia_wgl::*;
-
-use crate::WinApiError;
 use thiserror::Error;
 use windows::Win32::Foundation::HWND;
 use windows::Win32::Graphics::Gdi::{
     GetDCEx, ReleaseDC, DCX_CACHE, DCX_LOCKWINDOWUPDATE, DCX_WINDOW, HDC, PFD_DOUBLEBUFFER,
     PFD_DRAW_TO_WINDOW, PFD_MAIN_PLANE, PFD_SUPPORT_OPENGL, PFD_TYPE_RGBA,
 };
-use windows::Win32::Graphics::OpenGL::{
-    wglCreateContext, ChoosePixelFormat, SetPixelFormat, PIXELFORMATDESCRIPTOR,
-};
+use windows::Win32::Graphics::OpenGL::{ChoosePixelFormat, SetPixelFormat, PIXELFORMATDESCRIPTOR};
+
+pub use skia_wgl::*;
+pub use wgl::*;
+
+use crate::WinApiError;
+
+mod skia_wgl;
+mod wgl;
 
 /// Represents a graphics context centered around a [`HDC`].
 #[derive(Debug)]

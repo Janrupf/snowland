@@ -1,7 +1,8 @@
-use crate::scene::SnowlandScene;
 use rand::rngs::ThreadRng;
 use rand::Rng;
 use skia_safe::{Canvas, Color4f, Paint};
+
+use crate::scene::SnowlandScene;
 
 pub struct XMasCountdown {
     flakes: Vec<Snowflake>,

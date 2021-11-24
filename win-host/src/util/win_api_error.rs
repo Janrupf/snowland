@@ -1,4 +1,5 @@
 use std::fmt::{Display, Formatter};
+
 use thiserror::Error;
 use windows::Win32::Foundation::{GetLastError, PSTR, WIN32_ERROR};
 use windows::Win32::System::Diagnostics::Debug::{
@@ -54,12 +55,12 @@ impl WinApiError {
 
         Ok(message.into())
     }
-    
+
     /// Retrieves the underlying error code
     pub fn code(&self) -> WIN32_ERROR {
         self.code
     }
-    
+
     /// Tests whether this error is of a certain type
     pub fn is(&self, other: WIN32_ERROR) -> bool {
         self.code == other
