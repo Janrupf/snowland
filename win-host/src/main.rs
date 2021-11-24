@@ -3,6 +3,7 @@ use crate::progman::{ProgMan, Worker};
 use crate::util::WinApiError;
 use snowland_universal::rendering::SnowlandRenderer;
 use snowland_universal::Snowland;
+use windows::Win32::Graphics::Dwm::DwmFlush;
 
 mod graphics;
 mod progman;
@@ -52,11 +53,6 @@ fn main() {
         }
     };
 
-    match gl.change_swap_interval(1) {
-        Ok(()) => log::info!("Successfully changed swap interval"),
-        Err(err) => log::warn!("Failed to change swap interval: {0}", err),
-    }
-
     log::debug!("Creating renderer...");
     let renderer = match SkiaWGLSnowlandRender::from_context(gl) {
         Ok(v) => v,
@@ -94,5 +90,9 @@ where
         let (width, height) = worker.get_size()?;
         snowland.resize(width, height)?;
         snowland.render_frame()?;
+
+        unsafe {
+            DwmFlush().unwrap();
+        }
     }
 }

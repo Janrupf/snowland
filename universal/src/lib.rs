@@ -16,7 +16,7 @@ where
 {
     renderer: R,
     surface: Option<Surface>,
-    last_frame_time: Option<f32>,
+    last_frame_time: Option<Instant>,
     scene: Box<dyn SnowlandScene>,
 }
 
@@ -60,20 +60,20 @@ where
 
         let canvas = surface.canvas();
 
-        let pre_frame_time = Instant::now();
+        let last_frame_time = self
+            .last_frame_time
+            .replace(Instant::now())
+            .unwrap_or_else(Instant::now);
 
         self.scene.update(
             canvas,
             width as u64,
             height as u64,
-            self.last_frame_time.unwrap_or(0.0),
+            (last_frame_time.elapsed().as_nanos() as f32) / 1000000.0,
         );
 
         surface.flush_and_submit();
         self.renderer.present().map_err(Error::PresentFailed)?;
-
-        self.last_frame_time
-            .replace((pre_frame_time.elapsed().as_nanos() as f32) / 1000000.0);
 
         Ok(())
     }

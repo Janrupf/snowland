@@ -1,5 +1,5 @@
 use crate::WinApiError;
-use std::fmt::{write, Debug, Formatter};
+use std::fmt::{Debug, Formatter};
 use thiserror::Error;
 use windows::Win32::Foundation::{BOOL, HINSTANCE};
 use windows::Win32::Graphics::Gdi::{HDC, WGL_SWAP_MAIN_PLANE};
@@ -117,60 +117,6 @@ impl WGLContext {
             Err(Error::WGLSwapControlExtNotAvailable)
         }
     }
-
-    /* pub fn test_draw(&self) {
-        assert!(unsafe { wglMakeCurrent(self.dc, self.gl).as_bool() });
-
-        let wgl_backend = unsafe { GliumWGLBackend::new(self.dc, self.gl) };
-
-        let skia_gl_interface = skia_safe::gpu::gl::Interface::new_load_with(|proc| unsafe {
-            wgl_backend.get_proc_address(proc)
-        });
-
-        assert!(skia_gl_interface.is_some());
-        assert!(skia_gl_interface.as_ref().unwrap().validate());
-
-        let mut context = DirectContext::new_gl(skia_gl_interface, None).unwrap();
-
-        let render_target = BackendRenderTarget::new_gl(
-            (400, 400),
-            None,
-            0,
-            FramebufferInfo {
-                fboid: 0,
-                format: GL_RGBA8,
-            },
-        );
-
-        let mut surface = Surface::from_backend_render_target(
-            &mut context,
-            &render_target,
-            SurfaceOrigin::BottomLeft,
-            ColorType::RGBA8888,
-            Some(ColorSpace::new_srgb()),
-            None,
-        )
-        .unwrap();
-
-        let canvas = surface.canvas();
-
-        loop {
-            // drawing a frame
-            // frame.clear_color(0.0, 0.0, 0.0, 0.0);
-
-            // canvas.clear(Color4f::new(1.0, 1.0, 1.0, 1.0));
-
-            canvas.clear(Color4f::new(1.0, 1.0, 1.0, 1.0));
-            canvas.draw_rect(
-                Rect::new(0.0, 0.0, 200.0, 200.0),
-                &Paint::new(Color4f::new(1.0, 0.0, 0.0, 1.0), None),
-            );
-
-            context.flush_and_submit();
-
-            wgl_backend.swap_buffers();
-        }
-    } */
 }
 
 impl Drop for WGLContext {

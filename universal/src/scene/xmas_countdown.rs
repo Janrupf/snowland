@@ -6,7 +6,7 @@ use skia_safe::{Canvas, Color4f, Paint};
 pub struct XMasCountdown {
     flakes: Vec<Snowflake>,
     random: ThreadRng,
-    snowflake_generation_delta: f32,
+    target_flake_count: u32,
 }
 
 impl XMasCountdown {
@@ -16,26 +16,27 @@ impl XMasCountdown {
         Self {
             flakes: Vec::new(),
             random,
-            snowflake_generation_delta: 0.0,
+            target_flake_count: 400,
         }
     }
 }
 
 impl SnowlandScene for XMasCountdown {
     fn update(&mut self, canvas: &mut Canvas, width: u64, height: u64, delta: f32) {
+        log::debug!("delta = {}", delta);
+
         canvas.clear(Color4f::new(0.102, 0.102, 0.102, 1.0));
 
-        self.snowflake_generation_delta += delta;
-
-        while self.snowflake_generation_delta > 10.0 {
+        if (self.target_flake_count as usize) != self.flakes.len() {
             self.flakes
-                .push(Snowflake::new_random(width, height, &mut self.random));
-
-            self.snowflake_generation_delta -= 10.0;
+                .resize_with(self.target_flake_count as usize, || {
+                    Snowflake::new_random(width, height, &mut self.random)
+                });
         }
 
-        self.flakes
-            .drain_filter(|flake| flake.tick(canvas, delta, width, height, &mut self.random));
+        for flake in self.flakes.iter_mut() {
+            flake.tick(canvas, delta, width, height, &mut self.random);
+        }
     }
 }
 
@@ -75,7 +76,7 @@ impl Snowflake {
         x_limit: u64,
         y_limit: u64,
         random: &mut ThreadRng,
-    ) -> bool {
+    ) {
         let mut paint = Paint::new(Color4f::new(1.0, 1.0, 1.0, self.calculate_opacity()), None);
         paint.set_anti_alias(true);
 
@@ -86,14 +87,17 @@ impl Snowflake {
         self.x += tumble;
         self.y += fall;
 
-        canvas.draw_circle((self.x, self.y), 3.0, &paint);
+        canvas.draw_circle((self.x, self.y), 2.5, &paint);
 
         self.time_alive += delta;
 
-        self.time_alive > self.time_to_live
+        if self.time_alive > self.time_to_live
             || self.x < -10.0
             || self.x > (x_limit + 10) as f32
             || self.y > (y_limit + 10) as f32
+        {
+            self.reset(x_limit, y_limit, random);
+        }
     }
 
     fn calculate_opacity(&self) -> f32 {
@@ -104,5 +108,9 @@ impl Snowflake {
                 2000.0,
             ),
         ) / 2000.0
+    }
+
+    fn reset(&mut self, max_x: u64, max_y: u64, random: &mut ThreadRng) {
+        *self = Self::new_random(max_x, max_y, random);
     }
 }
