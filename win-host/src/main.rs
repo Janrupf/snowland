@@ -7,6 +7,9 @@ use snowland_universal::Snowland;
 
 use crate::graphics::{Graphics, SkiaWGLSnowlandRender};
 use crate::progman::{ProgMan, Worker};
+use crate::shell::messenger::{
+    HostMessenger, HostToIntegrationMessage, IntegrationToHostMessage, ReceiveResult,
+};
 use crate::shell::start_shell_integration;
 use crate::util::WinApiError;
 
@@ -75,32 +78,45 @@ fn main() {
         graphics,
     );
 
-    let shell_integration = start_shell_integration();
+    let mut messenger = start_shell_integration();
 
-    let snowland = Snowland::new(renderer);
-    match run_render_loop(&worker, snowland) {
+    let mut snowland = Snowland::new(renderer);
+    match run_render_loop(&worker, &mut messenger, &mut snowland) {
         Ok(()) => (),
         Err(err) => {
             log::error!("Encountered error while rendering: {0}", err);
             std::process::exit(1);
         }
     };
-    
-    match shell_integration.join() {
-        Err(err) => log::warn!("Failed to join shell integration thread: {:?}", err),
-        Ok(Err(err)) => log::warn!("Join integration thread finished with error: {}", err),
-        Ok(Ok(())) => (),
+
+    std::mem::forget(snowland); // TODO: dropping the renderer hangs it Skia...
+
+    messenger.send(HostToIntegrationMessage::QuitLoop);
+    match messenger.join() {
+        Err(err) => log::warn!("Join integration thread finished with error: {}", err),
+        Ok(()) => (),
     }
 }
 
 fn run_render_loop<R>(
     worker: &Worker,
-    mut snowland: Snowland<R>,
+    messenger: &mut HostMessenger,
+    snowland: &mut Snowland<R>,
 ) -> Result<(), Box<dyn std::error::Error>>
 where
     R: SnowlandRenderer,
 {
     loop {
+        match messenger.receive() {
+            ReceiveResult::Message(v) => {
+                return match v {
+                    IntegrationToHostMessage::StopRendering => Ok(()),
+                }
+            }
+            ReceiveResult::Shutdown => return Ok(()),
+            ReceiveResult::None => {}
+        }
+
         let (width, height) = worker.get_size()?;
         snowland.resize(width, height)?;
         snowland.render_frame()?;

@@ -12,11 +12,15 @@ use windows::Win32::UI::Shell::{
     NIM_SETVERSION, NOTIFYICONDATAA, NOTIFYICONDATAA_0, NOTIFYICON_VERSION_4,
 };
 use windows::Win32::UI::WindowsAndMessaging::{
-    AppendMenuA, CreatePopupMenu, DefWindowProcA, DestroyMenu, GetCursorPos, SetForegroundWindow,
-    TrackPopupMenu, HICON, HMENU, MF_STRING, TPM_NONOTIFY, TPM_RETURNCMD, TRACK_POPUP_MENU_FLAGS,
-    WM_CREATE, WM_DESTROY, WM_USER,
+    AppendMenuA, CreatePopupMenu, DefWindowProcA, DestroyMenu, GetCursorPos, PostQuitMessage,
+    SetForegroundWindow, TrackPopupMenu, HICON, HMENU, MF_STRING, TPM_NONOTIFY, TPM_RETURNCMD,
+    TRACK_POPUP_MENU_FLAGS, WM_CREATE, WM_DESTROY, WM_USER,
 };
 
+use crate::shell::messenger::{
+    HostToIntegrationMessage, IntegrationMessenger, IntegrationToHostMessage,
+    InternalIntegrationToHostMessage,
+};
 use crate::WinApiError;
 
 /// Shell integration of Snowland.
@@ -24,6 +28,7 @@ use crate::WinApiError;
 /// This is managed by the shell integration window and has all the control
 /// to provide integration with the Windows system shell.
 pub struct ShellIntegration {
+    messenger: IntegrationMessenger,
     window: HWND,
     menu: HMENU,
     icon_data: NOTIFYICONDATAA,
@@ -39,8 +44,11 @@ const NOTIFICATION_ICON_GUID: GUID = GUID::from_values(
     [0x93, 0x2a, 0xb4, 0xba, 0xba, 0x5b, 0x10, 0x4d],
 );
 
+/// Window message sent by the Snowland host thread to notify that a message is in the messenger.
+pub const WM_SNOWLAND_MESSENGER: u32 = WM_USER + 1;
+
 /// Window message sent by the Snowland notification system tay.
-const WM_SNOWLAND_NOTIFICATION: u32 = WM_USER + 1;
+const WM_SNOWLAND_NOTIFICATION: u32 = WM_USER + 2;
 
 /// Menu item which should quit the application.
 const MENU_ITEM_EXIT: usize = 0x1;
@@ -49,7 +57,9 @@ impl ShellIntegration {
     /// Creates the shell integration.
     ///
     /// At this point the window has been fully created.
-    pub fn new(window: HWND) -> Result<Self, Error> {
+    pub fn new(messenger: IntegrationMessenger, window: HWND) -> Result<Self, Error> {
+        messenger.window_created(window);
+
         let menu = unsafe {
             let menu = CreatePopupMenu();
 
@@ -83,6 +93,7 @@ impl ShellIntegration {
         };
 
         Ok(Self {
+            messenger,
             window,
             menu,
             icon_data,
@@ -104,6 +115,9 @@ impl ShellIntegration {
         match message {
             WM_CREATE => self.create().map(|()| LRESULT(0)),
             WM_DESTROY => self.destroy().map(|()| LRESULT(0)),
+            WM_SNOWLAND_MESSENGER => self
+                .process_host_message(*unsafe { Box::from_raw(l_param.0 as _) })
+                .map(|()| LRESULT(0)),
             WM_SNOWLAND_NOTIFICATION => self
                 .process_notification_message(w_param, l_param)
                 .map(|()| LRESULT(0)),
@@ -129,6 +143,15 @@ impl ShellIntegration {
     /// Destroys the integration and releases all resources.
     fn destroy(&mut self) -> Result<(), Error> {
         unsafe { Shell_NotifyIconA(NIM_DELETE, &self.icon_data) };
+
+        Ok(())
+    }
+
+    /// Processes a message received from the host thread.
+    fn process_host_message(&mut self, message: HostToIntegrationMessage) -> Result<(), Error> {
+        match message {
+            HostToIntegrationMessage::QuitLoop => unsafe { PostQuitMessage(0) },
+        }
 
         Ok(())
     }
@@ -166,6 +189,7 @@ impl ShellIntegration {
 
             if click_result == MENU_ITEM_EXIT {
                 log::info!("User requested application exit using popup menu!");
+                self.messenger.send(IntegrationToHostMessage::StopRendering);
             }
         }
 
