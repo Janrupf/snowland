@@ -34,16 +34,6 @@ pub struct ShellIntegration {
     icon_data: NOTIFYICONDATAA,
 }
 
-/// GUID of the notification icon.
-///
-/// {0D4D901A-D36F-439A-932A-B4BABA5B104D}
-const NOTIFICATION_ICON_GUID: GUID = GUID::from_values(
-    0xd4d901a,
-    0xd36f,
-    0x439a,
-    [0x93, 0x2a, 0xb4, 0xba, 0xba, 0x5b, 0x10, 0x4d],
-);
-
 /// Window message sent by the Snowland host thread to notify that a message is in the messenger.
 pub const WM_SNOWLAND_MESSENGER: u32 = WM_USER + 1;
 
@@ -76,13 +66,13 @@ impl ShellIntegration {
             cbSize: std::mem::size_of::<NOTIFYICONDATAA>() as u32,
             hWnd: window,
             uCallbackMessage: WM_SNOWLAND_NOTIFICATION,
+            uID: 1,
 
             // Show the icon and tooltip and use a GUID to identify the icon calling the window
             // with a window message.
-            uFlags: NIF_ICON | NIF_TIP | NIF_SHOWTIP | NIF_GUID | NIF_MESSAGE,
+            uFlags: NIF_ICON | NIF_TIP | NIF_SHOWTIP | NIF_MESSAGE,
             hIcon: Self::load_icon(1),
             szTip: Self::make_string("Snowland"),
-            guidItem: NOTIFICATION_ICON_GUID,
 
             // Set to version 4
             Anonymous: NOTIFYICONDATAA_0 {
