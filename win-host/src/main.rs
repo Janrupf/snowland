@@ -7,10 +7,12 @@ use snowland_universal::Snowland;
 
 use crate::graphics::{Graphics, SkiaWGLSnowlandRender};
 use crate::progman::{ProgMan, Worker};
+use crate::shell::start_shell_integration;
 use crate::util::WinApiError;
 
 mod graphics;
 mod progman;
+mod shell;
 mod util;
 
 fn main() {
@@ -73,6 +75,8 @@ fn main() {
         graphics,
     );
 
+    let shell_integration = start_shell_integration();
+
     let snowland = Snowland::new(renderer);
     match run_render_loop(&worker, snowland) {
         Ok(()) => (),
@@ -81,6 +85,12 @@ fn main() {
             std::process::exit(1);
         }
     };
+    
+    match shell_integration.join() {
+        Err(err) => log::warn!("Failed to join shell integration thread: {:?}", err),
+        Ok(Err(err)) => log::warn!("Join integration thread finished with error: {}", err),
+        Ok(Ok(())) => (),
+    }
 }
 
 fn run_render_loop<R>(

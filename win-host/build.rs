@@ -11,9 +11,11 @@ fn main() {
     }
 }
 
+#[cfg(windows)]
 fn setup_resources() {
     WindowsResource::new()
         .set_icon("res/snowflake.ico")
+        .set_manifest_file("res/snowland-host-win.manifest")
         .compile()
-        .expect("Faled to compile resource file!");
+        .expect("Failed to compile resource file!");
 }
