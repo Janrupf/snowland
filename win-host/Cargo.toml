@@ -2,6 +2,8 @@
 name = "snowland-win-host"
 version = "0.1.0"
 edition = "2021"
+description = "Windows host application for the desktop wallpaper renderer snowland!"
+authors = ["Janrupf"]
 
 [dependencies]
 thiserror = "1.0.30"
@@ -29,3 +31,6 @@ features = [
     "Win32_Graphics_OpenGL",
     "Win32_Graphics_Dwm"
 ]
+
+[target.'cfg(windows)'.build-dependencies]
+winres = "0.1.12"
