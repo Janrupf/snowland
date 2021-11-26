@@ -26,7 +26,22 @@ fn main() {
         env!("CARGO_PKG_VERSION")
     );
 
-    let snowland = Snowland::create_with(WinHost::new).unwrap();
+    let host = match WinHost::new() {
+        Ok(v) => v,
+        Err(err) => {
+            log::error!("Failed to create host: {}", err);
+            std::process::exit(1);
+        }
+    };
+
+    let snowland = match Snowland::new(host) {
+        Ok(v) => v,
+        Err(err) => {
+            log::error!("Failed to make it snow: {}", err);
+            std::process::exit(1);
+        }
+    };
+
     match snowland.run() {
         Ok(()) => {
             log::debug!("Snowland finished successfully!");

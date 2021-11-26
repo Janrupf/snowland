@@ -18,9 +18,7 @@ use windows::Win32::UI::WindowsAndMessaging::{
 
 use snowland_universal::control::ControlMessage;
 
-use crate::shell::messenger::{
-    HostToIntegrationMessage, IntegrationMessenger, IntegrationToHostMessage,
-};
+use crate::shell::messenger::{HostToIntegrationMessage, IntegrationMessenger};
 use crate::WinApiError;
 
 /// Shell integration of Snowland.
@@ -180,7 +178,7 @@ impl ShellIntegration {
 
             if click_result == MENU_ITEM_EXIT {
                 log::info!("User requested application exit using popup menu!");
-                self.messenger.send(IntegrationToHostMessage::StopRendering);
+                self.messenger.send(ControlMessage::Exit);
             }
         }
 

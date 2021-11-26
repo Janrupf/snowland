@@ -25,36 +25,45 @@ where
     surface: Option<Surface>,
     last_frame_time: Option<Instant>,
     host: H,
+    host_pipe: MessagePipeEnd<ControlMessage>,
 }
 
 impl<H> Snowland<H>
 where
     H: SnowlandHost,
 {
-    /// Creates a new snowland host by calling the creator function with the message pipe.
-    pub fn create_with<F>(host_creator: F) -> Result<Self, Error<H>>
-    where
-        F: FnOnce(MessagePipeEnd<ControlMessage>) -> Result<H, H::Error>,
-    {
+    /// Creates a new snowland by using the given host.
+    pub fn new(host: H) -> Result<Self, Error<H>> {
         let (host_pipe, ui_pipe) = message_pipe();
 
         std::mem::forget(ui_pipe); // TODO: implement the UI side
-
-        let host = host_creator(host_pipe).map_err(Error::HostError)?;
 
         Ok(Self {
             host,
             surface: None,
             last_frame_time: None,
             scene: Box::new(XMasCountdown::new()),
+            host_pipe,
         })
     }
 
     /// Starts the snowland run loop.
     pub fn run(mut self) -> Result<(), Error<H>> {
         loop {
-            if !self.host.process_messages().map_err(Error::HostError)? {
+            let ui_control_messages = self.collect_ui_control_message();
+            let host_control_messages = self
+                .host
+                .process_messages(&ui_control_messages)
+                .map_err(Error::HostError)?;
+
+            if self.process_control_messages(&ui_control_messages)
+                || self.process_control_messages(&host_control_messages)
+            {
                 return Ok(());
+            }
+
+            for message in host_control_messages {
+                drop(self.host_pipe.send(message)); // TODO: Maybe handle this result?
             }
 
             let (width, height) = self.host.get_size().map_err(Error::HostError)?;
@@ -62,6 +71,20 @@ where
 
             self.render_frame()?;
         }
+    }
+
+    fn collect_ui_control_message(&self) -> Vec<ControlMessage> {
+        let mut messages = Vec::new();
+
+        while let Ok(v) = self.host_pipe.try_recv() {
+            messages.push(v);
+        }
+
+        messages
+    }
+
+    fn process_control_messages(&mut self, messages: &[ControlMessage]) -> bool {
+        messages.contains(&ControlMessage::Exit)
     }
 
     fn resize(&mut self, width: u64, height: u64) -> Result<(), Error<H>> {

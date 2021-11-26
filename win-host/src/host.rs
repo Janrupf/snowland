@@ -3,11 +3,10 @@ use std::sync::mpsc::{SendError, TryRecvError};
 use thiserror::Error;
 use windows::Win32::Graphics::Dwm::DwmFlush;
 
-use snowland_universal::control::message_pipe::MessagePipeEnd;
 use snowland_universal::control::ControlMessage;
 use snowland_universal::host::SnowlandHost;
 
-use crate::shell::messenger::{IntegrationToHostMessage, ReceiveResult};
+use crate::shell::messenger::ReceiveResult;
 use crate::{
     start_shell_integration, Graphics, HostMessenger, HostToIntegrationMessage, ProgMan,
     SkiaWGLSnowlandRender, WinApiError, Worker,
@@ -20,13 +19,12 @@ pub struct WinHost {
     graphics: Graphics,
     worker: Worker,
     prog_man: ProgMan,
-    snowland_pipe: MessagePipeEnd<ControlMessage>,
     messenger: HostMessenger,
 }
 
 impl WinHost {
     /// Creates a new Win32 host implementation.
-    pub fn new(snowland_pipe: MessagePipeEnd<ControlMessage>) -> Result<Self, Error> {
+    pub fn new() -> Result<Self, Error> {
         let messenger = start_shell_integration();
 
         let prog_man = ProgMan::new()?;
@@ -40,7 +38,6 @@ impl WinHost {
             graphics,
             worker,
             prog_man,
-            snowland_pipe,
             messenger,
         })
     }
@@ -54,26 +51,29 @@ impl SnowlandHost for WinHost {
         &mut self.renderer
     }
 
-    fn process_messages(&mut self) -> Result<bool, Self::Error> {
-        match self.messenger.receive() {
-            ReceiveResult::Message(msg) => match msg {
-                IntegrationToHostMessage::StopRendering => return Ok(false),
-                IntegrationToHostMessage::Control(msg) => match self.snowland_pipe.send(msg) {
-                    Ok(()) => {}
-                    Err(err) => return Err(Error::PipeClosed(PipeClosedError::Send(err))),
-                },
-            },
-            ReceiveResult::None => {}
-            ReceiveResult::Shutdown => return Ok(false),
+    fn process_messages(
+        &mut self,
+        control_messages: &[ControlMessage],
+    ) -> Result<Vec<ControlMessage>, Self::Error> {
+        for message in control_messages {
+            self.messenger
+                .send(HostToIntegrationMessage::Control(message.clone()));
         }
 
-        match self.snowland_pipe.try_recv() {
-            Ok(msg) => self.messenger.send(HostToIntegrationMessage::Control(msg)),
-            Err(TryRecvError::Empty) => {}
-            Err(v) => return Err(Error::PipeClosed(PipeClosedError::Receive(v))),
+        let mut messages = Vec::new();
+
+        loop {
+            let received = self.messenger.receive();
+            let received = match received {
+                ReceiveResult::Message(msg) => msg,
+                ReceiveResult::None => break,
+                ReceiveResult::Shutdown => return Ok(vec![ControlMessage::Exit]),
+            };
+
+            messages.push(received)
         }
 
-        Ok(true)
+        Ok(messages)
     }
 
     fn get_size(&self) -> Result<(u64, u64), Self::Error> {

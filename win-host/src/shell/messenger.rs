@@ -25,13 +25,7 @@ pub enum HostToIntegrationMessage {
 #[derive(Debug)]
 pub enum InternalIntegrationToHostMessage {
     WindowCreated(HWND),
-    Message(IntegrationToHostMessage),
-}
-
-#[derive(Debug)]
-pub enum IntegrationToHostMessage {
-    StopRendering,
-    Control(ControlMessage),
+    Message(ControlMessage),
 }
 
 #[derive(Debug)]
@@ -53,7 +47,7 @@ impl HostMessenger {
         }
     }
 
-    pub fn receive(&mut self) -> ReceiveResult<IntegrationToHostMessage> {
+    pub fn receive(&mut self) -> ReceiveResult<ControlMessage> {
         match self.receiver.try_recv() {
             Ok(InternalIntegrationToHostMessage::WindowCreated(window)) => {
                 self.window.replace(window);
@@ -113,7 +107,7 @@ impl IntegrationMessenger {
         );
     }
 
-    pub fn send(&self, message: IntegrationToHostMessage) {
+    pub fn send(&self, message: ControlMessage) {
         drop(
             self.sender
                 .send(InternalIntegrationToHostMessage::Message(message)),
