@@ -25,7 +25,6 @@ where
     surface: Option<Surface>,
     last_frame_time: Option<Instant>,
     host: H,
-    host_pipe: MessagePipeEnd<ControlMessage>,
 }
 
 impl<H> Snowland<H>
@@ -34,16 +33,11 @@ where
 {
     /// Creates a new snowland by using the given host.
     pub fn new(host: H) -> Result<Self, Error<H>> {
-        let (host_pipe, ui_pipe) = message_pipe();
-
-        std::mem::forget(ui_pipe); // TODO: implement the UI side
-
         Ok(Self {
             host,
             surface: None,
             last_frame_time: None,
             scene: Box::new(XMasCountdown::new()),
-            host_pipe,
         })
     }
 
@@ -51,10 +45,19 @@ where
     pub fn run(mut self) -> Result<(), Error<H>> {
         loop {
             let ui_control_messages = self.collect_ui_control_message();
+
+            if !ui_control_messages.is_empty() {
+                log::debug!("Control messages to host: {:?}", ui_control_messages);
+            }
+
             let host_control_messages = self
                 .host
                 .process_messages(&ui_control_messages)
                 .map_err(Error::HostError)?;
+
+            if !host_control_messages.is_empty() {
+                log::debug!("Control messages to UI: {:?}", host_control_messages);
+            }
 
             if self.process_control_messages(&ui_control_messages)
                 || self.process_control_messages(&host_control_messages)
@@ -62,23 +65,16 @@ where
                 return Ok(());
             }
 
-            for message in host_control_messages {
-                drop(self.host_pipe.send(message)); // TODO: Maybe handle this result?
-            }
-
             let (width, height) = self.host.get_size().map_err(Error::HostError)?;
             self.resize(width, height)?;
 
             self.render_frame()?;
+            self.host.flush_frame().map_err(Error::HostError)?;
         }
     }
 
     fn collect_ui_control_message(&self) -> Vec<ControlMessage> {
         let mut messages = Vec::new();
-
-        while let Ok(v) = self.host_pipe.try_recv() {
-            messages.push(v);
-        }
 
         messages
     }

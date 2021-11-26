@@ -1,5 +1,3 @@
-use std::sync::mpsc::{SendError, TryRecvError};
-
 use thiserror::Error;
 use windows::Win32::Graphics::Dwm::DwmFlush;
 
@@ -106,16 +104,4 @@ pub enum Error {
 
     #[error("an error occurred while calling the win32 API: {0}")]
     WinApi(#[from] WinApiError),
-
-    #[error("Snowland closed the message pipe unexpectedly")]
-    PipeClosed(PipeClosedError),
-}
-
-#[derive(Debug, Error)]
-pub enum PipeClosedError {
-    #[error("failed to receive message: {0}")]
-    Receive(TryRecvError),
-
-    #[error("failed to send message: {0}")]
-    Send(SendError<ControlMessage>),
 }
