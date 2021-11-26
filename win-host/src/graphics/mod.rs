@@ -6,7 +6,9 @@ use windows::Win32::Graphics::Gdi::{
 };
 use windows::Win32::Graphics::OpenGL::{ChoosePixelFormat, SetPixelFormat, PIXELFORMATDESCRIPTOR};
 
+pub use skia_wgl::Error as SkiaWGLError;
 pub use skia_wgl::*;
+pub use wgl::Error as WGLError;
 pub use wgl::*;
 
 use crate::WinApiError;
@@ -28,7 +30,7 @@ impl Graphics {
             unsafe { GetDCEx(window, None, DCX_WINDOW | DCX_CACHE | DCX_LOCKWINDOWUPDATE) };
 
         if handle.0 == 0 {
-            Err(Error::DCRetrievalFailed(WinApiError::last()))
+            Err(Error::DCRetrievalFailed(WinApiError::from_win32()))
         } else {
             Ok(Graphics { window, handle })
         }
@@ -68,11 +70,11 @@ impl Graphics {
         let pixel_format = unsafe { ChoosePixelFormat(self.handle, &descriptor) };
 
         if pixel_format == 0 {
-            return Err(Error::NoPixelFormat(WinApiError::last()));
+            return Err(Error::NoPixelFormat(WinApiError::from_win32()));
         }
 
         if !unsafe { SetPixelFormat(self.handle, pixel_format, &descriptor) }.as_bool() {
-            return Err(Error::PixelFormatNotChanged(WinApiError::last()));
+            return Err(Error::PixelFormatNotChanged(WinApiError::from_win32()));
         }
 
         Ok(WGLContext::for_dc(self.handle)?)
@@ -97,5 +99,5 @@ pub enum Error {
     PixelFormatNotChanged(WinApiError),
 
     #[error("failed to create WGL context: {0}")]
-    WGLCreationFailed(#[from] wgl::Error),
+    WGLCreationFailed(#[from] WGLError),
 }

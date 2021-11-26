@@ -2,24 +2,24 @@ use std::ffi::CString;
 use std::mem::MaybeUninit;
 
 use thiserror::Error;
-use windows::core::GUID;
 use windows::Win32::Foundation::{CHAR, HWND, LPARAM, LRESULT, POINT, PWSTR, WPARAM};
 use windows::Win32::System::LibraryLoader::GetModuleHandleA;
 use windows::Win32::UI::Controls::RichEdit::WM_CONTEXTMENU;
 use windows::Win32::UI::Controls::{LoadIconMetric, LIM_SMALL};
 use windows::Win32::UI::Shell::{
-    Shell_NotifyIconA, NIF_GUID, NIF_ICON, NIF_MESSAGE, NIF_SHOWTIP, NIF_TIP, NIM_ADD, NIM_DELETE,
+    Shell_NotifyIconA, NIF_ICON, NIF_MESSAGE, NIF_SHOWTIP, NIF_TIP, NIM_ADD, NIM_DELETE,
     NIM_SETVERSION, NOTIFYICONDATAA, NOTIFYICONDATAA_0, NOTIFYICON_VERSION_4,
 };
 use windows::Win32::UI::WindowsAndMessaging::{
     AppendMenuA, CreatePopupMenu, DefWindowProcA, DestroyMenu, GetCursorPos, PostQuitMessage,
     SetForegroundWindow, TrackPopupMenu, HICON, HMENU, MF_STRING, TPM_NONOTIFY, TPM_RETURNCMD,
-    TRACK_POPUP_MENU_FLAGS, WM_CREATE, WM_DESTROY, WM_USER,
+    WM_CREATE, WM_DESTROY, WM_USER,
 };
+
+use snowland_universal::control::ControlMessage;
 
 use crate::shell::messenger::{
     HostToIntegrationMessage, IntegrationMessenger, IntegrationToHostMessage,
-    InternalIntegrationToHostMessage,
 };
 use crate::WinApiError;
 
@@ -54,7 +54,7 @@ impl ShellIntegration {
             let menu = CreatePopupMenu();
 
             if menu.0 == 0 {
-                return Err(Error::MenuCreationFailed(WinApiError::last()));
+                return Err(Error::MenuCreationFailed(WinApiError::from_win32()));
             }
 
             AppendMenuA(menu, MF_STRING, MENU_ITEM_EXIT, "Exit");
@@ -106,7 +106,7 @@ impl ShellIntegration {
             WM_CREATE => self.create().map(|()| LRESULT(0)),
             WM_DESTROY => self.destroy().map(|()| LRESULT(0)),
             WM_SNOWLAND_MESSENGER => self
-                .process_host_message(*unsafe { Box::from_raw(l_param.0 as _) })
+                .process_host_message(*unsafe { Box::from_raw(w_param.0 as _) })
                 .map(|()| LRESULT(0)),
             WM_SNOWLAND_NOTIFICATION => self
                 .process_notification_message(w_param, l_param)
@@ -141,6 +141,7 @@ impl ShellIntegration {
     fn process_host_message(&mut self, message: HostToIntegrationMessage) -> Result<(), Error> {
         match message {
             HostToIntegrationMessage::QuitLoop => unsafe { PostQuitMessage(0) },
+            HostToIntegrationMessage::Control(msg) => self.process_control_message(msg)?,
         }
 
         Ok(())
@@ -184,6 +185,11 @@ impl ShellIntegration {
         }
 
         Ok(())
+    }
+
+    /// Processes a core control message.
+    fn process_control_message(&mut self, message: ControlMessage) -> Result<(), Error> {
+        todo!()
     }
 
     /// Loads the given resource index as an icon.

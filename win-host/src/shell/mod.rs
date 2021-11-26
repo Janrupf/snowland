@@ -159,7 +159,7 @@ impl ShellIntegrationWindow {
 
         let window_class = unsafe { RegisterClassA(&class) };
         if window_class == 0 {
-            return Err(Error::ClassRegistrationFailed(WinApiError::last()));
+            return Err(Error::ClassRegistrationFailed(WinApiError::from_win32()));
         }
 
         let messenger = Box::into_raw(Box::new(messenger));
@@ -183,7 +183,7 @@ impl ShellIntegrationWindow {
         };
 
         if window.0 == 0 {
-            return Err(Error::WindowCreationFailed(WinApiError::last()));
+            return Err(Error::WindowCreationFailed(WinApiError::from_win32()));
         }
 
         Ok(ShellIntegrationWindow { h_instance, window })

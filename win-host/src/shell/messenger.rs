@@ -1,6 +1,7 @@
 use std::sync::mpsc::{Receiver, Sender, TryRecvError};
 use std::thread::JoinHandle;
 
+use snowland_universal::control::ControlMessage;
 use windows::Win32::Foundation::{HWND, LPARAM, WPARAM};
 use windows::Win32::UI::WindowsAndMessaging::SendNotifyMessageA;
 
@@ -16,23 +17,25 @@ pub enum ReceiveResult<T> {
 
 #[derive(Debug)]
 pub enum HostToIntegrationMessage {
-    QuitLoop
+    QuitLoop,
+    Control(ControlMessage),
 }
 
 #[derive(Debug)]
 pub enum InternalIntegrationToHostMessage {
     WindowCreated(HWND),
-    Message(IntegrationToHostMessage)
+    Message(IntegrationToHostMessage),
 }
 
 #[derive(Debug)]
 pub enum IntegrationToHostMessage {
-    StopRendering
+    StopRendering,
+    Control(ControlMessage),
 }
 
 #[derive(Debug)]
 pub struct HostMessenger {
-    joiner: JoinHandle<Result<(), Error>>,
+    joiner: Option<JoinHandle<Result<(), Error>>>,
     window: Option<HWND>,
     receiver: Receiver<InternalIntegrationToHostMessage>,
 }
@@ -43,7 +46,7 @@ impl HostMessenger {
         receiver: Receiver<InternalIntegrationToHostMessage>,
     ) -> Self {
         Self {
-            joiner,
+            joiner: Some(joiner),
             window: None,
             receiver,
         }
@@ -76,9 +79,19 @@ impl HostMessenger {
             );
         }
     }
-    
-    pub fn join(self) -> Result<(), Error> {
-        self.joiner.join().expect("Integration panicked")
+}
+
+impl Drop for HostMessenger {
+    fn drop(&mut self) {
+        if let Err(err) = self
+            .joiner
+            .take()
+            .unwrap()
+            .join()
+            .expect("Integration panicked")
+        {
+            log::error!("Shell integration finished with error: {}", err)
+        }
     }
 }
 
@@ -88,17 +101,21 @@ pub struct IntegrationMessenger {
 }
 
 impl IntegrationMessenger {
-    pub fn new(
-        sender: Sender<InternalIntegrationToHostMessage>,
-    ) -> Self {
+    pub fn new(sender: Sender<InternalIntegrationToHostMessage>) -> Self {
         Self { sender }
     }
-    
+
     pub fn window_created(&self, window: HWND) {
-        drop(self.sender.send(InternalIntegrationToHostMessage::WindowCreated(window)));
+        drop(
+            self.sender
+                .send(InternalIntegrationToHostMessage::WindowCreated(window)),
+        );
     }
 
     pub fn send(&self, message: IntegrationToHostMessage) {
-        drop(self.sender.send(InternalIntegrationToHostMessage::Message(message)));
+        drop(
+            self.sender
+                .send(InternalIntegrationToHostMessage::Message(message)),
+        );
     }
 }

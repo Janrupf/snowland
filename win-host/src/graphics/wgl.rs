@@ -1,5 +1,6 @@
 use std::fmt::{Debug, Formatter};
 
+use crate::WinApiError;
 use thiserror::Error;
 use windows::Win32::Foundation::{BOOL, HINSTANCE};
 use windows::Win32::Graphics::Gdi::{HDC, WGL_SWAP_MAIN_PLANE};
@@ -8,8 +9,6 @@ use windows::Win32::Graphics::OpenGL::{
     wglSwapLayerBuffers, HGLRC,
 };
 use windows::Win32::System::LibraryLoader::{FreeLibrary, GetProcAddress, LoadLibraryA};
-
-use crate::WinApiError;
 
 struct WGLSwapIntervalEXT(unsafe extern "system" fn(interval: i32) -> BOOL);
 
@@ -33,14 +32,14 @@ impl WGLContext {
         let opengl32 = unsafe { LoadLibraryA("OpenGL32") };
 
         if opengl32.0 == 0 {
-            return Err(Error::WinApi(WinApiError::last()));
+            return Err(Error::WinApi(WinApiError::from_win32()));
         }
 
         let gl = unsafe { wglCreateContext(dc) };
 
         if gl.0 == 0 {
             unsafe { FreeLibrary(opengl32) };
-            return Err(Error::WinApi(WinApiError::last()));
+            return Err(Error::WinApi(WinApiError::from_win32()));
         }
 
         let mut instance = Self {
@@ -85,7 +84,7 @@ impl WGLContext {
         if result {
             Ok(())
         } else {
-            Err(Error::WinApi(WinApiError::last()))
+            Err(Error::WinApi(WinApiError::from_win32()))
         }
     }
 
@@ -96,7 +95,7 @@ impl WGLContext {
         if result {
             Ok(())
         } else {
-            Err(Error::WinApi(WinApiError::last()))
+            Err(Error::WinApi(WinApiError::from_win32()))
         }
     }
 
@@ -113,7 +112,7 @@ impl WGLContext {
             if result {
                 Ok(())
             } else {
-                Err(Error::WinApi(WinApiError::last()))
+                Err(Error::WinApi(WinApiError::from_win32()))
             }
         } else {
             Err(Error::WGLSwapControlExtNotAvailable)

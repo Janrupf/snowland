@@ -1,17 +1,17 @@
-use std::error::Error;
-
 use skia_safe::Surface;
 
 pub mod fonts;
 
 /// Abstraction for Snowland renderer backends.
 pub trait SnowlandRenderer {
+    type Error: std::error::Error;
+    
     /// Creates a new surface for the given width and height.
     ///
     /// A surface can generally be re-used until the width and height of the rendering target
     /// changes.
-    fn create_surface(&mut self, width: u64, height: u64) -> Result<Surface, Box<dyn Error>>;
+    fn create_surface(&mut self, width: u64, height: u64) -> Result<Surface, Self::Error>;
 
     /// Presents the rendered content.
-    fn present(&self) -> Result<(), Box<dyn Error>>;
+    fn present(&self) -> Result<(), Self::Error>;
 }

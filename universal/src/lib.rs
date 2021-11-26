@@ -5,38 +5,64 @@ use std::time::{Instant, SystemTimeError};
 use skia_safe::Surface;
 use thiserror::Error;
 
+use crate::control::message_pipe::{message_pipe, MessagePipeEnd};
+use crate::control::ControlMessage;
+use crate::host::SnowlandHost;
 use crate::rendering::SnowlandRenderer;
 use crate::scene::{SnowlandScene, XMasCountdown};
 
+pub mod control;
+pub mod host;
 pub mod rendering;
 mod scene;
 
 /// The heart of Snowland, application manager and central controller.
-pub struct Snowland<R>
+pub struct Snowland<H>
 where
-    R: SnowlandRenderer,
+    H: SnowlandHost,
 {
-    renderer: R,
+    scene: Box<dyn SnowlandScene>,
     surface: Option<Surface>,
     last_frame_time: Option<Instant>,
-    scene: Box<dyn SnowlandScene>,
+    host: H,
 }
 
-impl<R> Snowland<R>
+impl<H> Snowland<H>
 where
-    R: SnowlandRenderer,
+    H: SnowlandHost,
 {
-    /// Creates a new snowland for the given renderer.
-    pub fn new(renderer: R) -> Self {
-        Self {
-            renderer,
+    pub fn create_with<F>(host_creator: F) -> Result<Self, Error<H>>
+    where
+        F: FnOnce(MessagePipeEnd<ControlMessage>) -> Result<H, H::Error>,
+    {
+        let (host_pipe, ui_pipe) = message_pipe();
+
+        std::mem::forget(ui_pipe); // TODO: implement the UI side
+
+        let host = host_creator(host_pipe).map_err(Error::HostError)?;
+
+        Ok(Self {
+            host,
             surface: None,
             last_frame_time: None,
             scene: Box::new(XMasCountdown::new()),
+        })
+    }
+
+    pub fn run(mut self) -> Result<(), Error<H>> {
+        loop {
+            if !self.host.process_messages().map_err(Error::HostError)? {
+                return Ok(());
+            }
+
+            let (width, height) = self.host.get_size().map_err(Error::HostError)?;
+            self.resize(width, height)?;
+
+            self.render_frame()?;
         }
     }
 
-    pub fn resize(&mut self, width: u64, height: u64) -> Result<(), Error> {
+    fn resize(&mut self, width: u64, height: u64) -> Result<(), Error<H>> {
         let needs_surface_recreation = self
             .surface
             .as_ref()
@@ -45,16 +71,17 @@ where
 
         if needs_surface_recreation {
             let new_surface = self
-                .renderer
+                .host
+                .renderer()
                 .create_surface(width, height)
-                .map_err(Error::SurfaceCreationError)?;
+                .map_err(Error::RendererError)?;
             self.surface.replace(new_surface);
         }
 
         Ok(())
     }
 
-    pub fn render_frame(&mut self) -> Result<(), Error> {
+    fn render_frame(&mut self) -> Result<(), Error<H>> {
         let surface = self.surface.as_mut().ok_or(Error::NoSurface)?;
 
         let width = surface.width();
@@ -75,22 +102,27 @@ where
         );
 
         surface.flush_and_submit();
-        self.renderer.present().map_err(Error::PresentFailed)?;
+
+        let renderer = self.host.renderer();
+        renderer.present().map_err(Error::RendererError)?;
 
         Ok(())
     }
 }
 
 #[derive(Debug, Error)]
-pub enum Error {
+pub enum Error<H>
+where
+    H: SnowlandHost,
+{
     #[error("no surface to render to")]
     NoSurface,
 
-    #[error("failed to create surface: {0}")]
-    SurfaceCreationError(Box<dyn std::error::Error>),
+    #[error(transparent)]
+    HostError(H::Error),
 
-    #[error("failed to present surface: {0}")]
-    PresentFailed(Box<dyn std::error::Error>),
+    #[error(transparent)]
+    RendererError(<<H as SnowlandHost>::Renderer as SnowlandRenderer>::Error),
 
     #[error("failed to calculate frame time: {0}")]
     TimeError(#[from] SystemTimeError),

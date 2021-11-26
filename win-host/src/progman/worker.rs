@@ -31,7 +31,7 @@ impl Worker {
         let mut rect = Default::default();
 
         if !unsafe { GetWindowRect(self.window, &mut rect) }.as_bool() {
-            Err(WinApiError::last())
+            Err(WinApiError::from_win32())
         } else {
             Ok((
                 (rect.right - rect.left) as u64,

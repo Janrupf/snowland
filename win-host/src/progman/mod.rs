@@ -48,7 +48,7 @@ impl ProgMan {
         };
 
         if result == LRESULT(0) {
-            return Err(Error::SendMessageFailure(WinApiError::last()));
+            return Err(Error::SendMessageFailure(WinApiError::from_win32()));
         }
 
         let mut worker_w: Option<HWND> = None;
@@ -62,7 +62,7 @@ impl ProgMan {
 
         let worker_w = match (result, worker_w) {
             (true, None) => return Err(Error::NotFound),
-            (false, None) => return Err(Error::EnumWindows(WinApiError::last())),
+            (false, None) => return Err(Error::EnumWindows(WinApiError::from_win32())),
             (false, Some(window)) => window,
             _ => unreachable!("Invalid combination of enumeration result and found window"),
         };

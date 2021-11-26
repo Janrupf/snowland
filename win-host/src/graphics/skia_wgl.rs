@@ -11,8 +11,8 @@ use crate::graphics::WGLContext;
 /// Snowland renderer based on WGL.
 #[derive(Debug)]
 pub struct SkiaWGLSnowlandRender {
-    wgl_context: WGLContext,
     skia_context: DirectContext,
+    wgl_context: WGLContext,
 }
 
 impl SkiaWGLSnowlandRender {
@@ -37,13 +37,11 @@ impl SkiaWGLSnowlandRender {
 }
 
 impl SnowlandRenderer for SkiaWGLSnowlandRender {
-    fn create_surface(
-        &mut self,
-        width: u64,
-        height: u64,
-    ) -> Result<Surface, Box<dyn std::error::Error>> {
+    type Error = Error;
+
+    fn create_surface(&mut self, width: u64, height: u64) -> Result<Surface, Self::Error> {
         if width > i32::MAX as u64 || height > i32::MAX as u64 {
-            return Err(Error::SizeOutOfBounds(width, height).into());
+            return Err(Error::SizeOutOfBounds(width, height));
         }
 
         let framebuffer = FramebufferInfo {
@@ -68,8 +66,10 @@ impl SnowlandRenderer for SkiaWGLSnowlandRender {
             .map_err(Into::into)
     }
 
-    fn present(&self) -> Result<(), Box<dyn std::error::Error>> {
-        self.wgl_context.swap_buffers()?;
+    fn present(&self) -> Result<(), Self::Error> {
+        self.wgl_context
+            .swap_buffers()
+            .map_err(Error::SwapBuffers)?;
         Ok(())
     }
 }
@@ -78,6 +78,9 @@ impl SnowlandRenderer for SkiaWGLSnowlandRender {
 pub enum Error {
     #[error("failed to make context current: {0}")]
     MakeContextCurrent(crate::graphics::wgl::Error),
+
+    #[error("failed to swap buffers: {0}")]
+    SwapBuffers(crate::graphics::wgl::Error),
 
     #[error("failed to create skia interface")]
     InterfaceCreationFailed,

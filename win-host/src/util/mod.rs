@@ -1,3 +1,1 @@
-pub use win_api_error::*;
-
-mod win_api_error;
+pub type WinApiError = windows::core::Error;
