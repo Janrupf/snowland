@@ -1,9 +1,10 @@
 use std::sync::mpsc::{Receiver, Sender, TryRecvError};
 use std::thread::JoinHandle;
 
-use snowland_universal::control::ControlMessage;
 use windows::Win32::Foundation::{HWND, LPARAM, WPARAM};
 use windows::Win32::UI::WindowsAndMessaging::SendNotifyMessageA;
+
+use snowland_universal::control::ControlMessage;
 
 use crate::shell::integration::WM_SNOWLAND_MESSENGER;
 use crate::shell::Error;

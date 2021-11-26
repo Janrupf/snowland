@@ -1,6 +1,5 @@
 use std::fmt::{Debug, Formatter};
 
-use crate::WinApiError;
 use thiserror::Error;
 use windows::Win32::Foundation::{BOOL, HINSTANCE};
 use windows::Win32::Graphics::Gdi::{HDC, WGL_SWAP_MAIN_PLANE};
@@ -9,6 +8,8 @@ use windows::Win32::Graphics::OpenGL::{
     wglSwapLayerBuffers, HGLRC,
 };
 use windows::Win32::System::LibraryLoader::{FreeLibrary, GetProcAddress, LoadLibraryA};
+
+use crate::WinApiError;
 
 struct WGLSwapIntervalEXT(unsafe extern "system" fn(interval: i32) -> BOOL);
 

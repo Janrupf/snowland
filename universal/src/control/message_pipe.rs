@@ -1,7 +1,7 @@
 use std::sync::mpsc::{channel, Receiver, SendError, Sender, TryRecvError};
 
 /// Creates a new message pipe.
-/// 
+///
 /// A message pipe is a wrapper around a 2 way unbounded channel.
 pub fn message_pipe<T>() -> (MessagePipeEnd<T>, MessagePipeEnd<T>) {
     let (sender_one, receiver_one) = channel();

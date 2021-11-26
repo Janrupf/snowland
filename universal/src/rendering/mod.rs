@@ -5,7 +5,7 @@ pub mod fonts;
 /// Abstraction for Snowland renderer backends.
 pub trait SnowlandRenderer {
     type Error: std::error::Error;
-    
+
     /// Creates a new surface for the given width and height.
     ///
     /// A surface can generally be re-used until the width and height of the rendering target

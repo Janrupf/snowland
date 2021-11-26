@@ -31,6 +31,7 @@ impl<H> Snowland<H>
 where
     H: SnowlandHost,
 {
+    /// Creates a new snowland host by calling the creator function with the message pipe.
     pub fn create_with<F>(host_creator: F) -> Result<Self, Error<H>>
     where
         F: FnOnce(MessagePipeEnd<ControlMessage>) -> Result<H, H::Error>,
@@ -49,6 +50,7 @@ where
         })
     }
 
+    /// Starts the snowland run loop.
     pub fn run(mut self) -> Result<(), Error<H>> {
         loop {
             if !self.host.process_messages().map_err(Error::HostError)? {
