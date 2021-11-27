@@ -1,4 +1,5 @@
 use std::fmt::{Debug, Display, Formatter};
+use std::sync::mpsc::Receiver;
 
 use iui::controls::{Button, VerticalBox};
 use iui::prelude::*;
@@ -9,14 +10,24 @@ use crate::ControlMessage;
 pub struct SnowlandUI {
     inner: UI,
     window: Window,
-    pending_messages: Vec<ControlMessage>,
+    message_receiver: Receiver<ControlMessage>,
     visible: bool,
 }
 
 impl SnowlandUI {
     pub fn new() -> Result<Self, Error> {
+        let (sender, receiver) = std::sync::mpsc::channel();
+
         let inner = UI::init()?;
         let mut window = Window::new(&inner, "Snowland", 200, 200, WindowType::NoMenubar);
+        window.on_closing(&inner, {
+            let inner = inner.clone();
+
+            move |w| {
+                w.hide(&inner);
+                drop(sender.send(ControlMessage::CloseUI));
+            }
+        });
 
         let mut vbox = VerticalBox::new(&inner);
 
@@ -35,7 +46,7 @@ impl SnowlandUI {
         Ok(Self {
             inner,
             window,
-            pending_messages: Vec::new(),
+            message_receiver: receiver,
             visible: false,
         })
     }
@@ -61,7 +72,13 @@ impl SnowlandUI {
             self.inner.event_loop().next_tick(&self.inner);
         }
 
-        std::mem::take(&mut self.pending_messages)
+        let mut messages = Vec::new();
+
+        while let Ok(v) = self.message_receiver.try_recv() {
+            messages.push(v);
+        }
+
+        messages
     }
 }
 
