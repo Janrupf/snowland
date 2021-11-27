@@ -11,3 +11,4 @@ skia-safe = "0.45.0"
 thiserror = "1.0.30"
 rand = "0.8.4"
 chrono = "0.4.19"
+iui = { git = "https://github.com/Janrupf/libui-rs", branch = "trunk" }

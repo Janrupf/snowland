@@ -2,6 +2,7 @@
 
 use std::time::{Instant, SystemTimeError};
 
+use iui::UIError;
 use skia_safe::Surface;
 use thiserror::Error;
 
@@ -10,17 +11,20 @@ use crate::control::ControlMessage;
 use crate::host::SnowlandHost;
 use crate::rendering::SnowlandRenderer;
 use crate::scene::{SnowlandScene, XMasCountdown};
+use crate::ui::SnowlandUI;
 
 pub mod control;
 pub mod host;
 pub mod rendering;
 mod scene;
+mod ui;
 
 /// The heart of Snowland, application manager and central controller.
 pub struct Snowland<H>
 where
     H: SnowlandHost,
 {
+    ui: SnowlandUI,
     scene: Box<dyn SnowlandScene>,
     surface: Option<Surface>,
     last_frame_time: Option<Instant>,
@@ -34,6 +38,7 @@ where
     /// Creates a new snowland by using the given host.
     pub fn new(host: H) -> Result<Self, Error<H>> {
         Ok(Self {
+            ui: SnowlandUI::new()?,
             host,
             surface: None,
             last_frame_time: None,
@@ -43,9 +48,9 @@ where
 
     /// Starts the snowland run loop.
     pub fn run(mut self) -> Result<(), Error<H>> {
-        loop {
-            let ui_control_messages = self.collect_ui_control_message();
+        let mut ui_control_messages = Vec::new();
 
+        loop {
             if !ui_control_messages.is_empty() {
                 log::debug!("Control messages to host: {:?}", ui_control_messages);
             }
@@ -54,6 +59,8 @@ where
                 .host
                 .process_messages(&ui_control_messages)
                 .map_err(Error::HostError)?;
+
+            ui_control_messages = self.ui.tick(&host_control_messages);
 
             if !host_control_messages.is_empty() {
                 log::debug!("Control messages to UI: {:?}", host_control_messages);
@@ -71,12 +78,6 @@ where
             self.render_frame()?;
             self.host.flush_frame().map_err(Error::HostError)?;
         }
-    }
-
-    fn collect_ui_control_message(&self) -> Vec<ControlMessage> {
-        let mut messages = Vec::new();
-
-        messages
     }
 
     fn process_control_messages(&mut self, messages: &[ControlMessage]) -> bool {
@@ -147,4 +148,7 @@ where
 
     #[error("failed to calculate frame time: {0}")]
     TimeError(#[from] SystemTimeError),
+
+    #[error("failed to call into user interface: {0}")]
+    Ui(#[from] ui::Error),
 }

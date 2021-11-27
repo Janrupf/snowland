@@ -4,5 +4,7 @@ pub mod message_pipe;
 #[derive(Debug, Clone, Ord, PartialOrd, Eq, PartialEq)]
 pub enum ControlMessage {
     ChangeScene(String),
+    OpenUI,
+    CloseUI,
     Exit,
 }

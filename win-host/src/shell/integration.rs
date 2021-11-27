@@ -38,8 +38,39 @@ pub const WM_SNOWLAND_MESSENGER: u32 = WM_USER + 1;
 /// Window message sent by the Snowland notification system tay.
 const WM_SNOWLAND_NOTIFICATION: u32 = WM_USER + 2;
 
-/// Menu item which should quit the application.
-const MENU_ITEM_EXIT: usize = 0x1;
+// Modified version of:
+// https://stackoverflow.com/questions/28028854/how-do-i-match-enum-values-with-an-integer/29530566
+macro_rules! back_to_enum {
+    (#[repr($repr_t:ident)] $(#[$meta:meta])* $vis:vis enum $name:ident {
+        $($(#[$vmeta:meta])* $vname:ident $(= $val:expr)?,)*
+    }) => {
+        #[repr($repr_t)]
+        $(#[$meta])*
+        $vis enum $name {
+            $($(#[$vmeta])* $vname $(= $val)?,)*
+        }
+
+        impl std::convert::TryFrom<$repr_t> for $name {
+            type Error = $repr_t;
+
+            fn try_from(v: $repr_t) -> Result<Self, Self::Error> {
+                match v {
+                    $(x if x == $name::$vname as $repr_t => Ok($name::$vname),)*
+                    x => Err(x),
+                }
+            }
+        }
+    }
+}
+
+back_to_enum! {
+    #[repr(usize)]
+    #[derive(Debug)]
+    enum MenuItem {
+        Exit,
+        ShowUI,
+    }
+}
 
 impl ShellIntegration {
     /// Creates the shell integration.
@@ -55,7 +86,8 @@ impl ShellIntegration {
                 return Err(Error::MenuCreationFailed(WinApiError::from_win32()));
             }
 
-            AppendMenuA(menu, MF_STRING, MENU_ITEM_EXIT, "Exit");
+            AppendMenuA(menu, MF_STRING, MenuItem::Exit as _, "Exit");
+            AppendMenuA(menu, MF_STRING, MenuItem::ShowUI as _, "Show UI");
 
             menu
         };
@@ -176,9 +208,19 @@ impl ShellIntegration {
             }
             .0 as usize;
 
-            if click_result == MENU_ITEM_EXIT {
-                log::info!("User requested application exit using popup menu!");
-                self.messenger.send(ControlMessage::Exit);
+            let click_result = match MenuItem::try_from(click_result) {
+                Ok(v) => v,
+                Err(err) => {
+                    log::warn!("Unknown pop menu click result 0x{:X}", err);
+                    return Ok(());
+                }
+            };
+
+            log::debug!("User clicked menu item {:?}", click_result);
+
+            match click_result {
+                MenuItem::Exit => self.messenger.send(ControlMessage::Exit),
+                MenuItem::ShowUI => self.messenger.send(ControlMessage::OpenUI),
             }
         }
 
@@ -186,8 +228,8 @@ impl ShellIntegration {
     }
 
     /// Processes a core control message.
-    fn process_control_message(&mut self, message: ControlMessage) -> Result<(), Error> {
-        todo!()
+    fn process_control_message(&mut self, _message: ControlMessage) -> Result<(), Error> {
+        Ok(())
     }
 
     /// Loads the given resource index as an icon.
