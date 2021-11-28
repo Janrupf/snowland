@@ -1,23 +1,27 @@
+use std::sync::Arc;
 use std::time::Instant;
 
 use skia_safe::Surface;
 
+use crate::rendering::state::SharedRendererState;
 use crate::{
     RendererError, SnowlandHost, SnowlandRenderer, SnowlandRendererCreator, SnowlandScene,
     XMasCountdown,
 };
 
 pub mod fonts;
+pub mod state;
 
 /// Contains the renderer and control over it.
 pub struct RendererContainer<H>
 where
     H: SnowlandHost,
 {
-    renderer: H::Renderer,
     surface: Surface,
+    renderer: H::Renderer,
     width: u64,
     height: u64,
+    state: Arc<SharedRendererState>,
     last_frame_time: Instant,
     scene: Box<dyn SnowlandScene>,
 }
@@ -27,7 +31,10 @@ where
     H: SnowlandHost,
 {
     /// Creates the container using a renderer creator.
-    pub fn create_with(creator: H::RendererCreator) -> Result<Self, RendererError<H>> {
+    pub fn create_with(
+        state: Arc<SharedRendererState>,
+        creator: H::RendererCreator,
+    ) -> Result<Self, RendererError<H>> {
         let mut renderer = creator.create()?;
         let (width, height) = renderer.get_size()?;
         let surface = renderer.create_surface(width, height)?;
@@ -37,6 +44,7 @@ where
             surface,
             width,
             height,
+            state,
             last_frame_time: Instant::now(),
             scene: Box::new(XMasCountdown::new()),
         })
@@ -44,7 +52,7 @@ where
 
     /// Starts the run loop and renders frames.
     pub fn run(mut self) -> Result<(), RendererError<H>> {
-        loop {
+        while !self.state.should_shutdown() {
             let (width, height) = self.renderer.get_size()?;
             self.resize(width, height)?;
 

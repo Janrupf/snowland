@@ -1,6 +1,7 @@
 #![feature(drain_filter)]
 
 use std::any::Any;
+use std::sync::Arc;
 use std::thread::JoinHandle;
 use std::time::{Duration, SystemTimeError};
 
@@ -8,6 +9,7 @@ use thiserror::Error;
 
 use crate::control::ControlMessage;
 use crate::host::{RendererError, SnowlandHost, SnowlandRenderer, SnowlandRendererCreator};
+use crate::rendering::state::SharedRendererState;
 use crate::rendering::RendererContainer;
 use crate::scene::{SnowlandScene, XMasCountdown};
 use crate::ui::SnowlandUI;
@@ -27,6 +29,7 @@ where
 {
     ui: SnowlandUI,
     host: H,
+    state: Arc<SharedRendererState>,
 }
 
 impl<H> Snowland<H>
@@ -38,6 +41,7 @@ where
         Ok(Self {
             ui: SnowlandUI::new()?,
             host,
+            state: SharedRendererState::new(),
         })
     }
 
@@ -73,6 +77,7 @@ where
             std::thread::sleep(Duration::from_secs(1));
         }
 
+        self.state.initiate_shutdown();
         renderer_handle.join().map_err(|err| Error::<H>::Generic {
             description: "failed to join renderer thread".into(),
             cause: err,
@@ -90,10 +95,12 @@ where
     ) -> Result<JoinHandle<()>, Error<H>> {
         let (delayed, resolver) = Delayed::new();
 
+        let state = self.state.clone();
+
         let join_handle = std::thread::Builder::new()
             .name("Renderer".into())
             .spawn(move || {
-                let container = match RendererContainer::<H>::create_with(creator) {
+                let container = match RendererContainer::<H>::create_with(state, creator) {
                     Ok(v) => v,
                     Err(err) => {
                         resolver.resolve(Err(Error::RendererError(err)));
