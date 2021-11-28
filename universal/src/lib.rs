@@ -1,23 +1,24 @@
 #![feature(drain_filter)]
 
-use std::time::{Instant, SystemTimeError};
+use std::any::Any;
+use std::thread::JoinHandle;
+use std::time::{Duration, SystemTimeError};
 
-use iui::UIError;
-use skia_safe::Surface;
 use thiserror::Error;
 
-use crate::control::message_pipe::{message_pipe, MessagePipeEnd};
 use crate::control::ControlMessage;
-use crate::host::SnowlandHost;
-use crate::rendering::SnowlandRenderer;
+use crate::host::{RendererError, SnowlandHost, SnowlandRenderer, SnowlandRendererCreator};
+use crate::rendering::RendererContainer;
 use crate::scene::{SnowlandScene, XMasCountdown};
 use crate::ui::SnowlandUI;
+use crate::util::Delayed;
 
 pub mod control;
 pub mod host;
 pub mod rendering;
 mod scene;
 mod ui;
+pub mod util;
 
 /// The heart of Snowland, application manager and central controller.
 pub struct Snowland<H>
@@ -25,9 +26,6 @@ where
     H: SnowlandHost,
 {
     ui: SnowlandUI,
-    scene: Box<dyn SnowlandScene>,
-    surface: Option<Surface>,
-    last_frame_time: Option<Instant>,
     host: H,
 }
 
@@ -40,14 +38,14 @@ where
         Ok(Self {
             ui: SnowlandUI::new()?,
             host,
-            surface: None,
-            last_frame_time: None,
-            scene: Box::new(XMasCountdown::new()),
         })
     }
 
     /// Starts the snowland run loop.
     pub fn run(mut self) -> Result<(), Error<H>> {
+        let renderer_creator = self.host.prepare_renderer();
+        let renderer_handle = self.create_renderer_thread(renderer_creator)?;
+
         let mut ui_control_messages = Vec::new();
 
         loop {
@@ -69,66 +67,46 @@ where
             if self.process_control_messages(&ui_control_messages)
                 || self.process_control_messages(&host_control_messages)
             {
-                return Ok(());
+                break;
             }
 
-            let (width, height) = self.host.get_size().map_err(Error::HostError)?;
-            self.resize(width, height)?;
-
-            self.render_frame()?;
-            self.host.flush_frame().map_err(Error::HostError)?;
+            std::thread::sleep(Duration::from_secs(1));
         }
+
+        renderer_handle.join().map_err(|err| Error::<H>::Generic {
+            description: "failed to join renderer thread".into(),
+            cause: err,
+        })?;
+        Ok(())
     }
 
     fn process_control_messages(&mut self, messages: &[ControlMessage]) -> bool {
         messages.contains(&ControlMessage::Exit)
     }
 
-    fn resize(&mut self, width: u64, height: u64) -> Result<(), Error<H>> {
-        let needs_surface_recreation = self
-            .surface
-            .as_ref()
-            .map(|s| s.width() as u64 == width && s.height() as u64 == height)
-            .unwrap_or(true);
+    fn create_renderer_thread(
+        &mut self,
+        creator: H::RendererCreator,
+    ) -> Result<JoinHandle<()>, Error<H>> {
+        let (delayed, resolver) = Delayed::new();
 
-        if needs_surface_recreation {
-            let new_surface = self
-                .host
-                .renderer()
-                .create_surface(width, height)
-                .map_err(Error::RendererError)?;
-            self.surface.replace(new_surface);
-        }
+        let join_handle = std::thread::Builder::new()
+            .name("Renderer".into())
+            .spawn(move || {
+                let container = match RendererContainer::<H>::create_with(creator) {
+                    Ok(v) => v,
+                    Err(err) => {
+                        resolver.resolve(Err(Error::RendererError(err)));
+                        return;
+                    }
+                };
 
-        Ok(())
-    }
+                resolver.resolve(Ok(()));
+                container.run().unwrap(); // TODO: Handle this properly
+            })?;
 
-    fn render_frame(&mut self) -> Result<(), Error<H>> {
-        let surface = self.surface.as_mut().ok_or(Error::NoSurface)?;
-
-        let width = surface.width();
-        let height = surface.height();
-
-        let canvas = surface.canvas();
-
-        let last_frame_time = self
-            .last_frame_time
-            .replace(Instant::now())
-            .unwrap_or_else(Instant::now);
-
-        self.scene.update(
-            canvas,
-            width as u64,
-            height as u64,
-            (last_frame_time.elapsed().as_nanos() as f32) / 1000000.0,
-        );
-
-        surface.flush_and_submit();
-
-        let renderer = self.host.renderer();
-        renderer.present().map_err(Error::RendererError)?;
-
-        Ok(())
+        delayed.wait()?;
+        Ok(join_handle)
     }
 }
 
@@ -137,18 +115,24 @@ pub enum Error<H>
 where
     H: SnowlandHost,
 {
-    #[error("no surface to render to")]
-    NoSurface,
+    #[error("an I/O error occurred: {0}")]
+    Io(#[from] std::io::Error),
 
     #[error(transparent)]
     HostError(H::Error),
 
     #[error(transparent)]
-    RendererError(<<H as SnowlandHost>::Renderer as SnowlandRenderer>::Error),
+    RendererError(RendererError<H>),
 
     #[error("failed to calculate frame time: {0}")]
     TimeError(#[from] SystemTimeError),
 
     #[error("failed to call into user interface: {0}")]
     Ui(#[from] ui::Error),
+
+    #[error("generic error: {description} ({cause:?})")]
+    Generic {
+        description: String,
+        cause: Box<dyn Any + Send>,
+    },
 }

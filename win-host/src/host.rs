@@ -2,7 +2,7 @@ use thiserror::Error;
 use windows::Win32::Graphics::Dwm::DwmFlush;
 
 use snowland_universal::control::ControlMessage;
-use snowland_universal::host::SnowlandHost;
+use snowland_universal::host::{RendererResult, SimpleRendererCreator, SnowlandHost};
 
 use crate::shell::messenger::ReceiveResult;
 use crate::{
@@ -13,10 +13,6 @@ use crate::{
 /// Win32 host implementation for snowland.
 #[derive(Debug)]
 pub struct WinHost {
-    renderer: SkiaWGLSnowlandRender,
-    graphics: Graphics,
-    worker: Worker,
-    prog_man: ProgMan,
     messenger: HostMessenger,
 }
 
@@ -25,28 +21,17 @@ impl WinHost {
     pub fn new() -> Result<Self, Error> {
         let messenger = start_shell_integration();
 
-        let prog_man = ProgMan::new()?;
-        let worker = prog_man.get_or_create_worker()?;
-        let graphics = Graphics::from_window(worker.get_handle())?;
-        let wgl = graphics.create_wgl_context()?;
-        let renderer = SkiaWGLSnowlandRender::from_context(wgl)?;
-
-        Ok(Self {
-            renderer,
-            graphics,
-            worker,
-            prog_man,
-            messenger,
-        })
+        Ok(Self { messenger })
     }
 }
 
 impl SnowlandHost for WinHost {
     type Renderer = SkiaWGLSnowlandRender;
+    type RendererCreator = fn() -> RendererResult<Self::Renderer, Self>;
     type Error = Error;
 
-    fn renderer(&mut self) -> &mut Self::Renderer {
-        &mut self.renderer
+    fn prepare_renderer(&mut self) -> Self::RendererCreator {
+        SkiaWGLSnowlandRender::init
     }
 
     fn process_messages(
@@ -73,16 +58,6 @@ impl SnowlandHost for WinHost {
 
         Ok(messages)
     }
-
-    fn get_size(&self) -> Result<(u64, u64), Self::Error> {
-        Ok(self.worker.get_size()?)
-    }
-
-    fn flush_frame(&mut self) -> Result<(), Self::Error> {
-        unsafe { DwmFlush() }?;
-
-        Ok(())
-    }
 }
 
 impl Drop for WinHost {
@@ -93,15 +68,6 @@ impl Drop for WinHost {
 
 #[derive(Debug, Error)]
 pub enum Error {
-    #[error("failed to create ProgMan: {0}")]
-    ProgMan(#[from] crate::progman::Error),
-
-    #[error("failed to create graphics: {0}")]
-    Graphics(#[from] crate::graphics::Error),
-
-    #[error("failed to create renderer: {0}")]
+    #[error("the renderer failed to perform an operation: {0}")]
     Renderer(#[from] crate::graphics::SkiaWGLError),
-
-    #[error("an error occurred while calling the win32 API: {0}")]
-    WinApi(#[from] WinApiError),
 }
