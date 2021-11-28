@@ -7,7 +7,7 @@ use glium::glutin::dpi::LogicalSize;
 use glium::glutin::event::{Event, WindowEvent};
 use glium::glutin::event_loop::{ControlFlow, EventLoop, EventLoopProxy};
 use glium::glutin::platform::run_return::EventLoopExtRunReturn;
-use glium::glutin::window::WindowBuilder;
+use glium::glutin::window::{UserAttentionType, WindowBuilder};
 use glium::glutin::ContextBuilder;
 use glium::{Display, Surface, SwapBuffersError};
 use thiserror::Error;
@@ -31,6 +31,7 @@ impl SnowlandUI {
     pub fn new() -> Result<(Self, Notifier<ControlMessage>), Error> {
         let window_builder = WindowBuilder::new()
             .with_resizable(true)
+            .with_visible(false)
             .with_inner_size(LogicalSize {
                 width: 640u32,
                 height: 420u32,
@@ -135,7 +136,13 @@ impl SnowlandUI {
         notifier: &Notifier<ControlMessage>,
     ) -> Result<ControlFlow, Error> {
         match message {
-            ControlMessage::OpenUI => self.display.gl_window().window().set_visible(true),
+            ControlMessage::OpenUI => {
+                self.display.gl_window().window().set_visible(true);
+                self.display
+                    .gl_window()
+                    .window()
+                    .request_user_attention(Some(UserAttentionType::Informational));
+            }
             ControlMessage::Exit => {
                 notifier.notify(ControlMessage::Exit);
                 return Ok(ControlFlow::Exit);
