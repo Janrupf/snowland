@@ -3,6 +3,7 @@
 use std::ffi::CString;
 use std::ops::Not;
 use std::ptr::NonNull;
+use std::thread::JoinHandle;
 
 use thiserror::Error;
 use windows::Win32::Foundation::{HINSTANCE, HWND, LPARAM, LRESULT, PSTR, WPARAM};
@@ -15,26 +16,30 @@ use windows::Win32::UI::WindowsAndMessaging::{
 };
 
 use integration::*;
+use snowland_universal::control::ControlMessage;
+use snowland_universal::util::{Delayed, DelayedResolver, Notifier};
 
-use crate::shell::messenger::{HostMessenger, IntegrationMessenger};
 use crate::WinApiError;
 
 mod integration;
-pub mod messenger;
 
 /// Starts the shell integration on a new thread.
-pub fn start_shell_integration() -> HostMessenger {
-    let (integration_sender, host_receiver) = std::sync::mpsc::channel();
+pub fn start_shell_integration(
+    notifier: Notifier<ControlMessage>,
+) -> (Notifier<ControlMessage>, JoinHandle<Result<(), Error>>) {
+    let (delayed_notifier, resolver) = Delayed::new();
 
-    let integration_messenger = IntegrationMessenger::new(integration_sender);
-    let join_handle = std::thread::spawn(|| shell_integration_main(integration_messenger));
+    let startup_data = ShellIntegrationStartupData::new(notifier, resolver);
+    let handle = std::thread::spawn(|| shell_integration_main(startup_data));
 
-    HostMessenger::new(join_handle, host_receiver)
+    let notifier = delayed_notifier.wait();
+
+    (notifier, handle)
 }
 
 /// Starts the shell integration on the current thread.
-fn shell_integration_main(messenger: IntegrationMessenger) -> Result<(), Error> {
-    match ShellIntegrationWindow::new(messenger) {
+fn shell_integration_main(data: ShellIntegrationStartupData) -> Result<(), Error> {
+    match ShellIntegrationWindow::new(data) {
         Ok(v) => v.run(),
         Err(err) => {
             log::error!("Shell integration failed to start: {}", err);
@@ -61,9 +66,9 @@ extern "system" fn window_procedure(
                 let create_parameters =
                     unsafe { (NonNull::<CREATESTRUCTA>::new_unchecked(l_param.0 as _)).as_ref() };
 
-                let messenger = unsafe { Box::from_raw(create_parameters.lpCreateParams as _) };
+                let data = unsafe { Box::from_raw(create_parameters.lpCreateParams as _) };
 
-                let integration = match ShellIntegration::new(*messenger, window) {
+                let integration = match ShellIntegration::new(*data, window) {
                     Ok(v) => v,
                     Err(err) => {
                         log::error!("Failed to create shell integration: {}", err);
@@ -133,6 +138,34 @@ extern "system" fn window_procedure(
     })
 }
 
+/// Bundle of data required to start the shell integration and wire it with the host.
+pub(crate) struct ShellIntegrationStartupData {
+    /// integration to host notifier
+    notifier: Notifier<ControlMessage>,
+    /// host to integration notifier, depends on the window to be created
+    resolver: DelayedResolver<Notifier<ControlMessage>>,
+}
+
+impl ShellIntegrationStartupData {
+    /// Compiles the startup data to be ready to be sent to the integration thread.
+    fn new(
+        notifier: Notifier<ControlMessage>,
+        resolver: DelayedResolver<Notifier<ControlMessage>>,
+    ) -> Self {
+        Self { notifier, resolver }
+    }
+
+    /// Resolves this startup data by sending back the host notifier and extracting the integration
+    /// notifier.
+    pub fn resolve(self, host_notifier: Notifier<ControlMessage>) -> Notifier<ControlMessage> {
+        let Self { notifier, resolver } = self;
+
+        resolver.resolve(host_notifier);
+
+        notifier
+    }
+}
+
 /// Helper window in order to provide message processing.
 ///
 /// This window will never be visible or directly interacted with by the user, but is required
@@ -145,7 +178,7 @@ struct ShellIntegrationWindow {
 
 impl ShellIntegrationWindow {
     /// Creates the shell integration window.
-    pub fn new(messenger: IntegrationMessenger) -> Result<Self, Error> {
+    pub fn new(data: ShellIntegrationStartupData) -> Result<Self, Error> {
         let h_instance = unsafe { GetModuleHandleA(None) };
 
         let mut window_class_name = CString::new(WINDOW_CLASS_NAME).unwrap().into_bytes();
@@ -162,7 +195,7 @@ impl ShellIntegrationWindow {
             return Err(Error::ClassRegistrationFailed(WinApiError::from_win32()));
         }
 
-        let messenger = Box::into_raw(Box::new(messenger));
+        let data = Box::into_raw(Box::new(data));
 
         // This creates a very basic window which is not visible.
         let window = unsafe {
@@ -178,7 +211,7 @@ impl ShellIntegrationWindow {
                 None,
                 None,
                 h_instance,
-                messenger as _,
+                data as _,
             )
         };
 

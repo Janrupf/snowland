@@ -5,7 +5,6 @@ use snowland_universal::Snowland;
 use crate::graphics::{Graphics, SkiaWGLSnowlandRender};
 use crate::host::WinHost;
 use crate::progman::{ProgMan, Worker};
-use crate::shell::messenger::{HostMessenger, HostToIntegrationMessage};
 use crate::shell::start_shell_integration;
 use crate::util::WinApiError;
 
@@ -23,15 +22,7 @@ fn main() {
         env!("CARGO_PKG_VERSION")
     );
 
-    let host = match WinHost::new() {
-        Ok(v) => v,
-        Err(err) => {
-            log::error!("Failed to create host: {}", err);
-            std::process::exit(1);
-        }
-    };
-
-    let snowland = match Snowland::new(host) {
+    let snowland = match Snowland::create_with(WinHost::new) {
         Ok(v) => v,
         Err(err) => {
             log::error!("Failed to make it snow: {}", err);

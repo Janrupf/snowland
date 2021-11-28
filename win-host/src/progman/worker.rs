@@ -1,7 +1,5 @@
-use windows::Win32::Foundation::{HWND, LPARAM, WPARAM};
-use windows::Win32::UI::WindowsAndMessaging::{
-    CloseWindow, GetWindowRect, SendMessageA, SetParent, SC_CLOSE, WM_SYSCOMMAND,
-};
+use windows::Win32::Foundation::HWND;
+use windows::Win32::UI::WindowsAndMessaging::{GetWindowRect, SetParent};
 
 use crate::WinApiError;
 

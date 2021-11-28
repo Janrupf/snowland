@@ -1,27 +1,33 @@
+use std::thread::JoinHandle;
+
 use thiserror::Error;
-use windows::Win32::Graphics::Dwm::DwmFlush;
 
 use snowland_universal::control::ControlMessage;
-use snowland_universal::host::{RendererResult, SimpleRendererCreator, SnowlandHost};
+use snowland_universal::host::{RendererResult, SnowlandHost};
+use snowland_universal::util::Notifier;
 
-use crate::shell::messenger::ReceiveResult;
-use crate::{
-    start_shell_integration, Graphics, HostMessenger, HostToIntegrationMessage, ProgMan,
-    SkiaWGLSnowlandRender, WinApiError, Worker,
-};
+use crate::{start_shell_integration, SkiaWGLSnowlandRender};
 
 /// Win32 host implementation for snowland.
-#[derive(Debug)]
 pub struct WinHost {
-    messenger: HostMessenger,
+    notifier: Notifier<ControlMessage>,
+    joiner: Option<JoinHandle<Result<(), crate::shell::Error>>>,
 }
 
 impl WinHost {
     /// Creates a new Win32 host implementation.
-    pub fn new() -> Result<Self, Error> {
-        let messenger = start_shell_integration();
+    pub fn new(
+        notifier: Notifier<ControlMessage>,
+    ) -> Result<(Self, Notifier<ControlMessage>), Error> {
+        let (notifier, joiner) = start_shell_integration(notifier);
 
-        Ok(Self { messenger })
+        Ok((
+            Self {
+                notifier: notifier.clone(),
+                joiner: Some(joiner),
+            },
+            notifier,
+        ))
     }
 }
 
@@ -33,36 +39,16 @@ impl SnowlandHost for WinHost {
     fn prepare_renderer(&mut self) -> Self::RendererCreator {
         SkiaWGLSnowlandRender::init
     }
-
-    fn process_messages(
-        &mut self,
-        control_messages: &[ControlMessage],
-    ) -> Result<Vec<ControlMessage>, Self::Error> {
-        for message in control_messages {
-            self.messenger
-                .send(HostToIntegrationMessage::Control(message.clone()));
-        }
-
-        let mut messages = Vec::new();
-
-        loop {
-            let received = self.messenger.receive();
-            let received = match received {
-                ReceiveResult::Message(msg) => msg,
-                ReceiveResult::None => break,
-                ReceiveResult::Shutdown => return Ok(vec![ControlMessage::Exit]),
-            };
-
-            messages.push(received)
-        }
-
-        Ok(messages)
-    }
 }
 
 impl Drop for WinHost {
     fn drop(&mut self) {
-        self.messenger.send(HostToIntegrationMessage::QuitLoop);
+        self.notifier.notify(ControlMessage::Exit);
+        match self.joiner.take().unwrap().join() {
+            Ok(Ok(())) => {}
+            Ok(Err(err)) => log::warn!("Integration finished with an error: {}", err),
+            Err(err) => std::panic::resume_unwind(err),
+        }
     }
 }
 

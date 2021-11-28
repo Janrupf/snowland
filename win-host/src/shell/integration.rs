@@ -12,13 +12,14 @@ use windows::Win32::UI::Shell::{
 };
 use windows::Win32::UI::WindowsAndMessaging::{
     AppendMenuA, CreatePopupMenu, DefWindowProcA, DestroyMenu, GetCursorPos, PostQuitMessage,
-    SetForegroundWindow, TrackPopupMenu, HICON, HMENU, MF_STRING, TPM_NONOTIFY, TPM_RETURNCMD,
-    WM_CREATE, WM_DESTROY, WM_USER,
+    SendNotifyMessageA, SetForegroundWindow, TrackPopupMenu, HICON, HMENU, MF_STRING, TPM_NONOTIFY,
+    TPM_RETURNCMD, WM_CREATE, WM_DESTROY, WM_USER,
 };
 
 use snowland_universal::control::ControlMessage;
+use snowland_universal::util::{Notifier, NotifierImpl};
 
-use crate::shell::messenger::{HostToIntegrationMessage, IntegrationMessenger};
+use crate::shell::ShellIntegrationStartupData;
 use crate::WinApiError;
 
 /// Shell integration of Snowland.
@@ -26,7 +27,7 @@ use crate::WinApiError;
 /// This is managed by the shell integration window and has all the control
 /// to provide integration with the Windows system shell.
 pub struct ShellIntegration {
-    messenger: IntegrationMessenger,
+    notifier: Notifier<ControlMessage>,
     window: HWND,
     menu: HMENU,
     icon_data: NOTIFYICONDATAA,
@@ -76,8 +77,8 @@ impl ShellIntegration {
     /// Creates the shell integration.
     ///
     /// At this point the window has been fully created.
-    pub fn new(messenger: IntegrationMessenger, window: HWND) -> Result<Self, Error> {
-        messenger.window_created(window);
+    pub(crate) fn new(data: ShellIntegrationStartupData, window: HWND) -> Result<Self, Error> {
+        let notifier = data.resolve(WindowNotifier::from_window(window));
 
         let menu = unsafe {
             let menu = CreatePopupMenu();
@@ -113,7 +114,7 @@ impl ShellIntegration {
         };
 
         Ok(Self {
-            messenger,
+            notifier,
             window,
             menu,
             icon_data,
@@ -136,7 +137,7 @@ impl ShellIntegration {
             WM_CREATE => self.create().map(|()| LRESULT(0)),
             WM_DESTROY => self.destroy().map(|()| LRESULT(0)),
             WM_SNOWLAND_MESSENGER => self
-                .process_host_message(*unsafe { Box::from_raw(w_param.0 as _) })
+                .process_control_message(*unsafe { Box::from_raw(w_param.0 as _) })
                 .map(|()| LRESULT(0)),
             WM_SNOWLAND_NOTIFICATION => self
                 .process_notification_message(w_param, l_param)
@@ -163,16 +164,6 @@ impl ShellIntegration {
     /// Destroys the integration and releases all resources.
     fn destroy(&mut self) -> Result<(), Error> {
         unsafe { Shell_NotifyIconA(NIM_DELETE, &self.icon_data) };
-
-        Ok(())
-    }
-
-    /// Processes a message received from the host thread.
-    fn process_host_message(&mut self, message: HostToIntegrationMessage) -> Result<(), Error> {
-        match message {
-            HostToIntegrationMessage::QuitLoop => unsafe { PostQuitMessage(0) },
-            HostToIntegrationMessage::Control(msg) => self.process_control_message(msg)?,
-        }
 
         Ok(())
     }
@@ -219,8 +210,8 @@ impl ShellIntegration {
             log::debug!("User clicked menu item {:?}", click_result);
 
             match click_result {
-                MenuItem::Exit => self.messenger.send(ControlMessage::Exit),
-                MenuItem::ShowUI => self.messenger.send(ControlMessage::OpenUI),
+                MenuItem::Exit => self.notifier.notify(ControlMessage::Exit),
+                MenuItem::ShowUI => self.notifier.notify(ControlMessage::OpenUI),
             }
         }
 
@@ -228,7 +219,11 @@ impl ShellIntegration {
     }
 
     /// Processes a core control message.
-    fn process_control_message(&mut self, _message: ControlMessage) -> Result<(), Error> {
+    fn process_control_message(&mut self, message: ControlMessage) -> Result<(), Error> {
+        if matches!(message, ControlMessage::Exit) {
+            unsafe { PostQuitMessage(0) };
+        }
+
         Ok(())
     }
 
@@ -276,4 +271,37 @@ pub enum Error {
 
     #[error("notification version 4 not supported by the shell")]
     NotificationVersionNotSupported,
+}
+
+/// Notifier for sending control messages to window handles.
+struct WindowNotifier {
+    window_handle: HWND,
+}
+
+impl WindowNotifier {
+    /// Creates a new notifier from a window handle.
+    fn from_window(handle: HWND) -> Notifier<ControlMessage> {
+        Notifier::from_impl(Self {
+            window_handle: handle,
+        })
+    }
+}
+
+impl NotifierImpl<ControlMessage> for WindowNotifier {
+    fn notify(&self, value: ControlMessage) {
+        let raw = Box::into_raw(Box::new(value));
+
+        unsafe {
+            SendNotifyMessageA(
+                self.window_handle,
+                WM_SNOWLAND_MESSENGER,
+                WPARAM(raw as _),
+                LPARAM(0),
+            );
+        }
+    }
+
+    fn replicate(&self) -> Notifier<ControlMessage> {
+        WindowNotifier::from_window(self.window_handle)
+    }
 }

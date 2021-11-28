@@ -1,24 +1,14 @@
 use skia_safe::Surface;
 
-use crate::ControlMessage;
-
 /// Abstraction for the underlying platform host.
 pub trait SnowlandHost: Sized + 'static {
     type Renderer: SnowlandRenderer;
     type RendererCreator: SnowlandRendererCreator<Self>;
     type Error: std::error::Error + Send;
 
+    /// Creates a callback which can be invoked on another thread in order to create
+    /// an async render loop.
     fn prepare_renderer(&mut self) -> Self::RendererCreator;
-
-    /// Called by snowland in order to give the host a chance to process events.
-    ///
-    /// It receives the control messages sent by the UI and returns additional control messages
-    /// sent by the host specific integration.
-    /// After this function returns the snowland core processes all messages.
-    fn process_messages(
-        &mut self,
-        messages: &[ControlMessage],
-    ) -> Result<Vec<ControlMessage>, Self::Error>;
 }
 
 /// Abstraction for Snowland renderer backends.

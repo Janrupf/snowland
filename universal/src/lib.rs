@@ -3,7 +3,7 @@
 use std::any::Any;
 use std::sync::Arc;
 use std::thread::JoinHandle;
-use std::time::{Duration, SystemTimeError};
+use std::time::SystemTimeError;
 
 use thiserror::Error;
 
@@ -13,7 +13,7 @@ use crate::rendering::state::SharedRendererState;
 use crate::rendering::RendererContainer;
 use crate::scene::{SnowlandScene, XMasCountdown};
 use crate::ui::SnowlandUI;
-use crate::util::Delayed;
+use crate::util::{Delayed, Notifier};
 
 pub mod control;
 pub mod host;
@@ -29,6 +29,7 @@ where
 {
     ui: SnowlandUI,
     host: H,
+    notifier: Notifier<ControlMessage>,
     state: Arc<SharedRendererState>,
 }
 
@@ -36,12 +37,18 @@ impl<H> Snowland<H>
 where
     H: SnowlandHost,
 {
-    /// Creates a new snowland by using the given host.
-    pub fn new(host: H) -> Result<Self, Error<H>> {
+    pub fn create_with<F>(creator: F) -> Result<Self, Error<H>>
+    where
+        F: FnOnce(Notifier<ControlMessage>) -> Result<(H, Notifier<ControlMessage>), H::Error>,
+    {
+        let (ui, notifier) = SnowlandUI::new()?;
+        let (host, notifier) = creator(notifier).map_err(Error::HostError)?;
+        
         Ok(Self {
-            ui: SnowlandUI::new()?,
+            ui,
             host,
-            state: SharedRendererState::new(),
+            notifier,
+            state: SharedRendererState::new()
         })
     }
 
@@ -50,43 +57,15 @@ where
         let renderer_creator = self.host.prepare_renderer();
         let renderer_handle = self.create_renderer_thread(renderer_creator)?;
 
-        let mut ui_control_messages = Vec::new();
-
-        loop {
-            if !ui_control_messages.is_empty() {
-                log::debug!("Control messages to host: {:?}", ui_control_messages);
-            }
-
-            let host_control_messages = self
-                .host
-                .process_messages(&ui_control_messages)
-                .map_err(Error::HostError)?;
-
-            ui_control_messages = self.ui.tick(&host_control_messages);
-
-            if !host_control_messages.is_empty() {
-                log::debug!("Control messages to UI: {:?}", host_control_messages);
-            }
-
-            if self.process_control_messages(&ui_control_messages)
-                || self.process_control_messages(&host_control_messages)
-            {
-                break;
-            }
-
-            std::thread::sleep(Duration::from_secs(1));
-        }
+        let ui_result = self.ui.run_loop(&self.notifier);
 
         self.state.initiate_shutdown();
         renderer_handle.join().map_err(|err| Error::<H>::Generic {
             description: "failed to join renderer thread".into(),
             cause: err,
         })?;
-        Ok(())
-    }
 
-    fn process_control_messages(&mut self, messages: &[ControlMessage]) -> bool {
-        messages.contains(&ControlMessage::Exit)
+        ui_result.map_err(Error::from)
     }
 
     fn create_renderer_thread(

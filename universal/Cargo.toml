@@ -11,4 +11,6 @@ skia-safe = "0.45.0"
 thiserror = "1.0.30"
 rand = "0.8.4"
 chrono = "0.4.19"
-iui = { git = "https://github.com/Janrupf/libui-rs", branch = "trunk" }
+egui = { version = "0.15.0", default-features = false, features = ["single_threaded"] }
+egui_glium = { version = "0.15.0", default-features = false }
+glium = "0.30.2"
