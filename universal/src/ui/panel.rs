@@ -1,12 +1,10 @@
 use egui::{CentralPanel, CtxRef};
 
-pub struct EguiPanel {
-}
+pub struct EguiPanel {}
 
 impl EguiPanel {
     pub fn new() -> Self {
-        Self {
-        }
+        Self {}
     }
 
     pub fn run(&mut self, ctx: &CtxRef) {

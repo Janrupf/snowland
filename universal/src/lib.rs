@@ -43,12 +43,12 @@ where
     {
         let (ui, notifier) = SnowlandUI::new()?;
         let (host, notifier) = creator(notifier).map_err(Error::HostError)?;
-        
+
         Ok(Self {
             ui,
             host,
             notifier,
-            state: SharedRendererState::new()
+            state: SharedRendererState::new(),
         })
     }
 

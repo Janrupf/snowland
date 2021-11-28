@@ -6,7 +6,10 @@ where
     inner: Box<dyn NotifierImpl<T>>,
 }
 
-impl<T> Notifier<T> where T: Send {
+impl<T> Notifier<T>
+where
+    T: Send,
+{
     /// Sends the notification through the backend
     pub fn notify(&self, value: T) {
         self.inner.notify(value)

@@ -1,5 +1,5 @@
-mod delayed;
 pub use delayed::*;
-
-mod notifier;
 pub use notifier::*;
+
+mod delayed;
+mod notifier;
