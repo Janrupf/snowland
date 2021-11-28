@@ -1,6 +1,7 @@
 use std::fmt::Debug;
 
 use egui::epaint::ClippedShape;
+use egui::{FontDefinitions, FontFamily};
 use egui_glium::EguiGlium;
 use glium::backend::glutin::DisplayCreationError;
 use glium::glutin::dpi::LogicalSize;
@@ -12,11 +13,13 @@ use glium::glutin::ContextBuilder;
 use glium::{Display, Surface, SwapBuffersError};
 use thiserror::Error;
 
+use crate::rendering::fonts::{get_embedded_font_bytes, Font};
 use crate::ui::panel::EguiPanel;
 use crate::util::{Notifier, NotifierImpl};
 use crate::ControlMessage;
 
 mod panel;
+mod module_list;
 
 /// Contains the contents of the user interface.
 pub struct SnowlandUI {
@@ -31,7 +34,7 @@ impl SnowlandUI {
     pub fn new() -> Result<(Self, Notifier<ControlMessage>), Error> {
         let window_builder = WindowBuilder::new()
             .with_resizable(true)
-            .with_visible(false)
+            .with_visible(cfg!(debug_assertions))
             .with_inner_size(LogicalSize {
                 width: 640u32,
                 height: 420u32,
@@ -48,6 +51,30 @@ impl SnowlandUI {
         let display = Display::new(window_builder, context_builder, &event_loop)?;
 
         let egui = EguiGlium::new(&display);
+
+        {
+            let mut definitions = FontDefinitions::default();
+
+            definitions.font_data.insert(
+                "NotoSansMono".into(),
+                std::borrow::Cow::Borrowed(get_embedded_font_bytes(Font::NotoSansMono)),
+            );
+
+            definitions.font_data.insert(
+                "RobotoRegular".into(),
+                std::borrow::Cow::Borrowed(get_embedded_font_bytes(Font::RobotoRegular)),
+            );
+
+            definitions
+                .fonts_for_family
+                .insert(FontFamily::Monospace, vec!["NotoSansMono".into()]);
+            definitions
+                .fonts_for_family
+                .insert(FontFamily::Proportional, vec!["RobotoRegular".into()]);
+
+            egui.ctx().set_fonts(definitions);
+        }
+
         let notifier = UINotifier::create(event_loop.create_proxy());
 
         Ok((
