@@ -1,9 +1,10 @@
 use std::sync::Arc;
+use std::sync::mpsc::{Receiver, Sender};
 use std::time::Instant;
 
 use skia_safe::Surface;
 
-use crate::rendering::state::SharedRendererState;
+use crate::rendering::state::{RendererStateMessage};
 use crate::{
     RendererError, SnowlandHost, SnowlandRenderer, SnowlandRendererCreator, SnowlandScene,
     XMasCountdown,
@@ -21,7 +22,7 @@ where
     renderer: H::Renderer,
     width: u64,
     height: u64,
-    state: Arc<SharedRendererState>,
+    message_receiver: Receiver<RendererStateMessage>,
     last_frame_time: Instant,
     scene: Box<dyn SnowlandScene>,
 }
@@ -32,7 +33,7 @@ where
 {
     /// Creates the container using a renderer creator.
     pub fn create_with(
-        state: Arc<SharedRendererState>,
+        message_receiver: Receiver<RendererStateMessage>,
         creator: H::RendererCreator,
     ) -> Result<Self, RendererError<H>> {
         let mut renderer = creator.create()?;
@@ -44,7 +45,7 @@ where
             surface,
             width,
             height,
-            state,
+            message_receiver,
             last_frame_time: Instant::now(),
             scene: Box::new(XMasCountdown::new()),
         })
@@ -52,14 +53,19 @@ where
 
     /// Starts the run loop and renders frames.
     pub fn run(mut self) -> Result<(), RendererError<H>> {
-        while !self.state.should_shutdown() {
+        loop {
             let (width, height) = self.renderer.get_size()?;
             self.resize(width, height)?;
 
             self.render_frame()?;
+            
+            while let Ok(message) = self.message_receiver.try_recv() {
+                match message {
+                    RendererStateMessage::Shutdown => return Ok(()),
+                    RendererStateMessage::InsertModule { .. } => {}
+                }
+            }
         }
-
-        Ok(())
     }
 
     /// Resizes the internal surface if required.

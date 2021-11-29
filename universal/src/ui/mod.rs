@@ -16,10 +16,10 @@ use thiserror::Error;
 use crate::rendering::fonts::{get_embedded_font_bytes, Font};
 use crate::ui::panel::EguiPanel;
 use crate::util::{Notifier, NotifierImpl};
-use crate::ControlMessage;
+use crate::{ControlMessage, RendererController};
 
-mod panel;
 mod module_list;
+mod panel;
 
 /// Contains the contents of the user interface.
 pub struct SnowlandUI {
@@ -89,22 +89,26 @@ impl SnowlandUI {
     }
 
     /// Starts the event loop and processes messages.
-    pub fn run_loop(&mut self, notifier: &Notifier<ControlMessage>) -> Result<(), Error> {
+    pub fn run_loop(
+        &mut self,
+        notifier: &Notifier<ControlMessage>,
+        controller: &RendererController,
+    ) -> Result<(), Error> {
         let mut run_result = Ok(());
         let run_result_ref = &mut run_result;
 
         self.event_loop
             .take()
             .unwrap()
-            .run_return(
-                |event, _, control_flow| match self.run_loop_iteration(event, notifier) {
+            .run_return(|event, _, control_flow| {
+                match self.run_loop_iteration(event, notifier, controller) {
                     Ok(flow) => *control_flow = flow,
                     Err(err) => {
                         *run_result_ref = Err(err);
                         *control_flow = ControlFlow::Exit;
                     }
-                },
-            );
+                }
+            });
 
         run_result
     }
@@ -114,9 +118,10 @@ impl SnowlandUI {
         &mut self,
         event: Event<ControlMessage>,
         notifier: &Notifier<ControlMessage>,
+        controller: &RendererController,
     ) -> Result<ControlFlow, Error> {
         let mut run_frame = || {
-            self.run_egui_frame()
+            self.run_egui_frame(controller)
                 .and_then(|(needs_redraw, shapes)| {
                     self.perform_paint(shapes).map(|()| needs_redraw)
                 })
@@ -144,7 +149,7 @@ impl SnowlandUI {
 
                 self.egui.on_event(&event);
 
-                if self.run_egui_frame()?.0 {
+                if self.run_egui_frame(controller)?.0 {
                     self.display.gl_window().window().request_redraw();
                     Ok(ControlFlow::Poll)
                 } else {
@@ -181,10 +186,13 @@ impl SnowlandUI {
     }
 
     /// Runs an egui frame.
-    fn run_egui_frame(&mut self) -> Result<(bool, Vec<ClippedShape>), Error> {
+    fn run_egui_frame(
+        &mut self,
+        controller: &RendererController,
+    ) -> Result<(bool, Vec<ClippedShape>), Error> {
         self.egui.begin_frame(&self.display);
 
-        self.panel.run(self.egui.ctx());
+        self.panel.run(self.egui.ctx(), controller);
 
         Ok(self.egui.end_frame(&self.display))
     }

@@ -1617,6 +1617,7 @@ dependencies = [
  "glium",
  "log",
  "rand",
+ "serde",
  "skia-safe",
  "thiserror",
 ]

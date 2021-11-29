@@ -1,3 +1,4 @@
+use crate::RendererController;
 use egui::{CentralPanel, CtxRef, SidePanel};
 
 use crate::ui::module_list::ModuleList;
@@ -13,7 +14,7 @@ impl EguiPanel {
         }
     }
 
-    pub fn run(&mut self, ctx: &CtxRef) {
+    pub fn run(&mut self, ctx: &CtxRef, controller: &RendererController) {
         SidePanel::left("Module list")
             .resizable(false)
             .show(ctx, |ui| {
@@ -22,7 +23,7 @@ impl EguiPanel {
                 });
 
                 ui.separator();
-                
+
                 self.modules.render(ui);
             });
 

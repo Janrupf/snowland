@@ -1,7 +1,7 @@
-#![feature(drain_filter)]
+#![feature(drain_filter, once_cell)]
 
 use std::any::Any;
-use std::sync::Arc;
+use std::sync::mpsc::Receiver;
 use std::thread::JoinHandle;
 use std::time::SystemTimeError;
 
@@ -9,7 +9,7 @@ use thiserror::Error;
 
 use crate::control::ControlMessage;
 use crate::host::{RendererError, SnowlandHost, SnowlandRenderer, SnowlandRendererCreator};
-use crate::rendering::state::SharedRendererState;
+use crate::rendering::state::{RendererController, RendererStateMessage};
 use crate::rendering::RendererContainer;
 use crate::scene::{SnowlandScene, XMasCountdown};
 use crate::ui::SnowlandUI;
@@ -30,7 +30,6 @@ where
     ui: SnowlandUI,
     host: H,
     notifier: Notifier<ControlMessage>,
-    state: Arc<SharedRendererState>,
 }
 
 impl<H> Snowland<H>
@@ -44,22 +43,19 @@ where
         let (ui, notifier) = SnowlandUI::new()?;
         let (host, notifier) = creator(notifier).map_err(Error::HostError)?;
 
-        Ok(Self {
-            ui,
-            host,
-            notifier,
-            state: SharedRendererState::new(),
-        })
+        Ok(Self { ui, host, notifier })
     }
 
     /// Starts the snowland run loop.
     pub fn run(mut self) -> Result<(), Error<H>> {
+        let (controller, receiver) = RendererController::new();
+
         let renderer_creator = self.host.prepare_renderer();
-        let renderer_handle = self.create_renderer_thread(renderer_creator)?;
+        let renderer_handle = self.create_renderer_thread(renderer_creator, receiver)?;
 
-        let ui_result = self.ui.run_loop(&self.notifier);
+        let ui_result = self.ui.run_loop(&self.notifier, &controller);
 
-        self.state.initiate_shutdown();
+        controller.shutdown();
         renderer_handle.join().map_err(|err| Error::<H>::Generic {
             description: "failed to join renderer thread".into(),
             cause: err,
@@ -71,15 +67,14 @@ where
     fn create_renderer_thread(
         &mut self,
         creator: H::RendererCreator,
+        receiver: Receiver<RendererStateMessage>,
     ) -> Result<JoinHandle<()>, Error<H>> {
         let (delayed, resolver) = Delayed::new();
-
-        let state = self.state.clone();
 
         let join_handle = std::thread::Builder::new()
             .name("Renderer".into())
             .spawn(move || {
-                let container = match RendererContainer::<H>::create_with(state, creator) {
+                let container = match RendererContainer::<H>::create_with(receiver, creator) {
                     Ok(v) => v,
                     Err(err) => {
                         resolver.resolve(Err(Error::RendererError(err)));
