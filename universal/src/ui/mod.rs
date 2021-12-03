@@ -1,32 +1,40 @@
 use std::fmt::Debug;
+use std::time::Instant;
 
-use egui::epaint::ClippedShape;
-use egui::{FontDefinitions, FontFamily};
-use egui_glium::EguiGlium;
 use glium::backend::glutin::DisplayCreationError;
 use glium::glutin::dpi::LogicalSize;
+use glium::glutin::error::ExternalError;
 use glium::glutin::event::{Event, WindowEvent};
 use glium::glutin::event_loop::{ControlFlow, EventLoop, EventLoopProxy};
 use glium::glutin::platform::run_return::EventLoopExtRunReturn;
 use glium::glutin::window::{UserAttentionType, WindowBuilder};
 use glium::glutin::ContextBuilder;
 use glium::{Display, Surface, SwapBuffersError};
+use imgui::{Context, FontConfig, FontSource};
+use imgui_glium_renderer::{Renderer, RendererError};
+use imgui_winit_support::{HiDpiMode, WinitPlatform};
 use thiserror::Error;
 
 use crate::rendering::fonts::{get_embedded_font_bytes, Font};
-use crate::ui::panel::EguiPanel;
+use crate::ui::panel::MainPanel;
 use crate::util::{Notifier, NotifierImpl};
 use crate::{ControlMessage, RendererController};
 
 mod module_list;
 mod panel;
 
+const WINDOW_INITIALLY_VISIBLE: bool = cfg!(debug_assertions);
+
 /// Contains the contents of the user interface.
 pub struct SnowlandUI {
-    panel: EguiPanel,
-    egui: EguiGlium,
+    panel: MainPanel,
+    platform: WinitPlatform,
+    imgui: Context,
+    renderer: Renderer,
     display: Display,
     event_loop: Option<EventLoop<ControlMessage>>,
+    last_frame: Instant,
+    is_visible: bool,
 }
 
 impl SnowlandUI {
@@ -34,7 +42,7 @@ impl SnowlandUI {
     pub fn new() -> Result<(Self, Notifier<ControlMessage>), Error> {
         let window_builder = WindowBuilder::new()
             .with_resizable(true)
-            .with_visible(cfg!(debug_assertions))
+            .with_visible(WINDOW_INITIALLY_VISIBLE)
             .with_inner_size(LogicalSize {
                 width: 640u32,
                 height: 420u32,
@@ -50,39 +58,44 @@ impl SnowlandUI {
         let event_loop = EventLoop::<ControlMessage>::with_user_event();
         let display = Display::new(window_builder, context_builder, &event_loop)?;
 
-        let egui = EguiGlium::new(&display);
+        let mut imgui = Context::create();
+        imgui.set_ini_filename(None);
 
+        let mut platform = WinitPlatform::init(&mut imgui);
         {
-            let mut definitions = FontDefinitions::default();
-
-            definitions.font_data.insert(
-                "NotoSansMono".into(),
-                std::borrow::Cow::Borrowed(get_embedded_font_bytes(Font::NotoSansMono)),
-            );
-
-            definitions.font_data.insert(
-                "RobotoRegular".into(),
-                std::borrow::Cow::Borrowed(get_embedded_font_bytes(Font::RobotoRegular)),
-            );
-
-            definitions
-                .fonts_for_family
-                .insert(FontFamily::Monospace, vec!["NotoSansMono".into()]);
-            definitions
-                .fonts_for_family
-                .insert(FontFamily::Proportional, vec!["RobotoRegular".into()]);
-
-            egui.ctx().set_fonts(definitions);
+            let gl_window = display.gl_window();
+            let window = gl_window.window();
+            platform.attach_window(imgui.io_mut(), window, HiDpiMode::Rounded);
         }
+
+        let hidpi_factor = platform.hidpi_factor();
+        let font_size = (13.0 * hidpi_factor) as f32;
+
+        imgui.fonts().add_font(&[FontSource::TtfData {
+            data: get_embedded_font_bytes(Font::RobotoRegular),
+            size_pixels: font_size,
+            config: Some(FontConfig {
+                size_pixels: font_size,
+                rasterizer_multiply: 1.75,
+                ..Default::default()
+            }),
+        }]);
+
+        imgui.io_mut().font_global_scale = (1.0 / hidpi_factor) as f32;
+        let renderer = Renderer::init(&mut imgui, &display)?;
 
         let notifier = UINotifier::create(event_loop.create_proxy());
 
         Ok((
             Self {
-                panel: EguiPanel::new(),
+                panel: MainPanel::new(),
+                platform,
+                imgui,
+                renderer,
                 display,
                 event_loop: Some(event_loop),
-                egui,
+                last_frame: Instant::now(),
+                is_visible: WINDOW_INITIALLY_VISIBLE,
             },
             notifier,
         ))
@@ -121,43 +134,75 @@ impl SnowlandUI {
         controller: &RendererController,
     ) -> Result<ControlFlow, Error> {
         let mut run_frame = || {
-            self.run_egui_frame(controller)
-                .and_then(|(needs_redraw, shapes)| {
-                    self.perform_paint(shapes).map(|()| needs_redraw)
-                })
-                .map(|redraw| {
-                    if redraw {
-                        self.display.gl_window().window().request_redraw();
-                        ControlFlow::Poll
-                    } else {
-                        ControlFlow::Wait
-                    }
-                })
+            let ui = self.imgui.frame();
+
+            self.panel.run(&ui, controller);
+
+            let gl_window = self.display.gl_window();
+
+            let mut target = self.display.draw();
+            target.clear_color(0.0, 0.0, 0.0, 1.0);
+            self.platform.prepare_render(&ui, gl_window.window());
+
+            let draw_data = ui.render();
+            self.renderer.render(&mut target, draw_data)?;
+
+            target.finish()?;
+
+            Ok(ControlFlow::Poll)
         };
 
         match event {
-            Event::RedrawEventsCleared if cfg!(windows) => run_frame(),
-            Event::RedrawRequested(_) if !cfg!(windows) => run_frame(),
+            Event::NewEvents(_) => {
+                let now = Instant::now();
+                self.imgui
+                    .io_mut()
+                    .update_delta_time(now - std::mem::replace(&mut self.last_frame, now));
 
-            Event::UserEvent(message) => self.process_control_message(message, notifier),
-
-            Event::WindowEvent { event, .. } => {
-                if matches!(event, WindowEvent::CloseRequested) {
-                    self.display.gl_window().window().set_visible(false);
-                    notifier.notify(ControlMessage::CloseUI);
-                }
-
-                self.egui.on_event(&event);
-
-                if self.run_egui_frame(controller)?.0 {
-                    self.display.gl_window().window().request_redraw();
-                    Ok(ControlFlow::Poll)
-                } else {
-                    Ok(ControlFlow::Wait)
-                }
+                Ok(ControlFlow::Poll)
             }
 
-            _ => Ok(ControlFlow::Wait),
+            Event::MainEventsCleared => {
+                let gl_window = self.display.gl_window();
+                self.platform
+                    .prepare_frame(self.imgui.io_mut(), gl_window.window())?;
+
+                gl_window.window().request_redraw();
+                Ok(ControlFlow::Wait)
+            }
+
+            Event::RedrawRequested(_) if self.is_visible => run_frame(),
+            // Event::RedrawEventsCleared if cfg!(windows) => run_frame(),
+            // Event::RedrawRequested(_) if !cfg!(windows) => run_frame(),
+            Event::UserEvent(message) => self.process_control_message(message, notifier),
+
+            Event::WindowEvent {
+                event: WindowEvent::CloseRequested,
+                ..
+            } => {
+                self.display.gl_window().window().set_visible(false);
+                self.is_visible = false;
+                notifier.notify(ControlMessage::CloseUI);
+
+                Ok(ControlFlow::Wait)
+            }
+
+            Event::RedrawEventsCleared => Ok(if self.is_visible {
+                ControlFlow::Poll
+            } else {
+                ControlFlow::Wait
+            }),
+
+            event if self.is_visible => {
+                let gl_window = self.display.gl_window();
+                self.platform
+                    .handle_event(self.imgui.io_mut(), gl_window.window(), &event);
+
+                Ok(ControlFlow::Poll)
+            }
+
+            _ if !self.is_visible => Ok(ControlFlow::Wait),
+            _ => unreachable!("Unhandled event even though all possibilities are covered"),
         }
     }
 
@@ -170,6 +215,8 @@ impl SnowlandUI {
         match message {
             ControlMessage::OpenUI => {
                 self.display.gl_window().window().set_visible(true);
+                self.is_visible = true;
+
                 self.display
                     .gl_window()
                     .window()
@@ -184,28 +231,6 @@ impl SnowlandUI {
 
         Ok(ControlFlow::Wait)
     }
-
-    /// Runs an egui frame.
-    fn run_egui_frame(
-        &mut self,
-        controller: &RendererController,
-    ) -> Result<(bool, Vec<ClippedShape>), Error> {
-        self.egui.begin_frame(&self.display);
-
-        self.panel.run(self.egui.ctx(), controller);
-
-        Ok(self.egui.end_frame(&self.display))
-    }
-
-    /// Repaints the window using OpenGL.
-    fn perform_paint(&mut self, shapes: Vec<ClippedShape>) -> Result<(), Error> {
-        let mut target = self.display.draw();
-        target.clear_color(0.0, 0.0, 0.0, 1.0);
-
-        self.egui.paint(&self.display, &mut target, shapes);
-
-        Ok(target.finish()?)
-    }
 }
 
 #[derive(Debug, Error)]
@@ -213,8 +238,14 @@ pub enum Error {
     #[error("failed to create window: {0}")]
     DisplayCreation(#[from] DisplayCreationError),
 
+    #[error("imgui renderer failed: {0}")]
+    Renderer(#[from] RendererError),
+
     #[error("failed to swap buffers: {0}")]
     SwapBuffers(#[from] SwapBuffersError),
+
+    #[error("an external error occurred: {0}")]
+    External(#[from] ExternalError),
 }
 
 /// Implementation of a notifier for the UI based on a message loop.

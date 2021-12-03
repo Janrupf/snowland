@@ -3,10 +3,7 @@ mod text;
 
 pub use known::*;
 
-use std::ops::Deref;
 use std::sync::{Arc, Mutex};
-
-use egui::Ui;
 
 use crate::scene::SceneData;
 
@@ -23,7 +20,7 @@ pub trait Module {
 
 pub trait ModuleConfig: Send + Clone + Default {
     /// Renders a menu to change this module configuration.
-    fn represent(&mut self, ui: &mut egui::Ui);
+    fn represent(&mut self, ui: &imgui::Ui);
 }
 
 pub trait ModuleRenderer: Send {
@@ -37,6 +34,7 @@ type ModuleWrapperPair = (Box<dyn ModuleContainer>, Box<dyn BoundModuleRenderer>
 type ModuleWrapperCreator = fn() -> ModuleWrapperPair;
 
 /// Generic wrapper over module types.
+#[derive(Debug)]
 pub struct ModuleWrapper {
     create: ModuleWrapperCreator,
 }
@@ -78,7 +76,7 @@ where
 
 /// Helper trait to represent this module in the user interface and make it configurable.
 pub trait ModuleContainer {
-    fn represent(&mut self, ui: &mut egui::Ui);
+    fn represent(&mut self, ui: &imgui::Ui);
 }
 
 struct InternalModuleContainer<M>
@@ -101,7 +99,7 @@ impl<M> ModuleContainer for InternalModuleContainer<M>
 where
     M: Module,
 {
-    fn represent(&mut self, ui: &mut Ui) {
+    fn represent(&mut self, ui: &imgui::Ui) {
         let mut config = self.config.lock().expect("Failed to lock ui config");
         config.represent(ui);
     }

@@ -1,73 +1,92 @@
-use std::fmt::{Display, Formatter};
+use imgui::{ChildWindow, InputText, Selectable, Ui};
 
-use egui::{Align, ComboBox, Layout, ScrollArea, Ui};
-
-#[derive(Debug, Ord, PartialOrd, Eq, PartialEq)]
-enum ModuleType {
-    Background,
-    Text,
-    Snow,
-}
-
-impl Display for ModuleType {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::Background => write!(f, "Background"),
-            Self::Text => write!(f, "Text"),
-            Self::Snow => write!(f, "Snow"),
-        }
-    }
-}
+use crate::scene::module::{BoundModuleRenderer, KnownModules, ModuleContainer, ModuleWrapper};
+use crate::RendererController;
 
 pub struct ModuleList {
     entries: Vec<ModuleEntry>,
-    selected_add_type: ModuleType,
+    add_types: Vec<(&'static String, &'static ModuleWrapper)>,
+    selected_add_type: usize,
+    next_id: i32,
+    selected_module: Option<usize>,
 }
 
 impl ModuleList {
     pub fn new() -> Self {
         Self {
-            entries: vec![ModuleEntry::new(), ModuleEntry::new()],
-            selected_add_type: ModuleType::Background,
+            entries: Vec::new(),
+            add_types: KnownModules::iter().collect(),
+            selected_add_type: 0,
+            next_id: 0,
+            selected_module: None,
         }
     }
 
-    pub fn render(&mut self, ui: &mut Ui) {
-        ui.horizontal(|ui| {
-            ComboBox::from_label("Type")
-                .selected_text(self.selected_add_type.to_string())
-                .show_ui(ui, |ui| {
-                    ui.selectable_value(
-                        &mut self.selected_add_type,
-                        ModuleType::Background,
-                        ModuleType::Background.to_string(),
-                    );
-                    ui.selectable_value(
-                        &mut self.selected_add_type,
-                        ModuleType::Snow,
-                        ModuleType::Snow.to_string(),
-                    );
-                    ui.selectable_value(
-                        &mut self.selected_add_type,
-                        ModuleType::Text,
-                        ModuleType::Text.to_string(),
-                    );
-                });
+    pub fn render(&mut self, ui: &Ui, controller: &RendererController) {
+        ChildWindow::new("Module Column")
+            .border(false)
+            .always_auto_resize(false)
+            .build(ui, || {
+                ui.combo(
+                    "###Type",
+                    &mut self.selected_add_type,
+                    &self.add_types,
+                    |(name, _)| (*name).into(),
+                );
 
-            if ui.button("Add").clicked() {
-                self.entries.push(ModuleEntry::new());
+                ui.same_line();
+
+                if ui.button("Add") {
+                    self.add_module(controller);
+                }
+
+                ui.separator();
+
+                ChildWindow::new("Module List").border(false).build(ui, || {
+                    let mut i = 0;
+
+                    self.entries.drain_filter(|entry| {
+                        let state = entry.render_sidebar(ui);
+                        let remove = match state {
+                            ModuleEntryState::NoModify => false,
+                            ModuleEntryState::Remove => {
+                                self.selected_module = None;
+                                true
+                            }
+
+                            ModuleEntryState::Select => {
+                                self.selected_module = Some(i);
+                                false
+                            }
+                        };
+
+                        i += 1;
+                        remove
+                    });
+                });
+            });
+    }
+
+    pub fn render_selected_container(&mut self, ui: &Ui) -> bool {
+        match self.selected_module {
+            Some(i) => {
+                self.entries[i].render_container(ui);
+                true
             }
-        });
 
-        ui.separator();
+            None => false,
+        }
+    }
 
-        ui.vertical(|ui| {
-            ScrollArea::vertical()
-                .auto_shrink([false, false])
-                .show(ui, |ui| {
-                    self.entries.drain_filter(|m| m.render(ui));
-                });
-        });
+    fn add_module(&mut self, controller: &RendererController) {
+        let (name, wrapper) = self.add_types[self.selected_add_type];
+
+        let (entry, renderer) = ModuleEntry::new(self.next_id, name.clone(), wrapper);
+
+        self.entries.push(entry);
+        self.next_id += 1;
+
+        controller.insert_module(renderer);
     }
 }
 
@@ -77,25 +96,57 @@ impl Default for ModuleList {
     }
 }
 
-struct ModuleEntry;
+#[derive(Eq, PartialEq)]
+enum ModuleEntryState {
+    NoModify,
+    Remove,
+    Select,
+}
+
+struct ModuleEntry {
+    id: i32,
+    name: String,
+    container: Box<dyn ModuleContainer>,
+}
 
 impl ModuleEntry {
-    pub fn new() -> Self {
-        Self {}
+    pub fn new(
+        id: i32,
+        name: String,
+        wrapper: &ModuleWrapper,
+    ) -> (Self, Box<dyn BoundModuleRenderer>) {
+        let (container, renderer) = wrapper.create_with_default_config();
+
+        (
+            Self {
+                id,
+                name,
+                container,
+            },
+            renderer,
+        )
     }
 
-    pub fn render(&mut self, ui: &mut Ui) -> bool {
-        ui.horizontal(|ui| {
-            if ui.button("-").clicked() {
-                return true;
-            }
+    pub fn render_sidebar(&mut self, ui: &Ui) -> ModuleEntryState {
+        let _id = ui.push_id(self.id);
+        let remove = ui.button("-");
 
-            ui.button("*");
+        ui.same_line();
+        let selected = Selectable::new(&self.name).build(ui);
 
-            ui.label("Module name");
+        match (remove, selected) {
+            (true, _) => ModuleEntryState::Remove,
+            (_, true) => ModuleEntryState::Select,
+            _ => ModuleEntryState::NoModify,
+        }
+    }
 
-            false
-        })
-        .inner
+    pub fn render_container(&mut self, ui: &Ui) {
+        ui.text("Name: ");
+        ui.same_line();
+
+        InputText::new(ui, "", &mut self.name).build();
+
+        self.container.represent(ui);
     }
 }

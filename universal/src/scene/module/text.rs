@@ -1,4 +1,3 @@
-use egui::Ui;
 use skia_safe::{Color4f, Font, Paint, Point};
 
 use crate::scene::module::{Module, ModuleConfig, ModuleRenderer};
@@ -24,7 +23,7 @@ impl Default for TextModuleConfig {
 }
 
 impl ModuleConfig for TextModuleConfig {
-    fn represent(&mut self, ui: &mut Ui) {}
+    fn represent(&mut self, ui: &imgui::Ui) {}
 }
 
 pub struct TextModuleRenderer;

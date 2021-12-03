@@ -9,7 +9,6 @@ pub enum RendererStateMessage {
 
     /// Inserts a renderer module.
     InsertModule {
-        index: usize,
         module: Box<dyn BoundModuleRenderer>,
     },
 }
@@ -28,10 +27,10 @@ impl RendererController {
     }
 
     /// Inserts a module into the renderer at the specified position.
-    pub fn insert_module(&self, index: usize, module: Box<dyn BoundModuleRenderer>) {
+    pub fn insert_module(&self, module: Box<dyn BoundModuleRenderer>) {
         drop(
             self.sender
-                .send(RendererStateMessage::InsertModule { index, module }),
+                .send(RendererStateMessage::InsertModule { module }),
         )
     }
 

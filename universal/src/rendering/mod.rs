@@ -1,10 +1,10 @@
-use std::sync::Arc;
-use std::sync::mpsc::{Receiver, Sender};
+use std::sync::mpsc::Receiver;
 use std::time::Instant;
 
 use skia_safe::Surface;
 
-use crate::rendering::state::{RendererStateMessage};
+use crate::rendering::state::RendererStateMessage;
+use crate::scene::module::BoundModuleRenderer;
 use crate::{
     RendererError, SnowlandHost, SnowlandRenderer, SnowlandRendererCreator, SnowlandScene,
     XMasCountdown,
@@ -25,6 +25,7 @@ where
     message_receiver: Receiver<RendererStateMessage>,
     last_frame_time: Instant,
     scene: Box<dyn SnowlandScene>,
+    modules: Vec<Box<dyn BoundModuleRenderer>>,
 }
 
 impl<H> RendererContainer<H>
@@ -48,6 +49,7 @@ where
             message_receiver,
             last_frame_time: Instant::now(),
             scene: Box::new(XMasCountdown::new()),
+            modules: Vec::new(),
         })
     }
 
@@ -58,11 +60,24 @@ where
             self.resize(width, height)?;
 
             self.render_frame()?;
-            
+
+            self.modules.retain(|m| {
+                let remove = m.should_remove();
+
+                if remove {
+                    log::debug!("Removing module as it expired!")
+                }
+
+                !remove
+            });
+
             while let Ok(message) = self.message_receiver.try_recv() {
                 match message {
                     RendererStateMessage::Shutdown => return Ok(()),
-                    RendererStateMessage::InsertModule { .. } => {}
+                    RendererStateMessage::InsertModule { module } => {
+                        log::debug!("Inserting new module!");
+                        self.modules.push(module);
+                    }
                 }
             }
         }
