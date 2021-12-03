@@ -1,11 +1,12 @@
-mod known;
-mod text;
+use std::sync::{Arc, Mutex};
 
 pub use known::*;
 
-use std::sync::{Arc, Mutex};
-
 use crate::scene::SceneData;
+
+mod known;
+mod part;
+mod text;
 
 pub trait Module {
     type Config: ModuleConfig;

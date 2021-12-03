@@ -1,29 +1,66 @@
+use imgui::{InputText, TreeNodeFlags};
 use skia_safe::{Color4f, Font, Paint, Point};
 
+use crate::rendering::fonts;
+use crate::scene::module::part::ModulePosition;
 use crate::scene::module::{Module, ModuleConfig, ModuleRenderer};
 use crate::scene::SceneData;
 
 pub(super) struct TextModule;
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct TextModuleConfig {
-    x: u64,
-    y: u64,
+    position: ModulePosition,
     value: String,
+    paint: Paint,
+    font: Font,
 }
 
 impl Default for TextModuleConfig {
     fn default() -> Self {
         Self {
-            x: 0,
-            y: 0,
+            position: Default::default(),
             value: String::from("Custom text"),
+            paint: Paint::new(Color4f::new(1.0, 1.0, 1.0, 1.0), None),
+            font: Font::from_typeface(
+                fonts::load_embedded_font(fonts::Font::NotoSansMono),
+                Some(32.0),
+            ),
+        }
+    }
+}
+
+impl Clone for TextModuleConfig {
+    fn clone(&self) -> Self {
+        let position = self.position.clone();
+        let value = self.value.clone();
+        let paint = self.paint.clone();
+        let font = Font::from_typeface_with_params(
+            self.font.typeface_or_default(),
+            self.font.size(),
+            self.font.scale_x(),
+            self.font.skew_x(),
+        );
+
+        Self {
+            position,
+            value,
+            paint,
+            font,
         }
     }
 }
 
 impl ModuleConfig for TextModuleConfig {
-    fn represent(&mut self, ui: &imgui::Ui) {}
+    fn represent(&mut self, ui: &imgui::Ui) {
+        if ui.collapsing_header("Position", TreeNodeFlags::FRAMED) {
+            self.position.represent(ui);
+        }
+
+        if ui.collapsing_header("Module", TreeNodeFlags::FRAMED) {
+            InputText::new(ui, "Value", &mut self.value).build();
+        }
+    }
 }
 
 pub struct TextModuleRenderer;
@@ -32,13 +69,22 @@ impl ModuleRenderer for TextModuleRenderer {
     type Config = TextModuleConfig;
 
     fn render<'a>(&mut self, config: &Self::Config, data: &mut SceneData<'a>) {
+        let (_, rect) = config.font.measure_str(&config.value, Some(&config.paint));
+
+        let (x, y) = config.position.compute_position(
+            data.width(),
+            data.height(),
+            rect.width() as u64,
+            rect.height() as u64,
+        );
+
         let canvas = data.canvas();
 
         canvas.draw_str(
             &config.value,
-            Point::new(config.x as _, config.y as _),
-            &Font::default(),
-            &Paint::new(Color4f::from(0xFFFFFF), None),
+            Point::new(x as _, y as _),
+            &config.font,
+            &config.paint,
         );
     }
 }
