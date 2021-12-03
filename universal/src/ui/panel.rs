@@ -3,10 +3,12 @@ use imgui::{Condition, TableColumnFlags, TableColumnSetup, TableFlags, Ui, Windo
 use crate::ui::module_list::ModuleList;
 use crate::RendererController;
 
+/// Main panel, this is what is displayed directly inside the window.
 pub struct MainPanel {
     modules: ModuleList,
 }
 
+/// The message which is displayed when no module is currently selected.
 const NO_MODULE_MESSAGE: &str = concat!(
     "\
 Select a module on the left to configure.
@@ -19,12 +21,14 @@ Or add a new module by using the drop down.\
 );
 
 impl MainPanel {
+    /// Creates a new main panel without any modules active.
     pub fn new() -> Self {
         Self {
             modules: ModuleList::new(),
         }
     }
 
+    /// Draws the UI and all its subtree.
     pub fn run(&mut self, ui: &Ui, controller: &RendererController) {
         Window::new("Snowland Control Panel")
             .title_bar(false)
@@ -66,6 +70,7 @@ impl MainPanel {
             });
     }
 
+    /// Draws the help message.
     fn draw_help_text(&mut self, ui: &Ui) {
         let [cursor_x, cursor_y] = ui.cursor_pos();
         let [available_width, available_height] = ui.content_region_avail();

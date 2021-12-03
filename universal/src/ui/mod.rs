@@ -23,6 +23,7 @@ use crate::{ControlMessage, RendererController};
 mod module_list;
 mod panel;
 
+/// The window is initially visible in debug builds to ease programming.
 const WINDOW_INITIALLY_VISIBLE: bool = cfg!(debug_assertions);
 
 /// Contains the contents of the user interface.

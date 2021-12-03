@@ -3,6 +3,7 @@ use imgui::{ChildWindow, InputText, Selectable, Ui};
 use crate::scene::module::{BoundModuleRenderer, KnownModules, ModuleContainer, ModuleWrapper};
 use crate::RendererController;
 
+/// Sidebar controller for inserted modules.
 pub struct ModuleList {
     entries: Vec<ModuleEntry>,
     add_types: Vec<(&'static String, &'static ModuleWrapper)>,
@@ -12,6 +13,7 @@ pub struct ModuleList {
 }
 
 impl ModuleList {
+    /// Creates a new module list and initializes its empty state.
     pub fn new() -> Self {
         Self {
             entries: Vec::new(),
@@ -22,6 +24,7 @@ impl ModuleList {
         }
     }
 
+    /// Renders the list into the UI and processes user input.
     pub fn render(&mut self, ui: &Ui, controller: &RendererController) {
         ChildWindow::new("Module Column")
             .border(false)
@@ -67,6 +70,7 @@ impl ModuleList {
             });
     }
 
+    /// Renders the currently selected container, if any.
     pub fn render_selected_container(&mut self, ui: &Ui) -> bool {
         match self.selected_module {
             Some(i) => {
@@ -78,6 +82,7 @@ impl ModuleList {
         }
     }
 
+    /// Helper function to add a module to the list.
     fn add_module(&mut self, controller: &RendererController) {
         let (name, wrapper) = self.add_types[self.selected_add_type];
 
@@ -96,13 +101,20 @@ impl Default for ModuleList {
     }
 }
 
+/// Represents the current state of a module entry.
 #[derive(Eq, PartialEq)]
 enum ModuleEntryState {
+    /// The entry should be kept as-is.
     NoModify,
+
+    /// The entry should be removed.
     Remove,
+
+    /// The entry should be marked as the selected one.
     Select,
 }
 
+/// Control interface for modules.
 struct ModuleEntry {
     id: i32,
     name: String,
@@ -110,6 +122,7 @@ struct ModuleEntry {
 }
 
 impl ModuleEntry {
+    /// Creates a new module entry and its underlying module.
     pub fn new(
         id: i32,
         name: String,
@@ -127,6 +140,7 @@ impl ModuleEntry {
         )
     }
 
+    /// Renders the sidebar content of the module.
     pub fn render_sidebar(&mut self, ui: &Ui) -> ModuleEntryState {
         let _id = ui.push_id(self.id);
         let remove = ui.button("-");
@@ -141,11 +155,12 @@ impl ModuleEntry {
         }
     }
 
+    /// Renders the internal module UI.
     pub fn render_container(&mut self, ui: &Ui) {
-        ui.text("Name: ");
-        ui.same_line();
-
-        InputText::new(ui, "", &mut self.name).build();
+        InputText::new(ui, "Name", &mut self.name)
+            .hint("Module name")
+            .allow_tab_input(false)
+            .build();
 
         self.container.represent(ui);
     }
