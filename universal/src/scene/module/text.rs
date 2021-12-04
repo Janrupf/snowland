@@ -1,18 +1,31 @@
 use imgui::{InputText, TreeNodeFlags};
-use skia_safe::{Color4f, Font, Paint, Point};
+use skia_safe::{Font, Point};
 
 use crate::rendering::fonts;
-use crate::scene::module::part::ModulePosition;
+use crate::scene::module::part::{ModulePosition, PaintSetting};
 use crate::scene::module::{Module, ModuleConfig, ModuleRenderer};
 use crate::scene::SceneData;
 
 pub(super) struct TextModule;
 
+impl Module for TextModule {
+    type Config = TextModuleConfig;
+    type Renderer = TextModuleRenderer;
+
+    fn create_renderer() -> Self::Renderer {
+        TextModuleRenderer
+    }
+
+    fn name() -> String {
+        "Text".into()
+    }
+}
+
 #[derive(Debug)]
 pub struct TextModuleConfig {
     position: ModulePosition,
     value: String,
-    paint: Paint,
+    paint: PaintSetting,
     font: Font,
 }
 
@@ -21,7 +34,7 @@ impl Default for TextModuleConfig {
         Self {
             position: Default::default(),
             value: String::from("Custom text"),
-            paint: Paint::new(Color4f::new(1.0, 1.0, 1.0, 1.0), None),
+            paint: PaintSetting::default(),
             font: Font::from_typeface(
                 fonts::load_embedded_font(fonts::Font::NotoSansMono),
                 Some(32.0),
@@ -57,6 +70,10 @@ impl ModuleConfig for TextModuleConfig {
             self.position.represent(ui);
         }
 
+        if ui.collapsing_header("Color", TreeNodeFlags::FRAMED) {
+            self.paint.represent(ui);
+        }
+
         if ui.collapsing_header("Module", TreeNodeFlags::FRAMED) {
             InputText::new(ui, "Value", &mut self.value).build();
         }
@@ -69,7 +86,9 @@ impl ModuleRenderer for TextModuleRenderer {
     type Config = TextModuleConfig;
 
     fn render<'a>(&mut self, config: &Self::Config, data: &mut SceneData<'a>) {
-        let (_, rect) = config.font.measure_str(&config.value, Some(&config.paint));
+        let (_, rect) = config
+            .font
+            .measure_str(&config.value, Some(config.paint.get_paint()));
 
         let (x, y) = config.position.compute_position(
             data.width(),
@@ -84,20 +103,7 @@ impl ModuleRenderer for TextModuleRenderer {
             &config.value,
             Point::new(x as _, y as _),
             &config.font,
-            &config.paint,
+            config.paint.get_paint(),
         );
-    }
-}
-
-impl Module for TextModule {
-    type Config = TextModuleConfig;
-    type Renderer = TextModuleRenderer;
-
-    fn create_renderer() -> Self::Renderer {
-        TextModuleRenderer
-    }
-
-    fn name() -> String {
-        "Text".into()
     }
 }

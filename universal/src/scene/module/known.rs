@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 use std::lazy::SyncLazy;
 
+use crate::scene::module::clear::ClearModule;
 use crate::scene::module::text::TextModule;
 use crate::scene::module::{Module, ModuleWrapper};
 
@@ -13,6 +14,7 @@ static KNOWN_MODULES: SyncLazy<HashMap<String, ModuleWrapper>> = SyncLazy::new(|
         map.insert(M::name(), ModuleWrapper::of::<M>());
     }
 
+    insert_helper::<ClearModule>(&mut map);
     insert_helper::<TextModule>(&mut map);
 
     map

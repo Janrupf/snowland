@@ -7,6 +7,7 @@ use crate::scene::SceneData;
 mod known;
 mod part;
 mod text;
+mod clear;
 
 pub trait Module {
     type Config: ModuleConfig;
