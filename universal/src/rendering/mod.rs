@@ -78,6 +78,10 @@ where
                         log::debug!("Inserting new module!");
                         self.modules.push(module);
                     }
+                    RendererStateMessage::Swap(a, b) => {
+                        log::debug!("Swapping module {} with {}", a, b);
+                        self.modules.swap(a, b);
+                    }
                 }
             }
         }

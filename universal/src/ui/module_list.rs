@@ -1,4 +1,6 @@
-use imgui::{ChildWindow, InputText, Selectable, Ui};
+use std::ops::{Add, Sub};
+
+use imgui::{ChildWindow, InputText, ItemHoveredFlags, MouseButton, Selectable, Ui};
 
 use crate::scene::module::{BoundModuleRenderer, KnownModules, ModuleContainer, ModuleWrapper};
 use crate::RendererController;
@@ -10,6 +12,7 @@ pub struct ModuleList {
     selected_add_type: usize,
     next_id: i32,
     selected_module: Option<usize>,
+    dragging_item: Option<(usize, usize)>,
 }
 
 impl ModuleList {
@@ -21,6 +24,7 @@ impl ModuleList {
             selected_add_type: 0,
             next_id: 0,
             selected_module: None,
+            dragging_item: None,
         }
     }
 
@@ -46,26 +50,63 @@ impl ModuleList {
                 ui.separator();
 
                 ChildWindow::new("Module List").border(false).build(ui, || {
-                    let mut i = 0;
+                    let list_start = ui.cursor_screen_pos()[1];
 
-                    self.entries.drain_filter(|entry| {
-                        let state = entry.render_sidebar(ui);
-                        let remove = match state {
-                            ModuleEntryState::NoModify => false,
-                            ModuleEntryState::Remove => {
-                                self.selected_module = None;
-                                true
+                    for i in 0..self.entries.len() {
+                        let state = self.entries[i].render_sidebar(ui);
+
+                        match state {
+                            ModuleEntryState::NoModify => {
+                                if ui.is_item_active() && !ui.is_item_hovered() {
+                                    self.dragging_item = Some((i, i));
+                                }
                             }
+                            ModuleEntryState::Remove => {
+                                self.entries.remove(i);
 
+                                match self.selected_module {
+                                    Some(x) if x == i => {
+                                        self.selected_module = None;
+                                    }
+                                    Some(x) if x > i => {
+                                        self.selected_module = Some(x - 1);
+                                    }
+                                    _ => {}
+                                }
+                                break;
+                            }
                             ModuleEntryState::Select => {
                                 self.selected_module = Some(i);
-                                false
                             }
-                        };
+                        }
+                    }
 
-                        i += 1;
-                        remove
-                    });
+                    let cursor_y_diff = ui.cursor_screen_pos()[1] - list_start;
+
+                    if self.entries.is_empty() || !ui.is_mouse_dragging(MouseButton::Left) {
+                        self.dragging_item = None;
+                    }
+
+                    if let Some((original_position, current_position)) = self.dragging_item {
+                        let mouse_y = ui.io().mouse_pos[1];
+                        let item_height = cursor_y_diff / self.entries.len() as f32;
+
+                        let new_position = {
+                            let relative_y = mouse_y - list_start;
+
+                            (relative_y / item_height) as i32
+                        }
+                        .clamp(0, (self.entries.len() - 1) as _)
+                            as usize;
+
+                        self.entries.swap(current_position, new_position);
+                        self.dragging_item = Some((original_position, new_position));
+                        controller.swap_modules(current_position, new_position);
+
+                        if Some(current_position) == self.selected_module {
+                            self.selected_module = Some(new_position);
+                        }
+                    }
                 });
             });
     }

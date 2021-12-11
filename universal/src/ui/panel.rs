@@ -12,7 +12,9 @@ pub struct MainPanel {
 const NO_MODULE_MESSAGE: &str = concat!(
     "\
 Select a module on the left to configure.
-Or add a new module by using the drop down.\
+Or add a new module by using the drop down.
+
+You can change the rendering order by dragging the modules.\
 ",
     "\n\n",
     env!("CARGO_PKG_NAME"),

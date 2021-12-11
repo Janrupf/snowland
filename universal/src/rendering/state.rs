@@ -11,6 +11,9 @@ pub enum RendererStateMessage {
     InsertModule {
         module: Box<dyn BoundModuleRenderer>,
     },
+
+    /// Swaps the position of 2 modules.
+    Swap(usize, usize),
 }
 
 pub struct RendererController {
@@ -26,12 +29,17 @@ impl RendererController {
         (Self { sender }, receiver)
     }
 
-    /// Inserts a module into the renderer at the specified position.
+    /// Inserts a module into the renderer at the end.
     pub fn insert_module(&self, module: Box<dyn BoundModuleRenderer>) {
         drop(
             self.sender
                 .send(RendererStateMessage::InsertModule { module }),
         )
+    }
+
+    /// Swaps the position of 2 renderer modules.
+    pub fn swap_modules(&self, a: usize, b: usize) {
+        drop(self.sender.send(RendererStateMessage::Swap(a, b)))
     }
 
     /// Sends the renderer the shutdown signal.
