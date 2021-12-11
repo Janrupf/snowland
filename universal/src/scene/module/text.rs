@@ -90,11 +90,11 @@ impl ModuleRenderer for TextModuleRenderer {
             .font
             .measure_str(&config.value, Some(config.paint.get_paint()));
 
-        let (x, y) = config.position.compute_position(
+        let (x, y) = config.position.compute_position_baselined(
             data.width(),
             data.height(),
-            rect.width() as u64,
-            rect.height() as u64,
+            rect.width() as i32,
+            rect.height() as i32,
         );
 
         let canvas = data.canvas();

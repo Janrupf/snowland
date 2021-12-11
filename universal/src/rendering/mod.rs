@@ -5,6 +5,7 @@ use skia_safe::Surface;
 
 use crate::rendering::state::RendererStateMessage;
 use crate::scene::module::BoundModuleRenderer;
+use crate::scene::SceneData;
 use crate::{
     RendererError, SnowlandHost, SnowlandRenderer, SnowlandRendererCreator, SnowlandScene,
     XMasCountdown,
@@ -24,7 +25,6 @@ where
     height: u64,
     message_receiver: Receiver<RendererStateMessage>,
     last_frame_time: Instant,
-    scene: Box<dyn SnowlandScene>,
     modules: Vec<Box<dyn BoundModuleRenderer>>,
 }
 
@@ -48,7 +48,6 @@ where
             height,
             message_receiver,
             last_frame_time: Instant::now(),
-            scene: Box::new(XMasCountdown::new()),
             modules: Vec::new(),
         })
     }
@@ -107,12 +106,10 @@ where
 
         let last_frame_time = std::mem::replace(&mut self.last_frame_time, Instant::now());
 
-        self.scene.update(
-            canvas,
-            width as u64,
-            height as u64,
-            (last_frame_time.elapsed().as_nanos() as f32) / 1000000.0,
-        );
+        for module in &mut self.modules {
+            let mut data = SceneData::new(canvas, width, height, last_frame_time);
+            module.render(&mut data);
+        }
 
         self.surface.flush_and_submit();
         self.renderer.present()?;

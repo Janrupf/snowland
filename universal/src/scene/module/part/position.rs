@@ -12,10 +12,7 @@ pub enum HorizontalPositionAnchor {
 impl HorizontalPositionAnchor {
     const VALUES: [Self; 3] = [Self::Left, Self::Middle, Self::Right];
 
-    pub fn compute(&self, available: u64, value: u64) -> i64 {
-        let available = available as i64;
-        let value = value as i64;
-
+    pub fn compute(&self, available: i32, value: i32) -> i32 {
         match self {
             Self::Left => 0,
             Self::Middle => (available / 2) - (value / 2),
@@ -57,14 +54,19 @@ pub enum VerticalPositionAnchor {
 impl VerticalPositionAnchor {
     const VALUES: [Self; 3] = [Self::Top, Self::Middle, Self::Bottom];
 
-    pub fn compute(&self, available: u64, value: u64) -> i64 {
-        let available = available as i64;
-        let value = value as i64;
-
+    pub fn compute(&self, available: i32, value: i32) -> i32 {
         match self {
             Self::Top => 0,
             Self::Middle => (available / 2) - (value / 2),
             Self::Bottom => available - value,
+        }
+    }
+
+    pub fn compute_baselined(&self, available: i32, value: i32) -> i32 {
+        match self {
+            Self::Top => value,
+            Self::Middle => (available / 2) + (value / 2),
+            Self::Bottom => available,
         }
     }
 }
@@ -96,21 +98,34 @@ impl ModuleConfig for VerticalPositionAnchor {
 pub struct ModulePosition {
     horizontal: HorizontalPositionAnchor,
     vertical: VerticalPositionAnchor,
-    x_offset: i64,
-    y_offset: i64,
+    x_offset: i32,
+    y_offset: i32,
 }
 
 impl ModulePosition {
     pub fn compute_position(
         &self,
-        available_width: u64,
-        available_height: u64,
-        width: u64,
-        height: u64,
-    ) -> (i64, i64) {
+        available_width: i32,
+        available_height: i32,
+        width: i32,
+        height: i32,
+    ) -> (i32, i32) {
         (
             self.horizontal.compute(available_width, width) + self.x_offset,
             self.vertical.compute(available_height, height) + self.y_offset,
+        )
+    }
+
+    pub fn compute_position_baselined(
+        &self,
+        available_width: i32,
+        available_height: i32,
+        width: i32,
+        height: i32,
+    ) -> (i32, i32) {
+        (
+            self.horizontal.compute(available_width, width) + self.x_offset,
+            self.vertical.compute_baselined(available_height, height) + self.y_offset,
         )
     }
 }

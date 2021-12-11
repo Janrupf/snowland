@@ -1,4 +1,5 @@
 use skia_safe::Canvas;
+use std::time::Instant;
 
 pub use xmas_countdown::*;
 
@@ -13,31 +14,38 @@ pub trait SnowlandScene {
 #[derive(Debug)]
 pub struct SceneData<'a> {
     canvas: &'a mut Canvas,
-    width: u64,
-    height: u64,
+    width: i32,
+    height: i32,
+    delta: Instant,
 }
 
 impl<'a> SceneData<'a> {
-    pub fn new(canvas: &'a mut Canvas, width: u64, height: u64) -> Self {
+    pub fn new(canvas: &'a mut Canvas, width: i32, height: i32, delta: Instant) -> Self {
         Self {
             canvas,
             width,
             height,
+            delta,
         }
     }
 
     /// The width of the scene in canvas units.
-    fn width(&self) -> u64 {
+    fn width(&self) -> i32 {
         self.width
     }
 
     /// The height of the scene in canvas units.
-    fn height(&self) -> u64 {
+    fn height(&self) -> i32 {
         self.height
     }
 
     /// The canvas the scene renders to.
     fn canvas(&mut self) -> &mut Canvas {
         self.canvas
+    }
+
+    /// The rendering delta.
+    fn delta(&self) -> &Instant {
+        &self.delta
     }
 }
