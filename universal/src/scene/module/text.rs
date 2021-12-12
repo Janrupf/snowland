@@ -74,7 +74,7 @@ impl ModuleConfig for TextModuleConfig {
             self.paint.represent(ui);
         }
 
-        if ui.collapsing_header("Module", TreeNodeFlags::FRAMED) {
+        if ui.collapsing_header("Text", TreeNodeFlags::FRAMED) {
             InputText::new(ui, "Value", &mut self.value).build();
         }
     }

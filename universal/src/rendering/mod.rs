@@ -107,7 +107,7 @@ where
         let last_frame_time = std::mem::replace(&mut self.last_frame_time, Instant::now());
 
         for module in &mut self.modules {
-            let mut data = SceneData::new(canvas, width, height, last_frame_time);
+            let mut data = SceneData::new(canvas, width, height, last_frame_time.elapsed());
             module.render(&mut data);
         }
 

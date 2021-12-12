@@ -4,10 +4,11 @@ pub use known::*;
 
 use crate::scene::SceneData;
 
+mod clear;
 mod known;
 mod part;
+mod snow;
 mod text;
-mod clear;
 
 pub trait Module {
     type Config: ModuleConfig;

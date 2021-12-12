@@ -1,5 +1,5 @@
 use skia_safe::Canvas;
-use std::time::Instant;
+use std::time::{Duration, Instant};
 
 pub use xmas_countdown::*;
 
@@ -16,11 +16,11 @@ pub struct SceneData<'a> {
     canvas: &'a mut Canvas,
     width: i32,
     height: i32,
-    delta: Instant,
+    delta: Duration,
 }
 
 impl<'a> SceneData<'a> {
-    pub fn new(canvas: &'a mut Canvas, width: i32, height: i32, delta: Instant) -> Self {
+    pub fn new(canvas: &'a mut Canvas, width: i32, height: i32, delta: Duration) -> Self {
         Self {
             canvas,
             width,
@@ -45,7 +45,7 @@ impl<'a> SceneData<'a> {
     }
 
     /// The rendering delta.
-    fn delta(&self) -> &Instant {
+    fn delta(&self) -> &Duration {
         &self.delta
     }
 }
