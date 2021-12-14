@@ -134,6 +134,11 @@ impl ModuleList {
 
         controller.insert_module(renderer);
     }
+
+    /// Retrieves a reference to all currently installed modules
+    pub fn get_modules(&self) -> impl Iterator<Item = &'_ Box<dyn ModuleContainer>> {
+        self.entries.iter().map(|e| &e.container)
+    }
 }
 
 impl Default for ModuleList {

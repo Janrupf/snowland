@@ -4,6 +4,8 @@ use crate::scene::module::part::ColorSetting;
 use crate::scene::module::{Module, ModuleConfig, ModuleRenderer};
 use crate::scene::SceneData;
 
+use serde::{Deserialize, Serialize};
+
 pub(super) struct ClearModule;
 
 impl Module for ClearModule {
@@ -19,7 +21,7 @@ impl Module for ClearModule {
     }
 }
 
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Default, Clone, Serialize, Deserialize)]
 pub struct ClearModuleConfig {
     color: ColorSetting,
 }

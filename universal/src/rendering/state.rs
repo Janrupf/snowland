@@ -1,6 +1,8 @@
+use std::collections::HashMap;
+use std::fs::File;
 use std::sync::mpsc::{Receiver, Sender};
 
-use crate::scene::module::BoundModuleRenderer;
+use crate::scene::module::{BoundModuleRenderer, ModuleConfigError, ModuleContainer};
 
 /// Messages which can be sent to the renderer.
 pub enum RendererStateMessage {

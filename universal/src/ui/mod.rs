@@ -15,6 +15,7 @@ use imgui_glium_renderer::{Renderer, RendererError};
 use imgui_winit_support::{HiDpiMode, WinitPlatform};
 use thiserror::Error;
 
+use crate::io::ConfigIO;
 use crate::rendering::fonts::{get_embedded_font_bytes, Font};
 use crate::ui::panel::MainPanel;
 use crate::util::{Notifier, NotifierImpl};
@@ -183,6 +184,15 @@ impl SnowlandUI {
             } => {
                 self.display.gl_window().window().set_visible(false);
                 self.is_visible = false;
+
+                let modules = self.panel.get_modules();
+                log::info!("Saving config file because window has been closed...");
+                if let Err(err) = ConfigIO::save(modules) {
+                    log::error!("Failed to save config file: {}", err);
+                } else {
+                    log::info!("Config file saved successfully!");
+                }
+
                 notifier.notify(ControlMessage::CloseUI);
 
                 Ok(ControlFlow::Wait)

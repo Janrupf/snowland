@@ -1,8 +1,9 @@
 use imgui::{InputText, TreeNodeFlags};
+use serde::{Deserialize, Serialize};
 use skia_safe::{Font, Point};
 
 use crate::rendering::fonts;
-use crate::scene::module::part::{ModulePosition, PaintSetting};
+use crate::scene::module::part::{FontSetting, ModulePosition, PaintSetting};
 use crate::scene::module::{Module, ModuleConfig, ModuleRenderer};
 use crate::scene::SceneData;
 
@@ -21,12 +22,12 @@ impl Module for TextModule {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TextModuleConfig {
     position: ModulePosition,
     value: String,
     paint: PaintSetting,
-    font: Font,
+    font: FontSetting,
 }
 
 impl Default for TextModuleConfig {
@@ -35,31 +36,7 @@ impl Default for TextModuleConfig {
             position: Default::default(),
             value: String::from("Custom text"),
             paint: PaintSetting::default(),
-            font: Font::from_typeface(
-                fonts::load_embedded_font(fonts::Font::NotoSansMono),
-                Some(32.0),
-            ),
-        }
-    }
-}
-
-impl Clone for TextModuleConfig {
-    fn clone(&self) -> Self {
-        let position = self.position.clone();
-        let value = self.value.clone();
-        let paint = self.paint.clone();
-        let font = Font::from_typeface_with_params(
-            self.font.typeface_or_default(),
-            self.font.size(),
-            self.font.scale_x(),
-            self.font.skew_x(),
-        );
-
-        Self {
-            position,
-            value,
-            paint,
-            font,
+            font: FontSetting::default(),
         }
     }
 }
@@ -88,6 +65,7 @@ impl ModuleRenderer for TextModuleRenderer {
     fn render<'a>(&mut self, config: &Self::Config, data: &mut SceneData<'a>) {
         let (_, rect) = config
             .font
+            .get_font()
             .measure_str(&config.value, Some(config.paint.get_paint()));
 
         let (x, y) = config.position.compute_position_baselined(
@@ -102,7 +80,7 @@ impl ModuleRenderer for TextModuleRenderer {
         canvas.draw_str(
             &config.value,
             Point::new(x as _, y as _),
-            &config.font,
+            config.font.get_font(),
             config.paint.get_paint(),
         );
     }

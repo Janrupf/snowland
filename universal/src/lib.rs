@@ -17,6 +17,7 @@ use crate::util::{Delayed, Notifier};
 
 pub mod control;
 pub mod host;
+pub mod io;
 pub mod rendering;
 mod scene;
 mod ui;

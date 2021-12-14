@@ -1,4 +1,9 @@
+use std::ops::Deref;
 use std::sync::{Arc, Mutex};
+
+use serde::de::DeserializeOwned;
+use serde::Serialize;
+use thiserror::Error;
 
 pub use known::*;
 
@@ -21,7 +26,7 @@ pub trait Module {
     fn name() -> String;
 }
 
-pub trait ModuleConfig: Send + Clone + Default {
+pub trait ModuleConfig: Send + Clone + Default + Serialize + DeserializeOwned {
     /// Renders a menu to change this module configuration.
     fn represent(&mut self, ui: &imgui::Ui);
 }
@@ -35,11 +40,14 @@ pub trait ModuleRenderer: Send {
 
 type ModuleWrapperPair = (Box<dyn ModuleContainer>, Box<dyn BoundModuleRenderer>);
 type ModuleWrapperCreator = fn() -> ModuleWrapperPair;
+type ModuleWrapperDeserializer =
+    fn(serde_json::Value) -> Result<ModuleWrapperPair, ModuleConfigError>;
 
 /// Generic wrapper over module types.
 #[derive(Debug)]
 pub struct ModuleWrapper {
     create: ModuleWrapperCreator,
+    deserialize: ModuleWrapperDeserializer,
 }
 
 impl ModuleWrapper {
@@ -50,6 +58,7 @@ impl ModuleWrapper {
     {
         Self {
             create: Self::create_generic::<M>,
+            deserialize: Self::deserialize_generic::<M>,
         }
     }
 
@@ -57,7 +66,25 @@ impl ModuleWrapper {
     where
         M: Module + 'static,
     {
-        let shared_config = Arc::new(Mutex::new(M::Config::default()));
+        Self::create_generic_with_config::<M>(M::Config::default())
+    }
+
+    fn deserialize_generic<M>(
+        value: serde_json::Value,
+    ) -> Result<ModuleWrapperPair, ModuleConfigError>
+    where
+        M: Module + 'static,
+    {
+        let config =
+            serde_json::from_value::<M::Config>(value).map_err(ModuleConfigError::Deserialize)?;
+        Ok(Self::create_generic_with_config::<M>(config))
+    }
+
+    fn create_generic_with_config<M>(config: M::Config) -> ModuleWrapperPair
+    where
+        M: Module + 'static,
+    {
+        let shared_config = Arc::new(Mutex::new(config));
 
         let container = InternalModuleContainer::<M>::new(shared_config.clone());
         let renderer = InternalBoundModuleRenderer::<M>::new(shared_config);
@@ -68,6 +95,14 @@ impl ModuleWrapper {
     /// Creates a new instance of the module with its default configuration.
     pub fn create_with_default_config(&self) -> ModuleWrapperPair {
         (self.create)()
+    }
+
+    /// Creates a new instance of the module based on a configuration deserialized from a json value.
+    pub fn deserialize_from_config(
+        &self,
+        config: serde_json::Value,
+    ) -> Result<ModuleWrapperPair, ModuleConfigError> {
+        (self.deserialize)(config)
     }
 }
 
@@ -80,6 +115,10 @@ where
 /// Helper trait to represent this module in the user interface and make it configurable.
 pub trait ModuleContainer {
     fn represent(&mut self, ui: &imgui::Ui);
+
+    fn serialize_config(&self) -> Result<serde_json::Value, ModuleConfigError>;
+
+    fn module_type(&self) -> String;
 }
 
 struct InternalModuleContainer<M>
@@ -105,6 +144,19 @@ where
     fn represent(&mut self, ui: &imgui::Ui) {
         let mut config = self.config.lock().expect("Failed to lock ui config");
         config.represent(ui);
+    }
+
+    fn serialize_config(&self) -> Result<serde_json::Value, ModuleConfigError> {
+        let config = self
+            .config
+            .lock()
+            .expect("Failed to lock serialization config");
+
+        serde_json::to_value(config.deref()).map_err(ModuleConfigError::Serialize)
+    }
+
+    fn module_type(&self) -> String {
+        M::name()
     }
 }
 
@@ -156,4 +208,16 @@ where
     fn should_remove(&self) -> bool {
         Arc::strong_count(&self.config) == 1
     }
+}
+
+#[derive(Debug, Error)]
+pub enum ModuleConfigError {
+    #[error("failed to serialize configuration: {0}")]
+    Serialize(serde_json::Error),
+
+    #[error("failed to deserialize configuration: {0}")]
+    Deserialize(serde_json::Error),
+    
+    #[error("an I/O error occurred: {0}")]
+    Io(#[from] std::io::Error)
 }

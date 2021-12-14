@@ -1,6 +1,7 @@
 use imgui::{Drag, DragRange, SliderFlags, TreeNodeFlags, Ui};
 use rand::rngs::ThreadRng;
 use rand::Rng;
+use serde::{Deserialize, Serialize};
 use skia_safe::{Color4f, Paint};
 
 use crate::scene::module::{Module, ModuleConfig, ModuleRenderer};
@@ -34,7 +35,7 @@ const DEFAULT_TUMBLING_MAX: f32 = 1.0;
 const DEFAULT_FALLING_SPEED_MIN: f32 = 1.0;
 const DEFAULT_FALLING_SPEED_MAX: f32 = 3.0;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SnowModuleConfig {
     pixel_flake_ratio: i32,
     fade_time: f32,

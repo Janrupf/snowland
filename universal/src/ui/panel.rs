@@ -1,5 +1,6 @@
 use imgui::{Condition, TableColumnFlags, TableColumnSetup, TableFlags, Ui, Window};
 
+use crate::scene::module::ModuleContainer;
 use crate::ui::module_list::ModuleList;
 use crate::RendererController;
 
@@ -98,5 +99,10 @@ impl MainPanel {
             ui.set_cursor_pos([x, y]);
             ui.text(text);
         }
+    }
+
+    /// Retrieves a reference to all currently installed modules
+    pub fn get_modules(&self) -> impl Iterator<Item = &'_ Box<dyn ModuleContainer>> {
+        self.modules.get_modules()
     }
 }

@@ -1,8 +1,9 @@
 use imgui::{Drag, Ui};
 
 use crate::scene::module::ModuleConfig;
+use serde::{Deserialize, Serialize};
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub enum HorizontalPositionAnchor {
     Left,
     Middle,
@@ -44,7 +45,7 @@ impl ModuleConfig for HorizontalPositionAnchor {
     }
 }
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub enum VerticalPositionAnchor {
     Top,
     Middle,
@@ -94,7 +95,7 @@ impl ModuleConfig for VerticalPositionAnchor {
     }
 }
 
-#[derive(Clone, Debug, Eq, PartialEq, Default)]
+#[derive(Clone, Debug, Eq, PartialEq, Default, Serialize, Deserialize)]
 pub struct ModulePosition {
     horizontal: HorizontalPositionAnchor,
     vertical: VerticalPositionAnchor,
