@@ -54,6 +54,7 @@ where
         let renderer_creator = self.host.prepare_renderer();
         let renderer_handle = self.create_renderer_thread(renderer_creator, receiver)?;
 
+        self.ui.configure(&controller);
         let ui_result = self.ui.run_loop(&self.notifier, &controller);
 
         controller.shutdown();

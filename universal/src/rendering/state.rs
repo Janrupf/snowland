@@ -1,8 +1,7 @@
-use std::collections::HashMap;
-use std::fs::File;
 use std::sync::mpsc::{Receiver, Sender};
 
-use crate::scene::module::{BoundModuleRenderer, ModuleConfigError, ModuleContainer};
+use crate::io::ConfigIO;
+use crate::scene::module::{BoundModuleRenderer, ModuleContainer, ModuleWrapperPair};
 
 /// Messages which can be sent to the renderer.
 pub enum RendererStateMessage {
@@ -47,5 +46,30 @@ impl RendererController {
     /// Sends the renderer the shutdown signal.
     pub fn shutdown(self) {
         drop(self.sender.send(RendererStateMessage::Shutdown));
+    }
+
+    /// Loads the modules from the configuration.
+    pub fn load(&self) -> Vec<ModuleWrapperPair> {
+        log::info!("Loading modules...");
+        match ConfigIO::load() {
+            Ok(v) => {
+                log::info!("Loaded {} modules successfully!", v.len());
+                v
+            }
+            Err(err) => {
+                log::error!("Failed to load modules: {}", err);
+                Vec::new()
+            }
+        }
+    }
+
+    /// Saves the modules into the configuration.
+    pub fn save<'a>(&self, modules: impl Iterator<Item = &'a Box<dyn ModuleContainer>>) {
+        log::info!("Saving modules...");
+        if let Err(err) = ConfigIO::save(modules) {
+            log::error!("Failed to save modules: {}", err);
+        } else {
+            log::info!("Modules saved successfully!");
+        }
     }
 }

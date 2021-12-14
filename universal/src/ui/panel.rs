@@ -1,6 +1,6 @@
 use imgui::{Condition, TableColumnFlags, TableColumnSetup, TableFlags, Ui, Window};
 
-use crate::scene::module::ModuleContainer;
+use crate::scene::module::{ModuleContainer, ModuleWrapperPair};
 use crate::ui::module_list::ModuleList;
 use crate::RendererController;
 
@@ -29,6 +29,15 @@ impl MainPanel {
         Self {
             modules: ModuleList::new(),
         }
+    }
+
+    /// Inserts already loaded modules into the panel.
+    pub fn insert_loaded_modules(
+        &mut self,
+        modules: Vec<ModuleWrapperPair>,
+        controller: &RendererController,
+    ) {
+        self.modules.insert_loaded_modules(modules, controller);
     }
 
     /// Draws the UI and all its subtree.

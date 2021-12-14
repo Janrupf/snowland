@@ -17,6 +17,7 @@ use thiserror::Error;
 
 use crate::io::ConfigIO;
 use crate::rendering::fonts::{get_embedded_font_bytes, Font};
+use crate::scene::module::ModuleWrapperPair;
 use crate::ui::panel::MainPanel;
 use crate::util::{Notifier, NotifierImpl};
 use crate::{ControlMessage, RendererController};
@@ -103,6 +104,12 @@ impl SnowlandUI {
         ))
     }
 
+    /// Configures the UI with loaded modules.
+    pub fn configure(&mut self, controller: &RendererController) {
+        let modules = controller.load();
+        self.panel.insert_loaded_modules(modules, controller);
+    }
+
     /// Starts the event loop and processes messages.
     pub fn run_loop(
         &mut self,
@@ -176,7 +183,9 @@ impl SnowlandUI {
             Event::RedrawRequested(_) if self.is_visible => run_frame(),
             // Event::RedrawEventsCleared if cfg!(windows) => run_frame(),
             // Event::RedrawRequested(_) if !cfg!(windows) => run_frame(),
-            Event::UserEvent(message) => self.process_control_message(message, notifier),
+            Event::UserEvent(message) => {
+                self.process_control_message(message, notifier, controller)
+            }
 
             Event::WindowEvent {
                 event: WindowEvent::CloseRequested,
@@ -185,13 +194,7 @@ impl SnowlandUI {
                 self.display.gl_window().window().set_visible(false);
                 self.is_visible = false;
 
-                let modules = self.panel.get_modules();
-                log::info!("Saving config file because window has been closed...");
-                if let Err(err) = ConfigIO::save(modules) {
-                    log::error!("Failed to save config file: {}", err);
-                } else {
-                    log::info!("Config file saved successfully!");
-                }
+                controller.save(self.panel.get_modules());
 
                 notifier.notify(ControlMessage::CloseUI);
 
@@ -222,6 +225,7 @@ impl SnowlandUI {
         &mut self,
         message: ControlMessage,
         notifier: &Notifier<ControlMessage>,
+        controller: &RendererController,
     ) -> Result<ControlFlow, Error> {
         match message {
             ControlMessage::OpenUI => {
@@ -234,6 +238,7 @@ impl SnowlandUI {
                     .request_user_attention(Some(UserAttentionType::Informational));
             }
             ControlMessage::Exit => {
+                controller.save(self.panel.get_modules());
                 notifier.notify(ControlMessage::Exit);
                 return Ok(ControlFlow::Exit);
             }

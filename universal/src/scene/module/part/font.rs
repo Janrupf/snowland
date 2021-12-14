@@ -7,7 +7,7 @@ use crate::scene::module::ModuleConfig;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct FontSetting {
-    #[serde(skip)]
+    #[serde(skip, default = "make_default_font")]
     inner: Font,
 }
 
@@ -24,13 +24,17 @@ impl Clone for FontSetting {
     }
 }
 
+fn make_default_font() -> Font {
+    Font::from_typeface(
+        fonts::load_embedded_font(fonts::Font::NotoSansMono),
+        Some(32.0),
+    )
+}
+
 impl FontSetting {
     pub fn new() -> Self {
         Self {
-            inner: Font::from_typeface(
-                fonts::load_embedded_font(fonts::Font::NotoSansMono),
-                Some(32.0),
-            ),
+            inner: make_default_font(),
         }
     }
 

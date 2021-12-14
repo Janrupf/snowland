@@ -1,8 +1,8 @@
-use std::ops::{Add, Sub};
+use imgui::{ChildWindow, InputText, MouseButton, Selectable, Ui};
 
-use imgui::{ChildWindow, InputText, ItemHoveredFlags, MouseButton, Selectable, Ui};
-
-use crate::scene::module::{BoundModuleRenderer, KnownModules, ModuleContainer, ModuleWrapper};
+use crate::scene::module::{
+    BoundModuleRenderer, KnownModules, ModuleContainer, ModuleWrapper, ModuleWrapperPair,
+};
 use crate::RendererController;
 
 /// Sidebar controller for inserted modules.
@@ -25,6 +25,19 @@ impl ModuleList {
             next_id: 0,
             selected_module: None,
             dragging_item: None,
+        }
+    }
+
+    /// Inserts already loaded modules into the list.
+    pub fn insert_loaded_modules(
+        &mut self,
+        modules: Vec<ModuleWrapperPair>,
+        controller: &RendererController,
+    ) {
+        debug_assert!(self.entries.is_empty());
+
+        for module in modules {
+            self.insert_module(|id| ModuleEntry::bind(id, module), controller)
         }
     }
 
@@ -125,13 +138,27 @@ impl ModuleList {
 
     /// Helper function to add a module to the list.
     fn add_module(&mut self, controller: &RendererController) {
-        let (name, wrapper) = self.add_types[self.selected_add_type];
+        let (_, wrapper) = self.add_types[self.selected_add_type];
+        self.insert_module(|id| ModuleEntry::create_new(id, wrapper), controller);
+    }
 
-        let (entry, renderer) = ModuleEntry::new(self.next_id, name.clone(), wrapper);
+    /// Builds a new module by calling the builder with its id and then inserts its
+    /// UI representation and renderer.
+    fn insert_module(
+        &mut self,
+        entry_builder: impl FnOnce(i32) -> (ModuleEntry, Box<dyn BoundModuleRenderer>),
+        controller: &RendererController,
+    ) {
+        let id = {
+            let id = self.next_id;
+            self.next_id += 1;
+
+            id
+        };
+
+        let (entry, renderer) = entry_builder(id);
 
         self.entries.push(entry);
-        self.next_id += 1;
-
         controller.insert_module(renderer);
     }
 
@@ -169,17 +196,19 @@ struct ModuleEntry {
 
 impl ModuleEntry {
     /// Creates a new module entry and its underlying module.
-    pub fn new(
-        id: i32,
-        name: String,
-        wrapper: &ModuleWrapper,
-    ) -> (Self, Box<dyn BoundModuleRenderer>) {
-        let (container, renderer) = wrapper.create_with_default_config();
+    pub fn create_new(id: i32, wrapper: &ModuleWrapper) -> (Self, Box<dyn BoundModuleRenderer>) {
+        Self::bind(id, wrapper.create_with_default_config())
+    }
 
+    /// Binds a module entry to an existing wrapper pair.
+    pub fn bind(
+        id: i32,
+        (container, renderer): ModuleWrapperPair,
+    ) -> (Self, Box<dyn BoundModuleRenderer>) {
         (
             Self {
                 id,
-                name,
+                name: container.module_type(),
                 container,
             },
             renderer,

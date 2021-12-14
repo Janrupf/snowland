@@ -38,7 +38,7 @@ pub trait ModuleRenderer: Send {
     fn render<'a>(&mut self, config: &Self::Config, data: &mut SceneData<'a>);
 }
 
-type ModuleWrapperPair = (Box<dyn ModuleContainer>, Box<dyn BoundModuleRenderer>);
+pub type ModuleWrapperPair = (Box<dyn ModuleContainer>, Box<dyn BoundModuleRenderer>);
 type ModuleWrapperCreator = fn() -> ModuleWrapperPair;
 type ModuleWrapperDeserializer =
     fn(serde_json::Value) -> Result<ModuleWrapperPair, ModuleConfigError>;
