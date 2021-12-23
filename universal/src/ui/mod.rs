@@ -15,9 +15,7 @@ use imgui_glium_renderer::{Renderer, RendererError};
 use imgui_winit_support::{HiDpiMode, WinitPlatform};
 use thiserror::Error;
 
-use crate::io::ConfigIO;
 use crate::rendering::fonts::{get_embedded_font_bytes, Font};
-use crate::scene::module::ModuleWrapperPair;
 use crate::ui::panel::MainPanel;
 use crate::util::{Notifier, NotifierImpl};
 use crate::{ControlMessage, RendererController};

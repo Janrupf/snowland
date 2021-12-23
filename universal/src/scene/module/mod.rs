@@ -10,6 +10,7 @@ pub use known::*;
 use crate::scene::SceneData;
 
 mod clear;
+mod image;
 mod known;
 mod part;
 mod snow;
@@ -217,7 +218,7 @@ pub enum ModuleConfigError {
 
     #[error("failed to deserialize configuration: {0}")]
     Deserialize(serde_json::Error),
-    
+
     #[error("an I/O error occurred: {0}")]
-    Io(#[from] std::io::Error)
+    Io(#[from] std::io::Error),
 }
