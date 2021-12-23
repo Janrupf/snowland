@@ -1,0 +1,33 @@
+name: Build
+
+on:
+  push: {}
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Setup Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: nightly
+
+      - name: Cache Rust
+        uses: Swatinem/rust-cache@v1
+
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Build Rust
+        run: cargo build --release
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: Snowland Windows Host
+          path: target/release/snowland-win-host.exe
