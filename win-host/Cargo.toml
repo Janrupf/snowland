@@ -9,7 +9,7 @@ authors = ["Janrupf"]
 thiserror = "1.0.30"
 log = "0.4.14"
 pretty_env_logger = "0.4.0"
-skia-safe = { version = "0.45.0", features = ["gl"] }
+skia-safe = { version = "0.45.1", features = ["gl"] }
 glium = "0.30.2"
 winit = "0.25.0"
 raw-window-handle = "0.4.1"

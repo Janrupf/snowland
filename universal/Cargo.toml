@@ -7,7 +7,7 @@ edition = "2021"
 
 [dependencies]
 log = "0.4.14"
-skia-safe = "0.45.1"
+skia-safe = { version = "0.45.1", features = ["gl"] }
 thiserror = "1.0.30"
 rand = "0.8.4"
 chrono = "0.4.19"
