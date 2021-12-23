@@ -11,12 +11,6 @@ jobs:
     runs-on: windows-latest
 
     steps:
-      - name: Setup Rust
-        uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: nightly
-
       - name: Cache Rust
         uses: Swatinem/rust-cache@v1
 
