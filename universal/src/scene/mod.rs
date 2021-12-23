@@ -4,10 +4,6 @@ use skia_safe::Canvas;
 
 pub mod module;
 
-pub trait SnowlandScene {
-    fn update(&mut self, canvas: &mut Canvas, width: u64, height: u64, delta: f32);
-}
-
 /// Generic description of the current scene.
 #[derive(Debug)]
 pub struct SceneData<'a> {

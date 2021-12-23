@@ -1,8 +1,7 @@
 use imgui::{InputText, TreeNodeFlags};
 use serde::{Deserialize, Serialize};
-use skia_safe::{Font, Point};
+use skia_safe::Point;
 
-use crate::rendering::fonts;
 use crate::scene::module::part::{FontSetting, ModulePosition, PaintSetting};
 use crate::scene::module::{Module, ModuleConfig, ModuleRenderer};
 use crate::scene::SceneData;

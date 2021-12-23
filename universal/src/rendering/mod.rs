@@ -6,9 +6,7 @@ use skia_safe::Surface;
 use crate::rendering::state::RendererStateMessage;
 use crate::scene::module::BoundModuleRenderer;
 use crate::scene::SceneData;
-use crate::{
-    RendererError, SnowlandHost, SnowlandRenderer, SnowlandRendererCreator, SnowlandScene,
-};
+use crate::{RendererError, SnowlandHost, SnowlandRenderer, SnowlandRendererCreator};
 
 pub mod fonts;
 pub mod state;

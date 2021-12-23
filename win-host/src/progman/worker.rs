@@ -1,5 +1,5 @@
 use windows::Win32::Foundation::HWND;
-use windows::Win32::UI::WindowsAndMessaging::{GetWindowRect, SetParent};
+use windows::Win32::UI::WindowsAndMessaging::GetWindowRect;
 
 use crate::WinApiError;
 
@@ -38,8 +38,8 @@ impl Worker {
         }
     }
 
-    /// Sets another window as a child of the worker window.
-    pub fn reparent_other_as_child(&self, other: HWND) {
-        unsafe { SetParent(other, self.window) };
-    }
+    // /// Sets another window as a child of the worker window.
+    // pub fn reparent_other_as_child(&self, other: HWND) {
+    //     unsafe { SetParent(other, self.window) };
+    // }
 }

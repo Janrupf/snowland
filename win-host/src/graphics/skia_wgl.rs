@@ -15,9 +15,9 @@ use crate::{Graphics, ProgMan, WinApiError, Worker};
 pub struct SkiaWGLSnowlandRender {
     skia_context: DirectContext,
     wgl_context: WGLContext,
-    graphics: Graphics,
+    _graphics: Graphics,
     worker: Worker,
-    prog_man: ProgMan,
+    _prog_man: ProgMan,
 }
 
 impl SkiaWGLSnowlandRender {
@@ -51,9 +51,9 @@ impl SkiaWGLSnowlandRender {
         Ok(Self {
             wgl_context,
             skia_context,
-            graphics,
+            _graphics: graphics,
             worker,
-            prog_man,
+            _prog_man: prog_man,
         })
     }
 }

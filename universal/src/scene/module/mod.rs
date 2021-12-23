@@ -109,10 +109,7 @@ impl ModuleWrapper {
 }
 
 /// Helper type for configurations shared between a renderer and a container.
-type SharedConfig<M>
-where
-    M: Module,
-= Arc<Mutex<M::Config>>;
+type SharedConfig<M> = Arc<Mutex<<M as Module>::Config>>;
 
 /// Helper trait to represent this module in the user interface and make it configurable.
 pub trait ModuleContainer {

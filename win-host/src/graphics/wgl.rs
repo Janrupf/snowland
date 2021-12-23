@@ -1,7 +1,7 @@
-use std::fmt::{Debug, Formatter};
+use std::fmt::Debug;
 
 use thiserror::Error;
-use windows::Win32::Foundation::{BOOL, HINSTANCE};
+use windows::Win32::Foundation::HINSTANCE;
 use windows::Win32::Graphics::Gdi::{HDC, WGL_SWAP_MAIN_PLANE};
 use windows::Win32::Graphics::OpenGL::{
     wglCreateContext, wglDeleteContext, wglGetCurrentContext, wglGetProcAddress, wglMakeCurrent,
@@ -11,20 +11,11 @@ use windows::Win32::System::LibraryLoader::{FreeLibrary, GetProcAddress, LoadLib
 
 use crate::WinApiError;
 
-struct WGLSwapIntervalEXT(unsafe extern "system" fn(interval: i32) -> BOOL);
-
-impl Debug for WGLSwapIntervalEXT {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{:p}", self.0 as *const ())
-    }
-}
-
 #[derive(Debug)]
 pub struct WGLContext {
     dc: HDC,
     gl: HGLRC,
     opengl32: HINSTANCE,
-    swap_interval_ext: Option<WGLSwapIntervalEXT>,
 }
 
 impl WGLContext {
@@ -43,23 +34,7 @@ impl WGLContext {
             return Err(Error::WinApi(WinApiError::from_win32()));
         }
 
-        let mut instance = Self {
-            dc,
-            gl,
-            opengl32,
-            swap_interval_ext: None,
-        };
-
-        if let Ok(()) = instance.make_current() {
-            let swap_interval_ext = instance.lookup_wgl_proc("wglSwapIntervalEXT");
-            if !swap_interval_ext.is_null() {
-                instance
-                    .swap_interval_ext
-                    .replace(unsafe { std::mem::transmute(swap_interval_ext) });
-            }
-        }
-
-        Ok(instance)
+        Ok(Self { dc, gl, opengl32 })
     }
 
     /// Attempts to find a WGL function by first querying WGL and then the OpenGL32 library.
@@ -104,21 +79,6 @@ impl WGLContext {
     pub fn is_current(&self) -> bool {
         self.gl == unsafe { wglGetCurrentContext() }
     }
-
-    /// Attempts to change the swap interval of the context.
-    pub fn change_swap_interval(&self, interval: i32) -> Result<(), Error> {
-        if let Some(wgl_swap_interval_ext) = &self.swap_interval_ext {
-            let result = unsafe { wgl_swap_interval_ext.0(interval) }.as_bool();
-
-            if result {
-                Ok(())
-            } else {
-                Err(Error::WinApi(WinApiError::from_win32()))
-            }
-        } else {
-            Err(Error::WGLSwapControlExtNotAvailable)
-        }
-    }
 }
 
 impl Drop for WGLContext {
@@ -134,7 +94,4 @@ impl Drop for WGLContext {
 pub enum Error {
     #[error("error while calling Win32: {0}")]
     WinApi(WinApiError),
-
-    #[error("WGL_EXT_swap_control not available")]
-    WGLSwapControlExtNotAvailable,
 }

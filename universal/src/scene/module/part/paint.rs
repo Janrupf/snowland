@@ -1,4 +1,4 @@
-use std::fmt::{Formatter, Write};
+use std::fmt::Formatter;
 
 use imgui::{ColorEdit, EditableColor, Slider, Ui};
 use serde::de::{MapAccess, SeqAccess, Visitor};

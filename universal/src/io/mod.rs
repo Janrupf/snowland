@@ -2,9 +2,7 @@ use std::fs::File;
 
 use serde::{Deserialize, Serialize};
 
-use crate::scene::module::{
-    KnownModules, Module, ModuleConfigError, ModuleContainer, ModuleWrapper, ModuleWrapperPair,
-};
+use crate::scene::module::{KnownModules, ModuleConfigError, ModuleContainer, ModuleWrapperPair};
 
 /// Helper representing the entire config structure.
 #[derive(Debug, Serialize, Deserialize)]

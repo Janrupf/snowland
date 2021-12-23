@@ -11,7 +11,6 @@ use crate::control::ControlMessage;
 use crate::host::{RendererError, SnowlandHost, SnowlandRenderer, SnowlandRendererCreator};
 use crate::rendering::state::{RendererController, RendererStateMessage};
 use crate::rendering::RendererContainer;
-use crate::scene::SnowlandScene;
 use crate::ui::SnowlandUI;
 use crate::util::{Delayed, Notifier};
 

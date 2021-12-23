@@ -56,5 +56,5 @@ impl Default for FontSetting {
 }
 
 impl ModuleConfig for FontSetting {
-    fn represent(&mut self, ui: &Ui) {}
+    fn represent(&mut self, _ui: &Ui) {}
 }
