@@ -10,6 +10,7 @@ pub use known::*;
 use crate::scene::SceneData;
 
 mod clear;
+mod countdown;
 mod image;
 mod known;
 mod part;

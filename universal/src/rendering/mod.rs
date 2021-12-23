@@ -8,7 +8,6 @@ use crate::scene::module::BoundModuleRenderer;
 use crate::scene::SceneData;
 use crate::{
     RendererError, SnowlandHost, SnowlandRenderer, SnowlandRendererCreator, SnowlandScene,
-    XMasCountdown,
 };
 
 pub mod fonts;
