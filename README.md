@@ -1,6 +1,5 @@
 # Snowland Desktop Renderer
 
----
 Snowland is a custom desktop background renderer, similar to Wallpaper Engine - but way
 more primitive. The project developed as a fun idea and interest in drawing on the 
 Windows wallpaper without overriding the icons. At the moment Snowland implements a very
