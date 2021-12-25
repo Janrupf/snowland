@@ -5,6 +5,7 @@ use skia_safe::{Point, Rect};
 #[derive(Debug, Clone, Ord, PartialOrd, Eq, PartialEq)]
 pub struct Display {
     name: String,
+    id: String,
     x: i32,
     y: i32,
     width: i32,
@@ -12,9 +13,10 @@ pub struct Display {
 }
 
 impl Display {
-    pub fn new(name: String, x: i32, y: i32, width: i32, height: i32) -> Self {
+    pub fn new(name: String, id: String, x: i32, y: i32, width: i32, height: i32) -> Self {
         Self {
             name,
+            id,
             x,
             y,
             width,
@@ -24,6 +26,10 @@ impl Display {
 
     pub fn name(&self) -> &String {
         &self.name
+    }
+
+    pub fn id(&self) -> &String {
+        &self.id
     }
 
     pub fn x(&self) -> i32 {

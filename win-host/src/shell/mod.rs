@@ -195,6 +195,11 @@ impl ShellIntegrationWindow {
             return Err(Error::ClassRegistrationFailed(WinApiError::from_win32()));
         }
 
+        // Dispatch a notification about the display configuration
+        data.notifier.notify(ControlMessage::UpdateDisplays(
+            crate::util::display::get_displays(),
+        ));
+
         let data = Box::into_raw(Box::new(data));
 
         // This creates a very basic window which is not visible.

@@ -13,7 +13,7 @@ use windows::Win32::UI::Shell::{
 use windows::Win32::UI::WindowsAndMessaging::{
     AppendMenuA, CreatePopupMenu, DefWindowProcA, DestroyMenu, GetCursorPos, PostQuitMessage,
     SendNotifyMessageA, SetForegroundWindow, TrackPopupMenu, HICON, HMENU, MF_STRING, TPM_NONOTIFY,
-    TPM_RETURNCMD, WM_CREATE, WM_DESTROY, WM_USER,
+    TPM_RETURNCMD, WM_CREATE, WM_DESTROY, WM_DISPLAYCHANGE, WM_USER,
 };
 
 use snowland_universal::control::ControlMessage;
@@ -134,13 +134,25 @@ impl ShellIntegration {
     ) -> Result<LRESULT, Error> {
         match message {
             WM_CREATE => self.create().map(|()| LRESULT(0)),
+
             WM_DESTROY => self.destroy().map(|()| LRESULT(0)),
+
+            WM_DISPLAYCHANGE => {
+                self.notifier.notify(ControlMessage::UpdateDisplays(
+                    crate::util::display::get_displays(),
+                ));
+
+                Ok(LRESULT(0))
+            }
+
             WM_SNOWLAND_MESSENGER => self
                 .process_control_message(*unsafe { Box::from_raw(w_param.0 as _) })
                 .map(|()| LRESULT(0)),
+
             WM_SNOWLAND_NOTIFICATION => self
                 .process_notification_message(w_param, l_param)
                 .map(|()| LRESULT(0)),
+
             _ => Ok(unsafe { DefWindowProcA(self.window, message, w_param, l_param) }),
         }
     }
