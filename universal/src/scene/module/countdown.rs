@@ -178,20 +178,19 @@ impl ModuleRenderer for CountdownModuleRenderer {
             .get_font()
             .measure_str(&value, Some(config.paint.get_paint()));
 
-        let (x, y) = config.position.compute_position_baselined(
-            data.width(),
-            data.height(),
+        if let Some((x, y)) = config.position.compute_position_baselined(
+            data,
             rect.width() as i32,
             rect.height() as i32,
-        );
+        ) {
+            let canvas = data.canvas();
 
-        let canvas = data.canvas();
-
-        canvas.draw_str(
-            &value,
-            Point::new(x as _, y as _),
-            config.font.get_font(),
-            config.paint.get_paint(),
-        );
+            canvas.draw_str(
+                &value,
+                Point::new(x as _, y as _),
+                config.font.get_font(),
+                config.paint.get_paint(),
+            );
+        }
     }
 }

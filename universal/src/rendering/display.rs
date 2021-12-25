@@ -6,6 +6,7 @@ use skia_safe::{Point, Rect};
 pub struct Display {
     name: String,
     id: String,
+    primary: bool,
     x: i32,
     y: i32,
     width: i32,
@@ -13,10 +14,31 @@ pub struct Display {
 }
 
 impl Display {
-    pub fn new(name: String, id: String, x: i32, y: i32, width: i32, height: i32) -> Self {
+    pub fn uninitialized() -> Self {
+        Self {
+            name: "Virtual uninitialized Display".into(),
+            id: "UNINITIALIZED".into(),
+            primary: false,
+            x: -1,
+            y: -1,
+            width: -1,
+            height: -1,
+        }
+    }
+
+    pub fn new(
+        name: String,
+        id: String,
+        primary: bool,
+        x: i32,
+        y: i32,
+        width: i32,
+        height: i32,
+    ) -> Self {
         Self {
             name,
             id,
+            primary,
             x,
             y,
             width,
@@ -30,6 +52,10 @@ impl Display {
 
     pub fn id(&self) -> &String {
         &self.id
+    }
+
+    pub fn primary(&self) -> bool {
+        self.primary
     }
 
     pub fn x(&self) -> i32 {
@@ -59,6 +85,15 @@ impl Display {
             (self.x + self.width) as _,
             (self.y + self.height) as _,
         )
+    }
+
+    #[must_use = "remap_coordinates consumes and creates a new display instance without side effects"]
+    pub fn remap_coordinates(self, new_x: i32, new_y: i32) -> Self {
+        Self {
+            x: new_x,
+            y: new_y,
+            ..self
+        }
     }
 }
 

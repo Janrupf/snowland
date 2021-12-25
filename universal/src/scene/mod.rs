@@ -11,6 +11,7 @@ pub mod module;
 #[derive(Debug)]
 pub struct SceneData<'a> {
     canvas: &'a mut Canvas,
+    primary_display: &'a Display,
     displays: &'a HashMap<String, Display>,
     width: i32,
     height: i32,
@@ -20,6 +21,7 @@ pub struct SceneData<'a> {
 impl<'a> SceneData<'a> {
     pub fn new(
         canvas: &'a mut Canvas,
+        primary_display: &'a Display,
         displays: &'a HashMap<String, Display>,
         width: i32,
         height: i32,
@@ -27,6 +29,7 @@ impl<'a> SceneData<'a> {
     ) -> Self {
         Self {
             canvas,
+            primary_display,
             displays,
             width,
             height,
@@ -54,8 +57,13 @@ impl<'a> SceneData<'a> {
         &self.delta
     }
 
-    /// Attempts to find a display by name.
-    pub fn lookup_display(&self, name: &str) -> Option<&'a Display> {
-        self.displays.get(name)
+    /// Retrieves the primary display
+    pub fn primary_display(&self) -> &'a Display {
+        self.primary_display
+    } 
+    
+    /// Attempts to find a display by it's id.
+    pub fn lookup_display(&self, id: &str) -> Option<&'a Display> {
+        self.displays.get(id)
     }
 }

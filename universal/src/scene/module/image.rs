@@ -139,16 +139,14 @@ impl ModuleRenderer for ImageModuleRenderer {
         }
 
         if let Some(image) = &self.current_image {
-            let pos = config.position.compute_position(
-                data.width(),
-                data.height(),
-                image.width(),
-                image.height(),
-            );
-
-            let canvas = data.canvas();
-            let paint = config.paint_enabled.then(|| config.paint.get_paint());
-            canvas.draw_image(image, pos, paint);
+            if let Some(pos) = config
+                .position
+                .compute_position(data, image.width(), image.height())
+            {
+                let canvas = data.canvas();
+                let paint = config.paint_enabled.then(|| config.paint.get_paint());
+                canvas.draw_image(image, pos, paint);
+            }
         }
     }
 }

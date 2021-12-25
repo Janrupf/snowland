@@ -26,6 +26,7 @@ where
     message_receiver: Receiver<RendererStateMessage>,
     last_frame_time: Instant,
     modules: Vec<Box<dyn BoundModuleRenderer>>,
+    primary_display: Display,
     displays: HashMap<String, Display>,
 }
 
@@ -50,6 +51,7 @@ where
             message_receiver,
             last_frame_time: Instant::now(),
             modules: Vec::new(),
+            primary_display: Display::uninitialized(),
             displays: HashMap::new(),
         })
     }
@@ -84,10 +86,13 @@ where
                         self.modules.swap(a, b);
                     }
                     RendererStateMessage::UpdateDisplayList(displays) => {
-                        self.displays = displays
-                            .into_iter()
-                            .map(|d| (d.name().clone(), d))
-                            .collect();
+                        self.primary_display = displays
+                            .iter()
+                            .find(|d| d.primary())
+                            .or_else(|| displays.first())
+                            .map(Clone::clone)
+                            .unwrap_or_else(Display::uninitialized);
+                        self.displays = displays.into_iter().map(|d| (d.id().clone(), d)).collect();
                     }
                 }
             }
@@ -117,6 +122,7 @@ where
         for module in &mut self.modules {
             let mut data = SceneData::new(
                 canvas,
+                &self.primary_display,
                 &self.displays,
                 width,
                 height,

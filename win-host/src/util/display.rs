@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 use std::ffi::OsString;
 
+use thiserror::Error;
 use windows::core::HRESULT;
 use windows::Win32::Devices::Display::{
     DisplayConfigGetDeviceInfo, GetDisplayConfigBufferSizes, QueryDisplayConfig,
@@ -12,6 +13,9 @@ use windows::Win32::Foundation::{BOOL, ERROR_SUCCESS, LPARAM, RECT, WIN32_ERROR}
 use windows::Win32::Graphics::Gdi::{
     EnumDisplayMonitors, GetMonitorInfoW, HDC, HMONITOR, MONITORINFO, MONITORINFOEXW,
     QDC_ONLY_ACTIVE_PATHS,
+};
+use windows::Win32::UI::WindowsAndMessaging::{
+    GetSystemMetrics, MONITORINFOF_PRIMARY, SM_XVIRTUALSCREEN, SM_YVIRTUALSCREEN,
 };
 
 use snowland_universal::rendering::display::Display;
@@ -25,6 +29,56 @@ type EnumDisplayMonitorsUserData<'a> = (&'a mut Vec<Display>, &'a HashMap<OsStri
 struct MonitorData {
     pub friendly_name: OsString,
     pub unique_path: OsString,
+}
+
+impl MonitorData {
+    pub fn resolve(&self, id: usize, primary: bool) -> ResolvedMonitorData {
+        ResolvedMonitorData {
+            primary,
+            friendly_name: format!("{}: {}", id, self.friendly_name.to_string_lossy()),
+            unique_path: self.unique_path.to_string_lossy().into(),
+        }
+    }
+}
+
+#[derive(Debug)]
+struct ResolvedMonitorData {
+    pub primary: bool,
+    pub friendly_name: String,
+    pub unique_path: String,
+}
+
+impl ResolvedMonitorData {
+    pub fn faked(id: usize) -> Self {
+        let fake_data = || format!("Monitor {}", id);
+
+        ResolvedMonitorData {
+            primary: false,
+            friendly_name: fake_data(),
+            unique_path: fake_data(),
+        }
+    }
+
+    pub fn into_display(self, rect: &RECT) -> Display {
+        let Self {
+            primary,
+            friendly_name,
+            unique_path,
+        } = self;
+
+        let width = rect.right - rect.left;
+        let height = rect.bottom - rect.top;
+
+        Display::new(
+            friendly_name,
+            unique_path,
+            primary,
+            rect.left,
+            rect.top,
+            width,
+            height,
+        )
+    }
 }
 
 /// Retrieves information about all active monitors for the current session.
@@ -44,7 +98,7 @@ pub fn get_displays() -> Vec<Display> {
     log::debug!("Retrieving display list...");
 
     // Prepare data to pass to the enumeration callback.
-    let mut displays = Vec::new();
+    let mut displays = Vec::<Display>::new();
     let mut user_data = (&mut displays, &path_name_map);
 
     let ok = unsafe {
@@ -66,7 +120,47 @@ pub fn get_displays() -> Vec<Display> {
     log::info!("Found {} displays", displays.len());
     log::debug!("Found displays: {:?}", displays);
 
+    // We now need to possibly correct the display coordinates.
+    //
+    // Snowland expects all coordinates to have the upper left corner at (0, 0). However, Windows
+    // monitor coordinates may be negative if the monitor is left or below of the primary monitor.
+    //
+    // The virtual screen is a virtual rectangle which spans tightly around all monitors and
+    // determines where the coordinates start. Using this information we can make the upper left
+    // corner of the virtual screen equal to (0, 0) in window coordinates.
+    let virtual_screen_x = unsafe { GetSystemMetrics(SM_XVIRTUALSCREEN) };
+    let virtual_screen_y = unsafe { GetSystemMetrics(SM_YVIRTUALSCREEN) };
+
+    log::debug!(
+        "Virtual screen top left corner is at ({}, {})",
+        virtual_screen_x,
+        virtual_screen_y
+    );
+
+    let correction_x = -virtual_screen_x;
+    let correction_y = -virtual_screen_y;
+
     displays
+        .into_iter()
+        .map(|d| {
+            let display_x = d.x();
+            let display_y = d.y();
+
+            let corrected_x = display_x + correction_x;
+            let corrected_y = display_y + correction_y;
+
+            log::debug!(
+                "Moving display {} from ({}, {}) to ({}, {})",
+                d.name(),
+                display_x,
+                display_y,
+                corrected_x,
+                corrected_y
+            );
+
+            d.remap_coordinates(corrected_x, corrected_y)
+        })
+        .collect()
 }
 
 extern "system" fn monitor_callback(
@@ -86,36 +180,19 @@ extern "system" fn monitor_callback(
     // whatsoever as it is simple the index of the monitor array Windows gives us!)
     let fake_id = displays.len() + 1;
 
-    let (name, id) = match monitor_data_from_hmonitor(monitor, path_name_map, fake_id)
-        .unwrap_or_else(|err| {
-            log::warn!(
-                "Failed to retrieve name for monitor 0x{:X}: {}",
-                monitor.0,
-                err
-            );
+    let data = monitor_data_from_hmonitor(monitor, path_name_map, fake_id).unwrap_or_else(|err| {
+        log::warn!(
+            "Failed to retrieve name for monitor 0x{:X}: {}",
+            monitor.0,
+            err
+        );
 
-            None
-        }) {
-        None => {
-            // We need to come up with some data so we can still identify the monitor
-            // and show it to the user.
-            let fake_data = format!("Monitor {}", fake_id);
-            log::warn!(
-                "Faking data for monitor 0x{:X} by setting name and id to {}",
-                monitor.0,
-                fake_data
-            );
-            (fake_data.clone(), fake_data)
-        }
-        Some(data) => data,
-    };
-
-    let width = rect.right - rect.left;
-    let height = rect.bottom - rect.top;
+        ResolvedMonitorData::faked(fake_id)
+    });
 
     // At this point name and id are either retrieved from Windows or have been filled with fake
     // data which makes the configuration at least temporary usable.
-    displays.push(Display::new(name, id, rect.left, rect.top, width, height));
+    displays.push(data.into_display(rect));
 
     true.into()
 }
@@ -126,7 +203,7 @@ fn monitor_data_from_hmonitor(
     monitor: HMONITOR,
     path_name_map: &HashMap<OsString, MonitorData>,
     id: usize,
-) -> Result<Option<(String, String)>, WinApiError> {
+) -> Result<ResolvedMonitorData, MonitorDataError> {
     let mut info = MONITORINFOEXW {
         __AnonymousBase_winuser_L13571_C43: MONITORINFO {
             cbSize: std::mem::size_of::<MONITORINFOEXW>() as _,
@@ -137,28 +214,30 @@ fn monitor_data_from_hmonitor(
 
     // Get some basic information about the HMONITOR, we will heavily rely on that!
     if !unsafe { GetMonitorInfoW(monitor, std::mem::transmute(&mut info)) }.as_bool() {
-        return Err(WinApiError::from_win32());
+        return Err(WinApiError::from_win32().into());
     }
 
     // The device path will be something like \\?\DISPLAY0
     let path = OsString::from_wide_null(&info.szDevice);
 
+    let primary = (info.__AnonymousBase_winuser_L13571_C43.dwFlags & MONITORINFOF_PRIMARY) != 0;
+
     // We can't get the friendly name from the HMONITOR itself, but earlier on we queried the
     // hardware for that information, so we now use our GDI path to map to that name as well as
     // unique id (or well, path).
-    let result = path_name_map.get(&path).map(
-        |MonitorData {
-             friendly_name,
-             unique_path,
-         }| {
-            let name = format!("{}: {}", id, friendly_name.to_string_lossy());
-            let unique_path = unique_path.to_string_lossy().to_string();
+    path_name_map
+        .get(&path)
+        .map(|data| data.resolve(id, primary))
+        .ok_or(MonitorDataError::DataNotFound(path))
+}
 
-            (name, unique_path)
-        },
-    );
+#[derive(Debug, Error)]
+enum MonitorDataError {
+    #[error(transparent)]
+    WinApi(#[from] WinApiError),
 
-    Ok(result)
+    #[error("data for monitor {} not found", .0.to_string_lossy())]
+    DataNotFound(OsString),
 }
 
 fn map_device_path_to_name() -> Result<HashMap<OsString, MonitorData>, WinApiError> {

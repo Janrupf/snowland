@@ -1,8 +1,10 @@
 use imgui::{Drag, Ui};
-
-use crate::scene::module::ModuleConfig;
-use crate::ui::context::Context;
 use serde::{Deserialize, Serialize};
+
+use crate::scene::module::part::DisplaySelection;
+use crate::scene::module::ModuleConfig;
+use crate::scene::SceneData;
+use crate::ui::context::Context;
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub enum HorizontalPositionAnchor {
@@ -100,6 +102,9 @@ impl ModuleConfig for VerticalPositionAnchor {
 pub struct ModulePosition {
     horizontal: HorizontalPositionAnchor,
     vertical: VerticalPositionAnchor,
+
+    #[serde(default)]
+    display: DisplaySelection,
     x_offset: i32,
     y_offset: i32,
 }
@@ -107,28 +112,32 @@ pub struct ModulePosition {
 impl ModulePosition {
     pub fn compute_position(
         &self,
-        available_width: i32,
-        available_height: i32,
+        data: &SceneData,
         width: i32,
         height: i32,
-    ) -> (i32, i32) {
-        (
-            self.horizontal.compute(available_width, width) + self.x_offset,
-            self.vertical.compute(available_height, height) + self.y_offset,
-        )
+    ) -> Option<(i32, i32)> {
+        self.display
+            .perform_calculation_with(data, |available_width, available_height| {
+                (
+                    self.horizontal.compute(available_width, width) + self.x_offset,
+                    self.vertical.compute(available_height, height) + self.y_offset,
+                )
+            })
     }
 
     pub fn compute_position_baselined(
         &self,
-        available_width: i32,
-        available_height: i32,
+        data: &SceneData,
         width: i32,
         height: i32,
-    ) -> (i32, i32) {
-        (
-            self.horizontal.compute(available_width, width) + self.x_offset,
-            self.vertical.compute_baselined(available_height, height) + self.y_offset,
-        )
+    ) -> Option<(i32, i32)> {
+        self.display
+            .perform_calculation_with(data, |available_width, available_height| {
+                (
+                    self.horizontal.compute(available_width, width) + self.x_offset,
+                    self.vertical.compute_baselined(available_height, height) + self.y_offset,
+                )
+            })
     }
 }
 
@@ -137,6 +146,11 @@ impl ModuleConfig for ModulePosition {
         if let Some(_tab) = ui.begin_table("Position", 2) {
             ui.table_next_row();
             ui.table_next_column();
+
+            self.display.represent(ui, ctx);
+
+            ui.table_next_column();
+            ui.table_next_row();
 
             self.horizontal.represent(ui, ctx);
             ui.table_next_column();
