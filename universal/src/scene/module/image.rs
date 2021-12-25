@@ -6,6 +6,7 @@ use skia_safe::Image;
 use crate::scene::module::part::{ModulePosition, PaintSetting};
 use crate::scene::module::{Module, ModuleConfig, ModuleRenderer};
 use crate::scene::SceneData;
+use crate::ui::context::Context;
 use crate::util::OwnedCodec;
 
 pub(super) struct ImageModule;
@@ -43,9 +44,9 @@ impl Default for ImageModuleConfig {
 }
 
 impl ModuleConfig for ImageModuleConfig {
-    fn represent(&mut self, ui: &Ui) {
+    fn represent(&mut self, ui: &Ui, ctx: &Context<'_>) {
         if ui.collapsing_header("Position", TreeNodeFlags::FRAMED) {
-            self.position.represent(ui);
+            self.position.represent(ui, ctx);
         }
 
         if ui.collapsing_header("Module", TreeNodeFlags::FRAMED) {
@@ -71,7 +72,7 @@ impl ModuleConfig for ImageModuleConfig {
             ui.checkbox("Enable paint override", &mut self.paint_enabled);
 
             if self.paint_enabled {
-                self.paint.represent(ui);
+                self.paint.represent(ui, ctx);
             }
         }
     }

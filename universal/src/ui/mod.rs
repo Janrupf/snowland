@@ -9,8 +9,8 @@ use glium::glutin::event_loop::{ControlFlow, EventLoop, EventLoopProxy};
 use glium::glutin::platform::run_return::EventLoopExtRunReturn;
 use glium::glutin::window::{UserAttentionType, WindowBuilder};
 use glium::glutin::ContextBuilder;
-use glium::{Display, Surface, SwapBuffersError};
-use imgui::{Context, FontConfig, FontSource};
+use glium::{Surface, SwapBuffersError};
+use imgui::{FontConfig, FontSource};
 use imgui_glium_renderer::{Renderer, RendererError};
 use imgui_winit_support::{HiDpiMode, WinitPlatform};
 use thiserror::Error;
@@ -20,6 +20,7 @@ use crate::ui::panel::MainPanel;
 use crate::util::{Notifier, NotifierImpl};
 use crate::{ControlMessage, RendererController};
 
+pub mod context;
 mod module_list;
 mod panel;
 
@@ -30,12 +31,13 @@ const WINDOW_INITIALLY_VISIBLE: bool = cfg!(debug_assertions);
 pub struct SnowlandUI {
     panel: MainPanel,
     platform: WinitPlatform,
-    imgui: Context,
+    imgui: imgui::Context,
     renderer: Renderer,
-    display: Display,
+    display: glium::Display,
     event_loop: Option<EventLoop<ControlMessage>>,
     last_frame: Instant,
     is_visible: bool,
+    displays: Vec<crate::rendering::display::Display>,
 }
 
 impl SnowlandUI {
@@ -57,9 +59,9 @@ impl SnowlandUI {
             .with_vsync(true);
 
         let event_loop = EventLoop::<ControlMessage>::with_user_event();
-        let display = Display::new(window_builder, context_builder, &event_loop)?;
+        let display = glium::Display::new(window_builder, context_builder, &event_loop)?;
 
-        let mut imgui = Context::create();
+        let mut imgui = imgui::Context::create();
         imgui.set_ini_filename(None);
 
         let mut platform = WinitPlatform::init(&mut imgui);
@@ -97,6 +99,7 @@ impl SnowlandUI {
                 event_loop: Some(event_loop),
                 last_frame: Instant::now(),
                 is_visible: WINDOW_INITIALLY_VISIBLE,
+                displays: Vec::new(),
             },
             notifier,
         ))
@@ -143,7 +146,8 @@ impl SnowlandUI {
         let mut run_frame = || {
             let ui = self.imgui.frame();
 
-            self.panel.run(&ui, controller);
+            let ui_context = context::Context::new(&self.displays);
+            self.panel.run(&ui, &ui_context, controller);
 
             let gl_window = self.display.gl_window();
 
@@ -239,6 +243,10 @@ impl SnowlandUI {
                 controller.save(self.panel.get_modules());
                 notifier.notify(ControlMessage::Exit);
                 return Ok(ControlFlow::Exit);
+            }
+            ControlMessage::UpdateDisplays(displays) => {
+                self.displays = displays;
+                controller.update_displays(self.displays.clone());
             }
             _ => {}
         }

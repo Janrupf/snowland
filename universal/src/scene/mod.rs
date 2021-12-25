@@ -1,6 +1,9 @@
+use std::collections::HashMap;
 use std::time::Duration;
 
 use skia_safe::Canvas;
+
+use crate::rendering::display::Display;
 
 pub mod module;
 
@@ -8,15 +11,23 @@ pub mod module;
 #[derive(Debug)]
 pub struct SceneData<'a> {
     canvas: &'a mut Canvas,
+    displays: &'a HashMap<String, Display>,
     width: i32,
     height: i32,
     delta: Duration,
 }
 
 impl<'a> SceneData<'a> {
-    pub fn new(canvas: &'a mut Canvas, width: i32, height: i32, delta: Duration) -> Self {
+    pub fn new(
+        canvas: &'a mut Canvas,
+        displays: &'a HashMap<String, Display>,
+        width: i32,
+        height: i32,
+        delta: Duration,
+    ) -> Self {
         Self {
             canvas,
+            displays,
             width,
             height,
             delta,
@@ -24,22 +35,27 @@ impl<'a> SceneData<'a> {
     }
 
     /// The width of the scene in canvas units.
-    fn width(&self) -> i32 {
+    pub fn width(&self) -> i32 {
         self.width
     }
 
     /// The height of the scene in canvas units.
-    fn height(&self) -> i32 {
+    pub fn height(&self) -> i32 {
         self.height
     }
 
     /// The canvas the scene renders to.
-    fn canvas(&mut self) -> &mut Canvas {
+    pub fn canvas(&mut self) -> &mut Canvas {
         self.canvas
     }
 
     /// The rendering delta.
-    fn delta(&self) -> &Duration {
+    pub fn delta(&self) -> &Duration {
         &self.delta
+    }
+
+    /// Attempts to find a display by name.
+    pub fn lookup_display(&self, name: &str) -> Option<&'a Display> {
+        self.displays.get(name)
     }
 }

@@ -6,6 +6,7 @@ use skia_safe::{Color4f, Paint};
 
 use crate::scene::module::{Module, ModuleConfig, ModuleRenderer};
 use crate::scene::SceneData;
+use crate::ui::context::Context;
 
 pub(super) struct SnowModule;
 
@@ -91,7 +92,7 @@ impl Default for SnowModuleConfig {
 }
 
 impl ModuleConfig for SnowModuleConfig {
-    fn represent(&mut self, ui: &Ui) {
+    fn represent(&mut self, ui: &Ui, _ctx: &Context<'_>) {
         if ui.collapsing_header("Module", TreeNodeFlags::FRAMED) {
             if let Some(_tab) = ui.begin_table("Values", 3) {
                 ui.table_next_row();

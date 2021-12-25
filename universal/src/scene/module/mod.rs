@@ -8,6 +8,7 @@ use thiserror::Error;
 pub use known::*;
 
 use crate::scene::SceneData;
+use crate::ui::context::Context;
 
 mod clear;
 mod countdown;
@@ -30,7 +31,7 @@ pub trait Module {
 
 pub trait ModuleConfig: Send + Clone + Default + Serialize + DeserializeOwned {
     /// Renders a menu to change this module configuration.
-    fn represent(&mut self, ui: &imgui::Ui);
+    fn represent(&mut self, ui: &imgui::Ui, ctx: &Context<'_>);
 }
 
 pub trait ModuleRenderer: Send {
@@ -113,7 +114,7 @@ type SharedConfig<M> = Arc<Mutex<<M as Module>::Config>>;
 
 /// Helper trait to represent this module in the user interface and make it configurable.
 pub trait ModuleContainer {
-    fn represent(&mut self, ui: &imgui::Ui);
+    fn represent(&mut self, ui: &imgui::Ui, ctx: &Context<'_>);
 
     fn serialize_config(&self) -> Result<serde_json::Value, ModuleConfigError>;
 
@@ -140,9 +141,9 @@ impl<M> ModuleContainer for InternalModuleContainer<M>
 where
     M: Module,
 {
-    fn represent(&mut self, ui: &imgui::Ui) {
+    fn represent(&mut self, ui: &imgui::Ui, ctx: &Context<'_>) {
         let mut config = self.config.lock().expect("Failed to lock ui config");
-        config.represent(ui);
+        config.represent(ui, ctx);
     }
 
     fn serialize_config(&self) -> Result<serde_json::Value, ModuleConfigError> {

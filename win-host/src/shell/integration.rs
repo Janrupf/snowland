@@ -99,8 +99,7 @@ impl ShellIntegration {
             uCallbackMessage: WM_SNOWLAND_NOTIFICATION,
             uID: 1,
 
-            // Show the icon and tooltip and use a GUID to identify the icon calling the window
-            // with a window message.
+            // Show the icon and tooltip
             uFlags: NIF_ICON | NIF_TIP | NIF_SHOWTIP | NIF_MESSAGE,
             hIcon: Self::load_icon(1),
             szTip: Self::make_string("Snowland"),

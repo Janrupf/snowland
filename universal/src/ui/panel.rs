@@ -1,6 +1,7 @@
 use imgui::{Condition, TableColumnFlags, TableColumnSetup, TableFlags, Ui, Window};
 
 use crate::scene::module::{ModuleContainer, ModuleWrapperPair};
+use crate::ui::context::Context;
 use crate::ui::module_list::ModuleList;
 use crate::RendererController;
 
@@ -41,7 +42,7 @@ impl MainPanel {
     }
 
     /// Draws the UI and all its subtree.
-    pub fn run(&mut self, ui: &Ui, controller: &RendererController) {
+    pub fn run(&mut self, ui: &Ui, ctx: &Context<'_>, controller: &RendererController) {
         Window::new("Snowland Control Panel")
             .title_bar(false)
             .movable(false)
@@ -75,7 +76,7 @@ impl MainPanel {
                     self.modules.render(ui, controller);
                     ui.table_next_column();
 
-                    if !self.modules.render_selected_container(ui) {
+                    if !self.modules.render_selected_container(ui, ctx) {
                         self.draw_help_text(ui);
                     }
                 }

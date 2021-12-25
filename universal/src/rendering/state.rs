@@ -1,6 +1,7 @@
 use std::sync::mpsc::{Receiver, Sender};
 
 use crate::io::ConfigIO;
+use crate::rendering::display::Display;
 use crate::scene::module::{BoundModuleRenderer, ModuleContainer, ModuleWrapperPair};
 
 /// Messages which can be sent to the renderer.
@@ -15,6 +16,9 @@ pub enum RendererStateMessage {
 
     /// Swaps the position of 2 modules.
     Swap(usize, usize),
+
+    /// Notifies the renderer of the new display list.
+    UpdateDisplayList(Vec<Display>),
 }
 
 pub struct RendererController {
@@ -41,6 +45,14 @@ impl RendererController {
     /// Swaps the position of 2 renderer modules.
     pub fn swap_modules(&self, a: usize, b: usize) {
         drop(self.sender.send(RendererStateMessage::Swap(a, b)))
+    }
+
+    /// Notifiers the renderer of the new display list.
+    pub fn update_displays(&self, displays: Vec<Display>) {
+        drop(
+            self.sender
+                .send(RendererStateMessage::UpdateDisplayList(displays)),
+        )
     }
 
     /// Sends the renderer the shutdown signal.

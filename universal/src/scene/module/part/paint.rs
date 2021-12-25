@@ -7,6 +7,7 @@ use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use skia_safe::{paint::Style, scalar, Color4f, Paint};
 
 use crate::scene::module::ModuleConfig;
+use crate::ui::context::Context;
 
 #[derive(Debug, Clone)]
 pub struct ColorSetting(Color4f);
@@ -25,7 +26,7 @@ impl Default for ColorSetting {
 }
 
 impl ModuleConfig for ColorSetting {
-    fn represent(&mut self, ui: &Ui) {
+    fn represent(&mut self, ui: &Ui, _ctx: &Context<'_>) {
         let color_data = self.0.as_array_mut();
         ColorEdit::new("Color", EditableColor::Float4(color_data)).build(ui);
     }
@@ -109,7 +110,7 @@ impl Default for PaintSetting {
 }
 
 impl ModuleConfig for PaintSetting {
-    fn represent(&mut self, ui: &Ui) {
+    fn represent(&mut self, ui: &Ui, _ctx: &Context<'_>) {
         let mut color = self.0.color4f();
         let color_data = color.as_array_mut();
 

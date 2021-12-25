@@ -8,6 +8,7 @@ use skia_safe::Point;
 use crate::scene::module::part::{FontSetting, ModulePosition, PaintSetting};
 use crate::scene::module::{Module, ModuleConfig, ModuleRenderer};
 use crate::scene::SceneData;
+use crate::ui::context::Context;
 
 pub(super) struct CountdownModule;
 
@@ -97,7 +98,7 @@ impl Default for CountdownTarget {
 }
 
 impl ModuleConfig for CountdownTarget {
-    fn represent(&mut self, _ui: &Ui) {}
+    fn represent(&mut self, _ui: &Ui, _ctx: &Context<'_>) {}
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
@@ -109,13 +110,13 @@ pub struct CountdownModuleConfig {
 }
 
 impl ModuleConfig for CountdownModuleConfig {
-    fn represent(&mut self, ui: &imgui::Ui) {
+    fn represent(&mut self, ui: &imgui::Ui, ctx: &Context<'_>) {
         if ui.collapsing_header("Position", TreeNodeFlags::FRAMED) {
-            self.position.represent(ui);
+            self.position.represent(ui, ctx);
         }
 
         if ui.collapsing_header("Color", TreeNodeFlags::FRAMED) {
-            self.paint.represent(ui);
+            self.paint.represent(ui, ctx);
         }
 
         if ui.collapsing_header("Module", TreeNodeFlags::FRAMED) {
@@ -128,7 +129,7 @@ impl ModuleConfig for CountdownModuleConfig {
                 self.target = CountdownTarget::from_ordinal(current_type_ordinal);
             }
 
-            self.target.represent(ui);
+            self.target.represent(ui, ctx);
         }
     }
 }

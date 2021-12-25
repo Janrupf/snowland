@@ -1,6 +1,7 @@
 use imgui::{Drag, Ui};
 
 use crate::scene::module::ModuleConfig;
+use crate::ui::context::Context;
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
@@ -29,7 +30,7 @@ impl Default for HorizontalPositionAnchor {
 }
 
 impl ModuleConfig for HorizontalPositionAnchor {
-    fn represent(&mut self, ui: &Ui) {
+    fn represent(&mut self, ui: &Ui, _ctx: &Context<'_>) {
         let mut current = Self::VALUES.iter().position(|v| v == self).unwrap();
 
         ui.combo("Horizontal", &mut current, &Self::VALUES, |v| {
@@ -79,7 +80,7 @@ impl Default for VerticalPositionAnchor {
 }
 
 impl ModuleConfig for VerticalPositionAnchor {
-    fn represent(&mut self, ui: &Ui) {
+    fn represent(&mut self, ui: &Ui, _ctx: &Context<'_>) {
         let mut current = Self::VALUES.iter().position(|v| v == self).unwrap();
 
         ui.combo("Vertical", &mut current, &Self::VALUES, |v| {
@@ -132,14 +133,14 @@ impl ModulePosition {
 }
 
 impl ModuleConfig for ModulePosition {
-    fn represent(&mut self, ui: &Ui) {
+    fn represent(&mut self, ui: &Ui, ctx: &Context<'_>) {
         if let Some(_tab) = ui.begin_table("Position", 2) {
             ui.table_next_row();
             ui.table_next_column();
 
-            self.horizontal.represent(ui);
+            self.horizontal.represent(ui, ctx);
             ui.table_next_column();
-            self.vertical.represent(ui);
+            self.vertical.represent(ui, ctx);
 
             ui.table_next_row();
             ui.table_next_column();

@@ -3,6 +3,7 @@ use imgui::{ChildWindow, InputText, MouseButton, Selectable, Ui};
 use crate::scene::module::{
     BoundModuleRenderer, KnownModules, ModuleContainer, ModuleWrapper, ModuleWrapperPair,
 };
+use crate::ui::context::Context;
 use crate::RendererController;
 
 /// Sidebar controller for inserted modules.
@@ -125,10 +126,10 @@ impl ModuleList {
     }
 
     /// Renders the currently selected container, if any.
-    pub fn render_selected_container(&mut self, ui: &Ui) -> bool {
+    pub fn render_selected_container(&mut self, ui: &Ui, ctx: &Context<'_>) -> bool {
         match self.selected_module {
             Some(i) => {
-                self.entries[i].render_container(ui);
+                self.entries[i].render_container(ui, ctx);
                 true
             }
 
@@ -231,12 +232,12 @@ impl ModuleEntry {
     }
 
     /// Renders the internal module UI.
-    pub fn render_container(&mut self, ui: &Ui) {
+    pub fn render_container(&mut self, ui: &Ui, ctx: &Context<'_>) {
         InputText::new(ui, "Name", &mut self.name)
             .hint("Module name")
             .allow_tab_input(false)
             .build();
 
-        self.container.represent(ui);
+        self.container.represent(ui, ctx);
     }
 }

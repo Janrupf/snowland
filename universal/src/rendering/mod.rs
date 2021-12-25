@@ -1,13 +1,16 @@
+use std::collections::HashMap;
 use std::sync::mpsc::Receiver;
 use std::time::Instant;
 
 use skia_safe::Surface;
 
+use crate::rendering::display::Display;
 use crate::rendering::state::RendererStateMessage;
 use crate::scene::module::BoundModuleRenderer;
 use crate::scene::SceneData;
 use crate::{RendererError, SnowlandHost, SnowlandRenderer, SnowlandRendererCreator};
 
+pub mod display;
 pub mod fonts;
 pub mod state;
 
@@ -23,6 +26,7 @@ where
     message_receiver: Receiver<RendererStateMessage>,
     last_frame_time: Instant,
     modules: Vec<Box<dyn BoundModuleRenderer>>,
+    displays: HashMap<String, Display>,
 }
 
 impl<H> RendererContainer<H>
@@ -46,6 +50,7 @@ where
             message_receiver,
             last_frame_time: Instant::now(),
             modules: Vec::new(),
+            displays: HashMap::new(),
         })
     }
 
@@ -78,6 +83,12 @@ where
                         log::debug!("Swapping module {} with {}", a, b);
                         self.modules.swap(a, b);
                     }
+                    RendererStateMessage::UpdateDisplayList(displays) => {
+                        self.displays = displays
+                            .into_iter()
+                            .map(|d| (d.name().clone(), d))
+                            .collect();
+                    }
                 }
             }
         }
@@ -104,7 +115,13 @@ where
         let last_frame_time = std::mem::replace(&mut self.last_frame_time, Instant::now());
 
         for module in &mut self.modules {
-            let mut data = SceneData::new(canvas, width, height, last_frame_time.elapsed());
+            let mut data = SceneData::new(
+                canvas,
+                &self.displays,
+                width,
+                height,
+                last_frame_time.elapsed(),
+            );
             module.render(&mut data);
         }
 
