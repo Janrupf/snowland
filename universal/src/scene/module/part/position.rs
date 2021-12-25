@@ -149,8 +149,8 @@ impl ModuleConfig for ModulePosition {
 
             self.display.represent(ui, ctx);
 
-            ui.table_next_column();
             ui.table_next_row();
+            ui.table_next_column();
 
             self.horizontal.represent(ui, ctx);
             ui.table_next_column();
