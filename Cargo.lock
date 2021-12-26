@@ -1628,6 +1628,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "snowland-linux-host"
+version = "0.1.0"
+dependencies = [
+ "log",
+ "pretty_env_logger",
+ "snowland-universal",
+ "thiserror",
+]
+
+[[package]]
 name = "snowland-universal"
 version = "0.1.0"
 dependencies = [
