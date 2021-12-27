@@ -1,5 +1,5 @@
 mod glx;
-mod x11_connection;
+mod x11;
 
+pub use self::x11::*;
 pub use glx::*;
-pub use x11_connection::*;
