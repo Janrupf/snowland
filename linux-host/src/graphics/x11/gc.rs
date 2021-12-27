@@ -1,28 +1,41 @@
-use crate::graphics::{XDisplay, XWindow};
+use crate::graphics::{XDisplay, XDrawable};
 use x11::xlib as xlib_sys;
-use x11::xlib::{XFillRectangle, XFreeGC};
 
 #[derive(Debug)]
-pub struct XGC<'a> {
+pub struct XGC<'a, T>
+where
+    T: XDrawable<'a>,
+{
     handle: xlib_sys::GC,
-    window: &'a XWindow<'a>,
+    _drawable: &'a T,
     display: &'a XDisplay,
 }
 
-impl<'a> XGC<'a> {
-    pub unsafe fn new(handle: xlib_sys::GC, window: &'a XWindow, display: &'a XDisplay) -> Self {
+impl<'a, T> XGC<'a, T>
+where
+    T: XDrawable<'a>,
+{
+    pub unsafe fn new(handle: xlib_sys::GC, drawable: &'a T, display: &'a XDisplay) -> Self {
         Self {
             handle,
-            window,
+            _drawable: drawable,
             display,
         }
     }
 
+    pub fn set_foreground(&self, foreground: u64) {
+        unsafe { xlib_sys::XSetForeground(self.display.handle(), self.handle, foreground) };
+    }
+
+    pub fn set_background(&self, background: u64) {
+        unsafe { xlib_sys::XSetBackground(self.display.handle(), self.handle, background) };
+    }
+
     pub fn fill_rect(&self, x: i32, y: i32, width: u32, height: u32) {
         unsafe {
-            XFillRectangle(
+            xlib_sys::XFillRectangle(
                 self.display.handle(),
-                self.window.handle(),
+                self._drawable.drawable_handle(),
                 self.handle,
                 x,
                 y,
@@ -33,8 +46,11 @@ impl<'a> XGC<'a> {
     }
 }
 
-impl<'a> Drop for XGC<'a> {
+impl<'a, T> Drop for XGC<'a, T>
+where
+    T: XDrawable<'a>,
+{
     fn drop(&mut self) {
-        unsafe { XFreeGC(self.display.handle(), self.handle) };
+        unsafe { xlib_sys::XFreeGC(self.display.handle(), self.handle) };
     }
 }

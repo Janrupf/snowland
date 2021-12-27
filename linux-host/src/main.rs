@@ -3,9 +3,15 @@ mod host;
 mod util;
 
 use log::Level;
+use std::time::Duration;
 use thiserror::Error;
 
-use crate::graphics::{GLXError, XDisplay, XLibError, GLX};
+use crate::graphics::{
+    GLXError, WindowPropertyChangeMode, XAtom, XDisplay, XDrawable, XLibError, XPixmap, XWindow,
+    GLX,
+};
+
+use x11::xlib as xlib_sys;
 
 fn main() {
     pretty_env_logger::init();
@@ -47,6 +53,27 @@ fn main_inner() -> Result<(), LinuxHostError> {
     let root_window = screen.root_window();
     log::debug!("Root window is 0x{:X}", root_window.handle());
 
+    let pixmap = root_window.create_matching_pixmap();
+
+    log::debug!("Pixmap = {:#?}", pixmap);
+
+    set_root_atoms(&display, &pixmap, &root_window);
+
+    let gc = pixmap.create_gc();
+    gc.set_foreground(0x0000FF00);
+    gc.set_background(0x00FF0000);
+    gc.fill_rect(0, 0, 400, 400);
+
+    display.sync(false);
+
+    log::debug!("Sleeping 5 seconds...");
+    std::thread::sleep(Duration::from_secs(5));
+
+    gc.set_foreground(0x00FF00FF);
+    gc.fill_rect(0, 0, 400, 400);
+
+    return Ok(());
+
     let context = glx.create_context(&root_window)?;
     log::trace!("is direct context = {}", context.is_direct());
 
@@ -74,6 +101,53 @@ fn main_inner() -> Result<(), LinuxHostError> {
     context.swap_buffers(&root_window);
 
     Ok(())
+}
+
+fn set_root_atoms(display: &XDisplay, pixmap: &XPixmap, window: &XWindow) {
+    reset_root_atoms(display, window);
+
+    let xroot_atom = display.get_or_create_atom("_XROOTPMAP_ID");
+    let eroot_atom = display.get_or_create_atom("ESETROOT_PMAP_ID");
+
+    window.change_property32(
+        xroot_atom,
+        XAtom::PIXMAP,
+        WindowPropertyChangeMode::Replace,
+        &[pixmap.drawable_handle() as _],
+    );
+
+    window.change_property32(
+        eroot_atom,
+        XAtom::PIXMAP,
+        WindowPropertyChangeMode::Replace,
+        &[pixmap.drawable_handle() as _],
+    );
+}
+
+fn reset_root_atoms(display: &XDisplay, window: &XWindow) -> Option<()> {
+    let xroot_atom = display.get_atom("_XROOTPMAP_ID")?;
+    let eroot_atom = display.get_atom("ESETROOT_PMAP_ID")?;
+
+    let (xroot_data, _) = window.get_property(xroot_atom, 0, 1, false, XAtom::ANY_PROPERTY_TYPE)?;
+    if xroot_data.ty() != XAtom::PIXMAP {
+        return None;
+    }
+
+    let (eroot_data, _) = window.get_property(eroot_atom, 0, 1, false, XAtom::ANY_PROPERTY_TYPE)?;
+    if eroot_data.ty() != XAtom::PIXMAP {
+        return None;
+    }
+
+    let xroot_pixmap = unsafe { xroot_data.get_as_ref::<u32>() };
+    let eroot_pixmap = unsafe { eroot_data.get_as_ref::<u32>() };
+
+    if xroot_pixmap == eroot_pixmap {
+        // TODO: This might generate an error which can simply be ignored,
+        // figure out how to ignore it!
+        // unsafe { xlib_sys::XKillClient(display.handle(), (*xroot_pixmap) as _) };
+    }
+
+    Some(())
 }
 
 #[derive(Debug, Error)]

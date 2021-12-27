@@ -1,4 +1,5 @@
-use crate::graphics::{XLibError, XScreen};
+use crate::graphics::{XAtom, XLibError, XScreen};
+use std::ffi::{CStr, CString};
 use x11::xlib as xlib_sys;
 
 #[derive(Debug)]
@@ -26,6 +27,25 @@ impl XDisplay {
 
     pub fn sync(&self, discard: bool) {
         unsafe { xlib_sys::XSync(self.handle, discard.into()) };
+    }
+
+    pub fn get_atom(&self, name: impl AsRef<str>) -> Option<XAtom> {
+        let name = CString::new(name.as_ref()).unwrap();
+        let atom = unsafe { xlib_sys::XInternAtom(self.handle, name.as_ptr(), 1) };
+
+        if atom == 0 {
+            None
+        } else {
+            Some(unsafe { XAtom::new(atom) })
+        }
+    }
+
+    pub fn get_or_create_atom(&self, name: impl AsRef<str>) -> XAtom {
+        let name = CString::new(name.as_ref()).unwrap();
+        let atom = unsafe { xlib_sys::XInternAtom(self.handle, name.as_ptr(), 0) };
+
+        debug_assert!(atom != 0);
+        unsafe { XAtom::new(atom) }
     }
 }
 

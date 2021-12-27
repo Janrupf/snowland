@@ -46,7 +46,7 @@ impl<'a> GLX<'a> {
             Err(_) => return None,
         };
 
-        let name = name.as_bytes().as_ptr();
+        let name = name.as_bytes_with_nul().as_ptr();
 
         unsafe { glx_sys::glXGetProcAddressARB(name).or_else(|| glx_sys::glXGetProcAddress(name)) }
     }
