@@ -1,11 +1,15 @@
 mod context;
 mod fb_config;
+mod pixmap;
+
 pub use context::*;
+pub use pixmap::*;
 
 pub use fb_config::*;
-use std::ffi::{CStr, CString, NulError};
+use std::ffi::{CStr, CString};
 
-use crate::graphics::{XDisplay, XScreen, XWindow};
+use crate::graphics::{XDisplay, XScreen, XVisual};
+use crate::{XDrawable, XPixmap};
 use thiserror::Error;
 use x11::glx as glx_sys;
 use x11::glx::arb as glx_arb_sys;
@@ -51,28 +55,49 @@ impl<'a> GLX<'a> {
         unsafe { glx_sys::glXGetProcAddressARB(name).or_else(|| glx_sys::glXGetProcAddress(name)) }
     }
 
-    pub fn create_context(&self, window: &XWindow) -> Result<GLXContext, GLXError> {
-        let window_attributes = window.get_attributes();
-
-        let configs = self.retrieve_framebuffer_configs(window_attributes.screen())?;
+    pub fn find_framebuffer_config(
+        &self,
+        screen: &XScreen,
+        visual: &XVisual,
+    ) -> Result<GLXFBConfig, GLXError> {
+        let configs = self.retrieve_framebuffer_configs(screen)?;
 
         log::debug!("Choosing out of {} framebuffer configs...", configs.count());
 
         let mut chosen_config = None;
 
         for config in configs.iter() {
-            if let Some(visual) = config.get_visual() {
-                if window_attributes.visual().id() == visual.visual().id() {
-                    chosen_config = Some(config.clone());
-                }
+            let select = matches!(config.get_visual(), Some(config_visual) if config_visual.visual().id() == visual.id());
+
+            if select {
+                chosen_config = Some(config.extend_lifetime(self.display));
+                break;
             }
         }
 
         log::debug!("Chosen FB config: {:#?}", chosen_config);
 
-        let chosen_config = chosen_config.ok_or(GLXError::NoFramebufferConfigFound)?;
+        chosen_config.ok_or(GLXError::NoFramebufferConfigFound)
+    }
 
-        let extensions = self.query_extensions(window_attributes.screen());
+    pub fn convert_pixmap(&self, config: &GLXFBConfig, x_pixmap: XPixmap<'a>) -> GLXPixmap<'a> {
+        let pixmap = unsafe {
+            glx_sys::glXCreateGLXPixmap(
+                self.display.handle(),
+                config.get_visual().unwrap().handle(),
+                x_pixmap.drawable_handle(),
+            )
+        };
+
+        unsafe { GLXPixmap::new(pixmap, x_pixmap, self.display) }
+    }
+
+    pub fn create_context(
+        &self,
+        screen: &XScreen,
+        config: &GLXFBConfig,
+    ) -> Result<GLXContext, GLXError> {
+        let extensions = self.query_extensions(screen);
         log::debug!("Supported extensions: {:#?}", extensions);
 
         let glx_create_context_attribs_arb = unsafe {
@@ -93,7 +118,7 @@ impl<'a> GLX<'a> {
         );
 
         let glx_context = match (glx_create_context_attribs_arb, arb_context_supported) {
-            (Some(glx_create_context_attribs_arb), true) => {
+            (Some(glx_create_context_attribs_arb), true) if false => {
                 #[rustfmt::skip]
                     let context_attribs = &[
                     glx_arb_sys::GLX_CONTEXT_MAJOR_VERSION_ARB, 3,
@@ -112,7 +137,7 @@ impl<'a> GLX<'a> {
                 unsafe {
                     glx_create_context_attribs_arb(
                         self.display.handle(),
-                        chosen_config.handle(),
+                        config.handle(),
                         std::ptr::null_mut(),
                         1,
                         context_attribs.as_ptr(),
@@ -125,7 +150,7 @@ impl<'a> GLX<'a> {
                 unsafe {
                     glx_sys::glXCreateNewContext(
                         self.display.handle(),
-                        chosen_config.handle(),
+                        config.handle(),
                         glx_sys::GLX_RGBA_TYPE,
                         std::ptr::null_mut(),
                         1,

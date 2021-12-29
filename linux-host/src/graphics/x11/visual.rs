@@ -57,6 +57,10 @@ impl<'a> XVisualInfo<'a> {
     pub fn visual(&self) -> &XVisual {
         &self.visual
     }
+
+    pub fn handle(&self) -> *mut xlib_sys::XVisualInfo {
+        self.handle
+    }
 }
 
 impl<'a> Drop for XVisualInfo<'a> {

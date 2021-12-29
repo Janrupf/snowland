@@ -296,6 +296,10 @@ impl<'a> XWindow<'a> {
             element_count as _,
         );
     }
+
+    pub fn delete_property(&self, property: XAtom) {
+        unsafe { xlib_sys::XDeleteProperty(self.display.handle(), self.handle, property.handle()) };
+    }
 }
 
 impl<'a> XDrawable<'a> for XWindow<'a> {

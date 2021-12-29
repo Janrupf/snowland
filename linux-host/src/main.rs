@@ -57,24 +57,16 @@ fn main_inner() -> Result<(), LinuxHostError> {
 
     log::debug!("Pixmap = {:#?}", pixmap);
 
-    set_root_atoms(&display, &pixmap, &root_window);
+    delete_root_atoms(&display, &root_window);
+    // set_root_atoms(&display, &pixmap, &root_window);
 
-    let gc = pixmap.create_gc();
-    gc.set_foreground(0x0000FF00);
-    gc.set_background(0x00FF0000);
-    gc.fill_rect(0, 0, 400, 400);
+    let window_attributes = root_window.get_attributes();
+    let screen = window_attributes.screen();
+    let visual = window_attributes.visual();
 
-    display.sync(false);
+    let framebuffer_config = glx.find_framebuffer_config(screen, visual)?;
+    let context = glx.create_context(screen, &framebuffer_config)?;
 
-    log::debug!("Sleeping 5 seconds...");
-    std::thread::sleep(Duration::from_secs(5));
-
-    gc.set_foreground(0x00FF00FF);
-    gc.fill_rect(0, 0, 400, 400);
-
-    return Ok(());
-
-    let context = glx.create_context(&root_window)?;
     log::trace!("is direct context = {}", context.is_direct());
 
     display.sync(false);
@@ -93,14 +85,31 @@ fn main_inner() -> Result<(), LinuxHostError> {
     context.make_non_current();
     context.make_current(&root_window);
 
-    unsafe {
-        glClearColor(0.2, 0.2, 1.0, 1.0);
-        glClear(16384);
+    display.sync(false);
+
+    loop {
+        unsafe {
+            glClearColor(0.2, 0.2, 1.0, 1.0);
+            glClear(16384);
+        }
+
+        context.swap_buffers(&root_window);
+        display.sync(false);
     }
 
-    context.swap_buffers(&root_window);
+    log::trace!("pixmap = {:#?}", pixmap);
+    log::debug!("Sleeping for 10 seconds...");
+    std::thread::sleep(Duration::from_secs(10));
 
     Ok(())
+}
+
+fn delete_root_atoms(display: &XDisplay, window: &XWindow) {
+    let xroot_atom = display.get_or_create_atom("_XROOTPMAP_ID");
+    let eroot_atom = display.get_or_create_atom("ESETROOT_PMAP_ID");
+
+    window.delete_property(xroot_atom);
+    window.delete_property(eroot_atom);
 }
 
 fn set_root_atoms(display: &XDisplay, pixmap: &XPixmap, window: &XWindow) {

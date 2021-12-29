@@ -136,4 +136,13 @@ impl<'a> GLXFBConfig<'a> {
     pub fn handle(&self) -> glx_sys::GLXFBConfig {
         self.handle
     }
+
+    pub fn extend_lifetime(self, display: &XDisplay) -> GLXFBConfig {
+        assert_eq!(self.display.handle(), display.handle());
+
+        GLXFBConfig {
+            display,
+            handle: self.handle,
+        }
+    }
 }

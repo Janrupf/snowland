@@ -1,4 +1,5 @@
 use crate::graphics::{XDisplay, XWindow};
+use crate::XDrawable;
 use x11::glx as glx_sys;
 
 #[derive(Debug)]
@@ -16,12 +17,24 @@ impl<'a> GLXContext<'a> {
         (unsafe { glx_sys::glXIsDirect(self.display.handle(), self.handle) }) > 0
     }
 
-    pub fn make_current(&self, window: &XWindow) {
-        unsafe { glx_sys::glXMakeCurrent(self.display.handle(), window.handle(), self.handle) };
+    pub fn make_current<D>(&self, drawable: &D)
+    where
+        D: XDrawable<'a>,
+    {
+        unsafe {
+            glx_sys::glXMakeCurrent(
+                self.display.handle(),
+                drawable.drawable_handle(),
+                self.handle,
+            )
+        };
     }
 
-    pub fn swap_buffers(&self, window: &XWindow) {
-        unsafe { glx_sys::glXSwapBuffers(self.display.handle(), window.handle()) }
+    pub fn swap_buffers<D>(&self, drawable: &D)
+    where
+        D: XDrawable<'a>,
+    {
+        unsafe { glx_sys::glXSwapBuffers(self.display.handle(), drawable.drawable_handle()) }
     }
 
     pub fn make_non_current(&self) {

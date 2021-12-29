@@ -44,6 +44,10 @@ where
             );
         }
     }
+    
+    pub fn handle(&self) -> xlib_sys::GC {
+        self.handle
+    }
 }
 
 impl<'a, T> Drop for XGC<'a, T>
