@@ -12,13 +12,53 @@ pub struct XDisplay {
 
 impl XDisplay {
     /// Attempts to open the connection to the X11 server using the default display.
-    pub fn open() -> Result<Self, XLibError> {
-        let handle = unsafe { xlib_sys::XOpenDisplay(std::ptr::null()) };
+    ///
+    /// # Arguments
+    ///
+    /// * `name` - The name of the display to open
+    pub fn open(name: Option<&str>) -> Result<Self, XLibError> {
+        let c_name = name.map(|name| CString::new(name).unwrap());
+
+        let handle = unsafe {
+            xlib_sys::XOpenDisplay(
+                c_name
+                    .map(|name| name.as_ptr())
+                    .unwrap_or(std::ptr::null_mut()),
+            )
+        };
         if handle.is_null() {
-            return Err(XLibError::OpenDisplayFailed);
+            return Err(XLibError::OpenDisplayFailed(
+                Self::display_name(name).unwrap_or_else(|| String::from("<unknown>")),
+            ));
         }
 
         Ok(XDisplay { handle })
+    }
+
+    /// Retrieves the name of the display that [`xlib_sys::XOpenDisplay`] would attempt to use.
+    ///
+    /// # Arguments
+    ///
+    /// * `name` - The name of the display to look up
+    pub fn display_name(name: Option<&str>) -> Option<String> {
+        let name = name.map(|name| CString::new(name).unwrap());
+
+        let used_name = unsafe {
+            xlib_sys::XDisplayName(
+                name.map(|name| name.as_ptr())
+                    .unwrap_or(std::ptr::null_mut()),
+            )
+        };
+
+        if used_name.is_null() {
+            None
+        } else {
+            Some(
+                unsafe { CString::from_raw(used_name) }
+                    .to_string_lossy()
+                    .into(),
+            )
+        }
     }
 
     /// Retrieves the underlying X11 native platform pointer.

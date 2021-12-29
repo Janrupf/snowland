@@ -20,6 +20,6 @@ use thiserror::Error;
 
 #[derive(Debug, Error)]
 pub enum XLibError {
-    #[error("failed to open display")]
-    OpenDisplayFailed,
+    #[error("failed to open display :{0}")]
+    OpenDisplayFailed(String),
 }

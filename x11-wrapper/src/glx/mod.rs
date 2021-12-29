@@ -228,7 +228,7 @@ impl<'a> GLX<'a> {
         &self,
         screen: &XScreen,
         config: &GLXFBConfig,
-    ) -> Result<GLXContext, GLXError> {
+    ) -> Result<GLXContext<'a>, GLXError> {
         let extensions = self.query_extensions(screen);
 
         let glx_create_context_attribs_arb = unsafe {

@@ -42,7 +42,7 @@ impl<'a> XScreen<'a> {
     /// Retrieves the root window of the screen.
     ///
     /// The root window is the top level background window which spans the entire screen.
-    pub fn root_window(&self) -> XWindow {
+    pub fn root_window(&self) -> XWindow<'a> {
         unsafe { XWindow::new((*self.handle).root, self.display) }
     }
 }
