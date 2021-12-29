@@ -1,6 +1,6 @@
+use crate::glx_sys;
 use crate::XDisplay;
 use crate::{XDrawable, XPixmap};
-use x11::glx as glx_sys;
 use x11::xlib::Drawable;
 
 #[derive(Debug)]

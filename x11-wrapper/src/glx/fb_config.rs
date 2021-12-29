@@ -1,7 +1,7 @@
 use crate::{GLXError, XDisplay};
 
+use crate::glx_sys;
 use crate::{XVisual, XVisualInfo};
-use x11::glx as glx_sys;
 use x11::glx::{glXGetFBConfigAttrib, glXGetVisualFromFBConfig, GLX_BAD_ATTRIBUTE};
 use x11::xlib::XFree;
 

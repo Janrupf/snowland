@@ -1,8 +1,8 @@
+use crate::xlib_sys;
 use crate::{XAtom, XDisplay, XDrawable, XGeometry, XPixmap, XScreen, XVisual, XVisualInfo, XGC};
 use std::cell::UnsafeCell;
 use std::fmt::Debug;
 use std::mem::MaybeUninit;
-use x11::xlib as xlib_sys;
 use x11::xlib::{
     Drawable, XBlackPixelOfScreen, XClearWindow, XCreateGC, XSetBackground, XSetForeground,
 };

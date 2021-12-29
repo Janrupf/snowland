@@ -1,7 +1,7 @@
+use crate::xlib_sys;
 use crate::XDisplay;
 use crate::{XPixmap, XGC};
 use std::mem::MaybeUninit;
-use x11::xlib as xlib_sys;
 
 #[derive(Debug, Default)]
 pub struct XGeometry {

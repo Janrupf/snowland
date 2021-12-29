@@ -1,6 +1,6 @@
+use crate::xlib_sys;
 use std::fmt::{Debug, Formatter, Pointer};
 use std::marker::PhantomData;
-use x11::xlib as xlib_sys;
 
 pub struct XVisual<'a> {
     handle: *mut xlib_sys::Visual,

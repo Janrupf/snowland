@@ -1,6 +1,6 @@
+use crate::xlib_sys;
 use crate::{XAtom, XLibError, XScreen};
 use std::ffi::{CStr, CString};
-use x11::xlib as xlib_sys;
 
 #[derive(Debug)]
 pub struct XDisplay {

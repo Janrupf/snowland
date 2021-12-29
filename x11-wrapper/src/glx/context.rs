@@ -1,6 +1,6 @@
+use crate::glx_sys;
 use crate::XDisplay;
 use crate::XDrawable;
-use x11::glx as glx_sys;
 
 #[derive(Debug)]
 pub struct GLXContext<'a> {

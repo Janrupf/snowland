@@ -1,5 +1,5 @@
+use crate::xlib_sys;
 use std::marker::PhantomData;
-use x11::xlib as xlib_sys;
 
 #[derive(Debug, Copy, Clone, Ord, PartialOrd, Eq, PartialEq)]
 pub struct XAtom<'a> {

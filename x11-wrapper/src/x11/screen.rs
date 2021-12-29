@@ -1,5 +1,5 @@
+use crate::xlib_sys;
 use crate::{XDisplay, XWindow};
-use x11::xlib as xlib_sys;
 
 #[derive(Debug)]
 pub struct XScreen<'a> {

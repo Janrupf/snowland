@@ -8,12 +8,13 @@ pub use pixmap::*;
 pub use fb_config::*;
 use std::ffi::{CStr, CString};
 
+use crate::glx_arb_sys;
+use crate::glx_sys;
+use crate::xlib_sys;
+
 use crate::{XDisplay, XScreen, XVisual};
 use crate::{XDrawable, XPixmap};
 use thiserror::Error;
-use x11::glx as glx_sys;
-use x11::glx::arb as glx_arb_sys;
-use x11::xlib as xlib_sys;
 
 type GLXCreateContextAttribsARBFn = unsafe extern "C" fn(
     *mut xlib_sys::Display,

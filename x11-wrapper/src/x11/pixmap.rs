@@ -1,6 +1,6 @@
 use crate::{XDisplay, XDrawable};
 
-use x11::xlib as xlib_sys;
+use crate::xlib_sys;
 
 #[derive(Debug)]
 pub struct XPixmap<'a> {
