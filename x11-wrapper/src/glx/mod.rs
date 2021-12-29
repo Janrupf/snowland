@@ -8,7 +8,7 @@ pub use pixmap::*;
 pub use fb_config::*;
 use std::ffi::{CStr, CString};
 
-use crate::graphics::{XDisplay, XScreen, XVisual};
+use crate::{XDisplay, XScreen, XVisual};
 use crate::{XDrawable, XPixmap};
 use thiserror::Error;
 use x11::glx as glx_sys;
@@ -62,8 +62,6 @@ impl<'a> GLX<'a> {
     ) -> Result<GLXFBConfig, GLXError> {
         let configs = self.retrieve_framebuffer_configs(screen)?;
 
-        log::debug!("Choosing out of {} framebuffer configs...", configs.count());
-
         let mut chosen_config = None;
 
         for config in configs.iter() {
@@ -74,8 +72,6 @@ impl<'a> GLX<'a> {
                 break;
             }
         }
-
-        log::debug!("Chosen FB config: {:#?}", chosen_config);
 
         chosen_config.ok_or(GLXError::NoFramebufferConfigFound)
     }
@@ -98,7 +94,6 @@ impl<'a> GLX<'a> {
         config: &GLXFBConfig,
     ) -> Result<GLXContext, GLXError> {
         let extensions = self.query_extensions(screen);
-        log::debug!("Supported extensions: {:#?}", extensions);
 
         let glx_create_context_attribs_arb = unsafe {
             glx_sys::glXGetProcAddressARB(
@@ -111,12 +106,6 @@ impl<'a> GLX<'a> {
 
         let arb_context_supported = extensions.contains(&ARB_CREATE_CONTEXT_EXTENSION);
 
-        log::trace!(
-            "glXCreateContextAttribsARB = {:?}, arb_context_supported = {}",
-            glx_create_context_attribs_arb,
-            arb_context_supported
-        );
-
         let glx_context = match (glx_create_context_attribs_arb, arb_context_supported) {
             (Some(glx_create_context_attribs_arb), true) if false => {
                 #[rustfmt::skip]
@@ -125,8 +114,6 @@ impl<'a> GLX<'a> {
                     glx_arb_sys::GLX_CONTEXT_MINOR_VERSION_ARB, 3,
                     0
                 ];
-
-                log::debug!("Creating GLX context using ARB extension...");
 
                 let glx_create_context_attribs_arb = unsafe {
                     std::mem::transmute::<_, GLXCreateContextAttribsARBFn>(
@@ -144,22 +131,16 @@ impl<'a> GLX<'a> {
                     )
                 }
             }
-            (_, _) => {
-                log::warn!("Falling back to old GLX context creation...");
-
-                unsafe {
-                    glx_sys::glXCreateNewContext(
-                        self.display.handle(),
-                        config.handle(),
-                        glx_sys::GLX_RGBA_TYPE,
-                        std::ptr::null_mut(),
-                        1,
-                    )
-                }
-            }
+            (_, _) => unsafe {
+                glx_sys::glXCreateNewContext(
+                    self.display.handle(),
+                    config.handle(),
+                    glx_sys::GLX_RGBA_TYPE,
+                    std::ptr::null_mut(),
+                    1,
+                )
+            },
         };
-
-        log::debug!("Created GLX context {:p}", glx_context);
 
         Ok(unsafe { GLXContext::new(glx_context, self.display) })
     }

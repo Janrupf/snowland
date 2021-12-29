@@ -1,4 +1,4 @@
-use crate::graphics::{XAtom, XLibError, XScreen};
+use crate::{XAtom, XLibError, XScreen};
 use std::ffi::{CStr, CString};
 use x11::xlib as xlib_sys;
 
@@ -51,7 +51,6 @@ impl XDisplay {
 
 impl Drop for XDisplay {
     fn drop(&mut self) {
-        log::trace!("Dropping XLibDisplay {:p}", self.handle);
         unsafe { xlib_sys::XCloseDisplay(self.handle) };
     }
 }

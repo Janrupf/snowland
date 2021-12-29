@@ -1,4 +1,4 @@
-use crate::graphics::{XDisplay, XDrawable};
+use crate::{XDisplay, XDrawable};
 
 use x11::xlib as xlib_sys;
 

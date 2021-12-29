@@ -1,4 +1,4 @@
-use crate::graphics::{XDisplay, XWindow};
+use crate::XDisplay;
 use crate::XDrawable;
 use x11::glx as glx_sys;
 

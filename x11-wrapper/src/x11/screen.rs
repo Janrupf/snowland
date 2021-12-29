@@ -1,4 +1,4 @@
-use crate::graphics::{XDisplay, XWindow};
+use crate::{XDisplay, XWindow};
 use x11::xlib as xlib_sys;
 
 #[derive(Debug)]

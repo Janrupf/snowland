@@ -1,6 +1,4 @@
-use crate::graphics::{
-    XAtom, XDisplay, XDrawable, XGeometry, XPixmap, XScreen, XVisual, XVisualInfo, XGC,
-};
+use crate::{XAtom, XDisplay, XDrawable, XGeometry, XPixmap, XScreen, XVisual, XVisualInfo, XGC};
 use std::cell::UnsafeCell;
 use std::fmt::Debug;
 use std::mem::MaybeUninit;

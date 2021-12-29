@@ -1,5 +1,5 @@
-use crate::graphics::{XPixmap, XGC};
 use crate::XDisplay;
+use crate::{XPixmap, XGC};
 use std::mem::MaybeUninit;
 use x11::xlib as xlib_sys;
 
