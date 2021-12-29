@@ -1637,10 +1637,10 @@ dependencies = [
 name = "snowland-linux-host"
 version = "0.1.0"
 dependencies = [
- "cargo-emit",
  "log",
  "pretty_env_logger",
  "snowland-universal",
+ "snowland-x11-wrapper",
  "thiserror",
  "x11",
 ]
@@ -1661,6 +1661,15 @@ dependencies = [
  "serde_json",
  "skia-safe",
  "thiserror",
+]
+
+[[package]]
+name = "snowland-x11-wrapper"
+version = "0.1.0"
+dependencies = [
+ "cargo-emit",
+ "thiserror",
+ "x11",
 ]
 
 [[package]]

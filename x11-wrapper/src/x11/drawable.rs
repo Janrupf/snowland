@@ -3,24 +3,42 @@ use crate::XDisplay;
 use crate::{XPixmap, XGC};
 use std::mem::MaybeUninit;
 
+/// Describes the geometry of a [`XDrawable`].
 #[derive(Debug, Default)]
 pub struct XGeometry {
+    /// The x coordinate of the drawable, only meaningful for windows
     pub x: i32,
+
+    /// The y coordinate of the drawable, only meaningful for windows
     pub y: i32,
+
+    /// The width of the drawable
     pub width: u32,
+
+    /// The height of the drawable
     pub height: u32,
+
+    /// The width of the border of the drawable, only meaningful for windows
     pub border_width: u32,
+
+    /// The color bit-depth of the drawable
     pub depth: u32,
 }
 
+/// Represents a drawable object in the X11 protocol.
+///
+/// This is usually implemented for windows and pixmap's.
 pub trait XDrawable<'a>
 where
     Self: Sized,
 {
+    /// Retrieves the underlying native X11 drawable representation.
     fn drawable_handle(&self) -> xlib_sys::Drawable;
 
+    /// Retrieves the display this drawable belongs to.
     fn display(&self) -> &'a XDisplay;
 
+    /// Retrieves the geometry of this drawable.
     fn get_geometry(&self) -> XGeometry {
         let mut geometry = XGeometry::default();
         let mut root = 0;
@@ -42,6 +60,7 @@ where
         geometry
     }
 
+    /// Creates a new X11 graphics context for rendering to the drawable.
     fn create_gc(&'a self) -> XGC<Self> {
         let mut values = MaybeUninit::uninit();
 
@@ -57,12 +76,21 @@ where
         unsafe { XGC::new(gc, self, self.display()) }
     }
 
+    /// Creates a pixmap matching the width, height and depth of this drawable on the same screen
+    /// as this drawable resides on.
     fn create_matching_pixmap(&'a self) -> XPixmap {
         let geometry = self.get_geometry();
 
         self.create_pixmap(geometry.width, geometry.height, geometry.depth)
     }
 
+    /// Creates a pixmap on the same screen as this drawable resides on.
+    ///
+    /// # Arguments
+    ///
+    /// * `width` - The width of the drawable
+    /// * `height` - The height of the drawable
+    /// * `depth` - The bit-depth of the drawable
     fn create_pixmap(&'a self, width: u32, height: u32, depth: u32) -> XPixmap {
         let pixmap = unsafe {
             xlib_sys::XCreatePixmap(

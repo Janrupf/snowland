@@ -3,6 +3,7 @@ use crate::XDisplay;
 use crate::{XDrawable, XPixmap};
 use x11::xlib::Drawable;
 
+/// A GLX pixmap.
 #[derive(Debug)]
 pub struct GLXPixmap<'a> {
     handle: glx_sys::GLXPixmap,
@@ -11,6 +12,17 @@ pub struct GLXPixmap<'a> {
 }
 
 impl<'a> GLXPixmap<'a> {
+    /// Wraps a native GLX pixmap pointer.
+    ///
+    /// # Arguments
+    ///
+    /// * `handle` - The native GLX pixmap to wrap
+    /// * `backing` - The X11 pixmap backing this GLX pixmap
+    /// * `display` - The display this pixmap belongs to
+    ///
+    /// # Safety
+    ///
+    /// It is up to the caller to ensure all arguments are valid.
     pub unsafe fn new(
         handle: glx_sys::GLXPixmap,
         backing: XPixmap<'a>,
@@ -23,10 +35,12 @@ impl<'a> GLXPixmap<'a> {
         }
     }
 
+    /// Retrieves the underlying native platform handle for the pixmap.
     pub fn handle(&self) -> glx_sys::GLXPixmap {
         self.handle
     }
 
+    /// Retrieves the X11 pixmap backing this GLX pixmap.
     pub fn backing(&self) -> &XPixmap {
         &self.backing
     }

@@ -1,3 +1,5 @@
+//! This module provides all sort of functionality to interact with GLX.
+
 mod context;
 mod fb_config;
 mod pixmap;
@@ -16,6 +18,7 @@ use crate::{XDisplay, XScreen, XVisual};
 use crate::{XDrawable, XPixmap};
 use thiserror::Error;
 
+/// Type alias for the [`glXCreateContextAttribsARB`] C function.
 type GLXCreateContextAttribsARBFn = unsafe extern "C" fn(
     *mut xlib_sys::Display,
     glx_sys::GLXFBConfig,
@@ -24,18 +27,58 @@ type GLXCreateContextAttribsARBFn = unsafe extern "C" fn(
     *const i32,
 ) -> glx_sys::GLXContext;
 
+/// The name of the GLX extension providing ARB context creation.
 const ARB_CREATE_CONTEXT_EXTENSION: &str = "GLX_ARB_create_context";
 
+/// Main interface for talking to GLX.
+///
+/// This interface is only valid as long as the display is held open. However, the functions
+/// used here are not loaded from the display but rather the `libGL.so` or its variations.
 #[derive(Debug)]
 pub struct GLX<'a> {
     display: &'a XDisplay,
 }
 
 impl<'a> GLX<'a> {
+    /// Creates the GLX interface.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # fn open_display() {}
+    /// # struct GLX;
+    /// # impl GLX {
+    /// #     pub fn create(display: &()) -> Result<Self, ()> { Ok(Self {}) }
+    /// # }
+    /// #
+    /// let display = open_display();
+    /// let glx = GLX::create(&display).unwrap();
+    /// ```
+    ///
+    /// # Note
+    ///
+    /// For now this function can't fail, but it might in the future, thus a result is returned.
     pub fn create(display: &'a XDisplay) -> Result<Self, GLXError> {
         Ok(Self { display })
     }
 
+    /// Retrieves the version of GLX present on the display.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # struct GLX {}
+    /// # impl GLX {
+    /// #     pub fn get_version(&self) -> (i32, i32) {
+    /// #         (1, 3)
+    /// #     }
+    /// # }
+    /// #
+    /// # let glx = GLX {};
+    /// #
+    /// let (major, minor) = glx.get_version();
+    /// println!("GLX version is {}.{}", major, minor);
+    /// ```
     pub fn get_version(&self) -> (i32, i32) {
         let mut major = 0;
         let mut minor = 0;
@@ -45,6 +88,34 @@ impl<'a> GLX<'a> {
         (major, minor)
     }
 
+    /// Looks up an OpenGL function from GLX.
+    ///
+    /// # Arguments
+    ///
+    /// * `name` - The name of the function to look up
+    ///
+    /// # Warning
+    ///
+    /// Some implementations of GLX return a function pointer for every name starting with "gl".
+    /// This means that this function might actually return pointers for OpenGL functions which
+    /// don't exist or are not supported!
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # struct GLX {}
+    /// # impl GLX {
+    /// #     pub fn lookup_function(&self, name: impl AsRef<str>) -> Option<unsafe extern "C" fn()> {
+    /// #         None
+    /// #     }
+    /// # }
+    /// #
+    /// # let glx = GLX {};
+    /// #
+    /// let gl_clear = glx.lookup_function("glClear");
+    /// println!("glClear = {:#?}", gl_clear);
+    /// ```
+    ///
     pub fn lookup_function(&self, name: impl AsRef<str>) -> Option<unsafe extern "C" fn()> {
         let name = match CString::new(name.as_ref()) {
             Ok(v) => v,
@@ -56,6 +127,17 @@ impl<'a> GLX<'a> {
         unsafe { glx_sys::glXGetProcAddressARB(name).or_else(|| glx_sys::glXGetProcAddress(name)) }
     }
 
+    /// Attempts to find a framebuffer configuration matching the specified visual.
+    ///
+    /// This function may be used to find a framebuffer configuration which can be used on an
+    /// already created visual, which might be controlled externally (for example a window which
+    /// was created by another X client.
+    ///
+    /// # Arguments
+    ///
+    /// * `screen` - The X screen on which the visual resides
+    /// * `visual` - The visual to look up the framebuffer configuration for
+    ///
     pub fn find_framebuffer_config(
         &self,
         screen: &XScreen,
@@ -77,6 +159,24 @@ impl<'a> GLX<'a> {
         chosen_config.ok_or(GLXError::NoFramebufferConfigFound)
     }
 
+    /// Converts an existing X11 pixmap into a GLX pixmap.
+    ///
+    /// This can be used to render to X11 pixmap's using OpenGL or to use an X11 pixmap as a texture
+    /// in OpenGL.
+    ///
+    /// It is always attempted to create an OpenGL 3.0 or newer context, however, this might fail
+    /// and an older context might be returned.
+    ///
+    /// # Arguments
+    ///
+    /// * `config` - The framebuffer configuration to use for the pixmap
+    /// * `x_pixmap` - The X11 pixmap to wrap
+    ///
+    /// # Warning
+    ///
+    /// Testing has revealed that this works mediocre at best, your millage may vary! On modern X11
+    /// connections its a hit or miss whether this works reliably.
+    ///
     pub fn convert_pixmap(&self, config: &GLXFBConfig, x_pixmap: XPixmap<'a>) -> GLXPixmap<'a> {
         let pixmap = unsafe {
             glx_sys::glXCreateGLXPixmap(
@@ -89,6 +189,41 @@ impl<'a> GLX<'a> {
         unsafe { GLXPixmap::new(pixmap, x_pixmap, self.display) }
     }
 
+    /// Creates an GLX OpenGL context.
+    ///
+    /// # Arguments
+    ///
+    /// * `screen` - The screen to create the context on
+    /// * `config` - The framebuffer configuration to use for rendering
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use snowland_x11_wrapper::GLXError;
+    /// #
+    /// # struct GLX {}
+    /// # impl GLX {
+    /// #     pub fn create_context(&self, screen: &(), config: &()) -> Result<GLXContext, GLXError> {
+    /// #         Ok(GLXContext {})
+    /// #     }
+    /// # }
+    /// #
+    /// # struct GLXContext;
+    /// # impl GLXContext {
+    /// #     pub fn make_current(&self, drawable: &()) {}
+    /// # }
+    /// #
+    /// # let screen = ();
+    /// # let config = ();
+    /// # let glx = GLX {};
+    /// # let window = ();
+    /// #
+    /// let context = glx.create_context(&screen, &config).expect("Failed to create GLX context");
+    /// context.make_current(&window);
+    ///
+    /// // From here on you can use OpenGL functions.
+    /// ```
+    ///
     pub fn create_context(
         &self,
         screen: &XScreen,
@@ -146,6 +281,26 @@ impl<'a> GLX<'a> {
         Ok(unsafe { GLXContext::new(glx_context, self.display) })
     }
 
+    /// Queries all available GLX extensions.
+    ///
+    /// # Arguments
+    ///
+    /// * `screen` - The screen to query extensions for
+    ///
+    /// # Examples  
+    /// ```
+    /// # struct GLX {}
+    /// # impl GLX {
+    /// #     pub fn query_extensions(&self, screen: &()) -> Vec<&'static str> {
+    /// #         Vec::new()
+    /// #     }
+    /// # }
+    /// # let screen = ();
+    /// # let glx = GLX {};
+    /// #
+    /// let extensions = glx.query_extensions(&screen);
+    /// println!("There are {} extensions available: {:#?}", extensions.len(), extensions);
+    /// ```
     pub fn query_extensions(&self, screen: &XScreen) -> Vec<&'static str> {
         let all: &'static CStr = unsafe {
             let ptr = glx_sys::glXQueryExtensionsString(self.display.handle(), screen.number());
@@ -182,17 +337,26 @@ impl<'a> GLX<'a> {
     }
 }
 
+/// Possible errors that might occur while working with GLX.
 #[derive(Debug, Error)]
 pub enum GLXError {
+    /// The GLX extension is missing from the X server.
+    ///
+    /// This usually happens when no appropriate graphics driver is installed or the connection
+    /// is running over the network. When running a network connection it may be possible to use
+    /// indirect GLX when enabling indirect rendering extensions on the X server.
     #[error("the GLX extension is not present on the X server")]
     ExtensionNotPresent,
 
+    /// Attempts to find a framebuffer configuration failed.
     #[error("no framebuffer configuration could be found for the requested attributes")]
     NoFramebufferConfigFound,
 
+    /// An attempt was made to request an invalid attribute from a GLX framebuffer configuration.
     #[error("0x{0:X} is not a valid GLX FBConfig attribute")]
     BadAttribute(i32),
 
+    /// Some unexpected error occurred while talking to GLX.
     #[error("GLX call failed with error 0x{0:X}")]
     GenericError(i32),
 }

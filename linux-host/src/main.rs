@@ -1,17 +1,13 @@
-mod graphics;
 mod host;
 mod util;
 
 use log::Level;
-use std::time::Duration;
-use thiserror::Error;
-
-use crate::graphics::{
+use snowland_x11_wrapper::{
     GLXError, WindowPropertyChangeMode, XAtom, XDisplay, XDrawable, XLibError, XPixmap, XWindow,
     GLX,
 };
-
-use x11::xlib as xlib_sys;
+use std::time::Duration;
+use thiserror::Error;
 
 fn main() {
     pretty_env_logger::init();

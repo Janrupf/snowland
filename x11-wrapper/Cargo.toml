@@ -1,0 +1,13 @@
+[package]
+name = "snowland-x11-wrapper"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+x11 = { version = "2.19.1", features = ["xlib", "glx"] }
+thiserror = "1.0.30"
+
+[build-dependencies]
+cargo-emit = "0.2.1"

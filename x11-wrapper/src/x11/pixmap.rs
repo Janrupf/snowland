@@ -2,6 +2,9 @@ use crate::{XDisplay, XDrawable};
 
 use crate::xlib_sys;
 
+/// X11 pixmap drawable.
+///
+/// An X11 pixmap is a offscreen buffer which can be drawn into and copied from.
 #[derive(Debug)]
 pub struct XPixmap<'a> {
     handle: xlib_sys::Pixmap,
@@ -9,10 +12,21 @@ pub struct XPixmap<'a> {
 }
 
 impl<'a> XPixmap<'a> {
+    /// Wraps an existing X11 pixmap.
+    ///
+    /// # Arguments
+    ///
+    /// * `handle` - The X11 pixmap to wrap
+    /// * `display` - The display the pixmap belongs to
+    ///
+    /// # Safety
+    ///
+    /// It is up to the caller to ensure all arguments are valid.
     pub unsafe fn new(handle: xlib_sys::Pixmap, display: &'a XDisplay) -> Self {
         Self { handle, display }
     }
 
+    /// Retrieves the underlying native X11 pixmap id.
     pub fn handle(&self) -> xlib_sys::Pixmap {
         self.handle
     }

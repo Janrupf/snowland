@@ -1,5 +1,5 @@
 [workspace]
-members = ["linux-host", "universal"]
+members = ["linux-host", "x11-wrapper", "universal"]
 
 [profile.release]
 lto = true
