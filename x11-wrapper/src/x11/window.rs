@@ -1,11 +1,9 @@
 use crate::xlib_sys;
-use crate::{XAtom, XDisplay, XDrawable, XGeometry, XPixmap, XScreen, XVisual, XVisualInfo, XGC};
-use std::cell::UnsafeCell;
+use crate::{XAtom, XDisplay, XDrawable, XScreen, XVisual};
+
 use std::fmt::Debug;
 use std::mem::MaybeUninit;
-use x11::xlib::{
-    Drawable, XBlackPixelOfScreen, XClearWindow, XCreateGC, XSetBackground, XSetForeground,
-};
+use x11::xlib::Drawable;
 
 /// Describes the possible format of a X11 window property.
 #[derive(Debug, Copy, Clone, Ord, PartialOrd, Eq, PartialEq)]
@@ -239,7 +237,7 @@ impl<'a> XWindow<'a> {
 
     /// Clears the content area of the window.
     pub fn clear(&self) {
-        unsafe { XClearWindow(self.display.handle(), self.handle) };
+        unsafe { xlib_sys::XClearWindow(self.display.handle(), self.handle) };
     }
 
     /// Attempts to retrieve a window property.
@@ -287,7 +285,7 @@ impl<'a> XWindow<'a> {
         };
 
         WindowPropertyDataFormat::from_native(actual_format).map(|format| {
-            let actual_type = unsafe { XAtom::new(actual_type) };
+            let actual_type = unsafe { XAtom::new(actual_type, self.display) };
             let data =
                 unsafe { WindowPropertyData::new(format, actual_type, item_count as _, data) };
 

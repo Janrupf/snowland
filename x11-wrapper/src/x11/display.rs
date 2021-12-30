@@ -98,7 +98,7 @@ impl XDisplay {
         if atom == 0 {
             None
         } else {
-            Some(unsafe { XAtom::new(atom) })
+            Some(unsafe { XAtom::new(atom, self) })
         }
     }
 
@@ -116,7 +116,7 @@ impl XDisplay {
         let atom = unsafe { xlib_sys::XInternAtom(self.handle, name.as_ptr(), 0) };
 
         debug_assert!(atom != 0);
-        unsafe { XAtom::new(atom) }
+        unsafe { XAtom::new(atom, self) }
     }
 }
 

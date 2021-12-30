@@ -8,16 +8,17 @@ use thiserror::Error;
 
 /// Linux host implementation for snowland.
 pub struct LinuxHost {
+    notifier: Notifier<ControlMessage>,
     cli: CLI,
 }
 
 impl LinuxHost {
     pub fn new(
-        _notifier: Notifier<ControlMessage>,
+        notifier: Notifier<ControlMessage>,
         cli: CLI,
     ) -> Result<(Self, Notifier<ControlMessage>), Error> {
         let dummy_notifier = Notifier::from_fn(|_| {});
-        Ok((Self { cli }, dummy_notifier))
+        Ok((Self { notifier, cli }, dummy_notifier))
     }
 }
 
@@ -28,18 +29,20 @@ impl SnowlandHost for LinuxHost {
 
     fn prepare_renderer(&mut self) -> Self::RendererCreator {
         LinuxRendererCreator {
+            notifier: self.notifier.clone(),
             window: self.cli.window,
         }
     }
 }
 
 pub struct LinuxRendererCreator {
+    notifier: Notifier<ControlMessage>,
     window: Option<u64>,
 }
 
 impl SnowlandRendererCreator<LinuxHost> for LinuxRendererCreator {
     fn create(self) -> RendererResult<SnowlandX11Renderer, LinuxHost> {
-        SnowlandX11Renderer::init(self.window)
+        SnowlandX11Renderer::init(self.notifier, self.window)
     }
 }
 

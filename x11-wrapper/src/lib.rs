@@ -4,6 +4,7 @@
 //! this wrapper does not reflect all of X11. A lot of error checks are also missing (due to X11
 //! bad error handling mechanism).
 
+mod ext;
 mod glx;
 mod x11;
 
@@ -13,3 +14,4 @@ pub use glx::*;
 pub use ::x11::glx as glx_sys;
 pub use ::x11::glx::arb as glx_arb_sys;
 pub use ::x11::xlib as xlib_sys;
+pub use ::x11::xrandr as xrandr_sys;
