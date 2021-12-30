@@ -7,7 +7,7 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  build:
+  build-windows:
     runs-on: windows-latest
 
     steps:
@@ -18,10 +18,32 @@ jobs:
         uses: actions/checkout@v2
 
       - name: Build Rust
-        run: cargo build --release
+        run: cargo build --release --package snowland-win-host
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v2
         with:
           name: Snowland Windows Host
           path: target/release/snowland-win-host.exe
+
+  build-linux:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Install required packages
+        run: sudo apt install libgl1-mesa-dev libxrandr-dev
+
+      - name: Cache Rust
+        uses: Swatinem/rust-cache@v1
+
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Build Rust
+        run: cargo build --release --package snowland-linux-host
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: Snowland Windows Host
+          path: target/release/snowland-linux-host
