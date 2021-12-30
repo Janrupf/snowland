@@ -11,8 +11,7 @@ See the chapters below for instructions on building and usage.
 ## Supported platforms
 
 - Windows
-
-Linux support is also planned!
+- Linux
 
 ## Building Snowland
 Snowland is written in Rust and thus requires the Rust toolchain in order to build. It is
