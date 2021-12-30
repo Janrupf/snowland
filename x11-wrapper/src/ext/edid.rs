@@ -1,3 +1,5 @@
+#![allow(clippy::identity_op, clippy::upper_case_acronyms)]
+
 // Copied from https://github.com/tuomas56/edid-rs/blob/master/src/lib.rs
 
 // MIT License
@@ -802,6 +804,7 @@ pub enum SyncPolarity {
 pub struct MonitorDescriptors(pub Vec<MonitorDescriptor>);
 
 impl MonitorDescriptors {
+    #[allow(clippy::type_complexity)]
     fn parse(
         r: &mut Reader,
     ) -> Result<(

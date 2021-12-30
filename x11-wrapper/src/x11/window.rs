@@ -447,6 +447,7 @@ impl<'a> XDrawable<'a> for XWindow<'a> {
 /// Properties of an X11 window.
 #[derive(Debug)]
 pub struct XWindowAttributes<'a> {
+    #[allow(dead_code)]
     inner: xlib_sys::XWindowAttributes,
     screen: XScreen<'a>,
     visual: XVisual<'a>,

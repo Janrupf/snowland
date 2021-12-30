@@ -1,10 +1,10 @@
 //! Modules which contains partial modules, such as positioning helpers.
+pub use display::*;
 pub use font::*;
 pub use paint::*;
 pub use position::*;
-pub use display::*;
 
+mod display;
 mod font;
 mod paint;
 mod position;
-mod display;

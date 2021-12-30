@@ -1,7 +1,7 @@
 use snowland_universal::control::ControlMessage;
 use snowland_universal::util::Notifier;
 
-use crate::cli::CLI;
+use crate::cli::Cli;
 use crate::graphics::SnowlandX11Renderer;
 use snowland_universal::host::{RendererResult, SnowlandHost, SnowlandRendererCreator};
 use thiserror::Error;
@@ -9,13 +9,13 @@ use thiserror::Error;
 /// Linux host implementation for snowland.
 pub struct LinuxHost {
     notifier: Notifier<ControlMessage>,
-    cli: CLI,
+    cli: Cli,
 }
 
 impl LinuxHost {
     pub fn new(
         notifier: Notifier<ControlMessage>,
-        cli: CLI,
+        cli: Cli,
     ) -> Result<(Self, Notifier<ControlMessage>), Error> {
         let dummy_notifier = Notifier::from_fn(|_| {});
         Ok((Self { notifier, cli }, dummy_notifier))

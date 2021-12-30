@@ -1,10 +1,10 @@
 use clap::{App, IntoApp, Parser};
-use std::error::Error;
+
 use std::num::ParseIntError;
 use std::str::FromStr;
 
 #[derive(Debug, Parser)]
-pub struct CLI {
+pub struct Cli {
     /// The window to render to, defaults to the root window if not given
     ///
     /// This should be the X window id of the window.
@@ -21,10 +21,11 @@ fn parse_maybe_hex(input: &str) -> Result<u64, ParseIntError> {
     }
 }
 
+#[allow(dead_code)]
 pub fn as_app() -> App<'static> {
-    CLI::into_app()
+    Cli::into_app()
 }
 
-pub fn parse() -> CLI {
-    CLI::parse()
+pub fn parse() -> Cli {
+    Cli::parse()
 }

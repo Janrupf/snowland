@@ -1,5 +1,5 @@
 use crate::host::LinuxHost;
-use snowland_universal::{Error, Snowland};
+use snowland_universal::Snowland;
 
 mod cli;
 mod graphics;

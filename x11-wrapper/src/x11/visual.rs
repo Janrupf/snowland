@@ -1,5 +1,5 @@
 use crate::xlib_sys;
-use std::fmt::{Debug, Formatter, Pointer};
+use std::fmt::{Debug, Formatter};
 use std::marker::PhantomData;
 
 /// X11 visual.

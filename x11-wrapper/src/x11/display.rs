@@ -1,6 +1,6 @@
 use crate::xlib_sys;
 use crate::{XAtom, XLibError, XScreen};
-use std::ffi::{CStr, CString};
+use std::ffi::CString;
 
 /// The heart of an X11 connection.
 ///

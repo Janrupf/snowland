@@ -60,8 +60,8 @@ impl<'a> SceneData<'a> {
     /// Retrieves the primary display
     pub fn primary_display(&self) -> &'a Display {
         self.primary_display
-    } 
-    
+    }
+
     /// Attempts to find a display by it's id.
     pub fn lookup_display(&self, id: &str) -> Option<&'a Display> {
         self.displays.get(id)
