@@ -2,9 +2,6 @@
 use winres::WindowsResource;
 
 fn main() {
-    #[cfg(not(windows))]
-    compile_error!("Can't compile the win-host for non Win32!");
-
     #[cfg(windows)]
     {
         setup_resources();
