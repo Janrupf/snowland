@@ -1,3 +1,6 @@
+mod com;
+
+use crate::com::TestCommunicationChannel;
 use nativeshell::codec::Value;
 use nativeshell::shell::ContextOptions;
 use nativeshell::Context;
@@ -28,6 +31,8 @@ fn main() {
         log::error!("Failed to create main window: {}", err);
         std::process::exit(1);
     }
+
+    let _test_channel = TestCommunicationChannel::register(&context);
 
     context.run_loop.borrow().run();
 

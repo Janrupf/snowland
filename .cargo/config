@@ -1,0 +1,2 @@
+[alias]
+flutter-debug = "run --package snowland-control-panel --bin snowland-control-panel --"
