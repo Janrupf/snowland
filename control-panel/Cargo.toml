@@ -1,0 +1,13 @@
+[package]
+name = "snowland-control-panel"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+nativeshell = "0.1.12"
+pretty_env_logger = "0.4.0"
+log = "0.4.14"
+
+[build-dependencies]
+cargo-emit = "0.2.1"
+nativeshell_build = "0.1.10"
