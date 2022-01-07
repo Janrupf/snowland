@@ -2,7 +2,7 @@ use std::fs::File;
 
 use serde::{Deserialize, Serialize};
 
-use crate::scene::module::{KnownModules, ModuleConfigError, ModuleContainer, ModuleWrapperPair};
+use crate::scene::module::{KnownModules, ModuleConfigError, ModuleContainer};
 
 /// Helper representing the entire config structure.
 #[derive(Debug, Serialize, Deserialize)]
@@ -38,7 +38,7 @@ impl ConfigIO {
     }
 
     /// Loads the modules from the configuration.
-    pub fn load() -> Result<Vec<ModuleWrapperPair>, ModuleConfigError> {
+    pub fn load() -> Result<Vec<Box<dyn ModuleContainer>>, ModuleConfigError> {
         let reader = Self::open(false)?;
         let configs =
             serde_json::from_reader::<_, Self>(reader).map_err(ModuleConfigError::Deserialize)?;

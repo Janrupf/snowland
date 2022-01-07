@@ -1,5 +1,4 @@
 use std::ops::Deref;
-use std::sync::{Arc, Mutex};
 
 use serde::de::DeserializeOwned;
 use serde::Serialize;
@@ -37,10 +36,9 @@ pub trait ModuleRenderer: Send {
     fn render<'a>(&mut self, config: &Self::Config, data: &mut SceneData<'a>);
 }
 
-pub type ModuleWrapperPair = (Box<dyn ModuleContainer>, Box<dyn BoundModuleRenderer>);
-type ModuleWrapperCreator = fn() -> ModuleWrapperPair;
+type ModuleWrapperCreator = fn() -> Box<dyn ModuleContainer>;
 type ModuleWrapperDeserializer =
-    fn(serde_json::Value) -> Result<ModuleWrapperPair, ModuleConfigError>;
+    fn(serde_json::Value) -> Result<Box<dyn ModuleContainer>, ModuleConfigError>;
 
 /// Generic wrapper over module types.
 #[derive(Debug)]
@@ -61,7 +59,7 @@ impl ModuleWrapper {
         }
     }
 
-    fn create_generic<M>() -> ModuleWrapperPair
+    fn create_generic<M>() -> Box<dyn ModuleContainer>
     where
         M: Module + 'static,
     {
@@ -70,7 +68,7 @@ impl ModuleWrapper {
 
     fn deserialize_generic<M>(
         value: serde_json::Value,
-    ) -> Result<ModuleWrapperPair, ModuleConfigError>
+    ) -> Result<Box<dyn ModuleContainer>, ModuleConfigError>
     where
         M: Module + 'static,
     {
@@ -79,20 +77,16 @@ impl ModuleWrapper {
         Ok(Self::create_generic_with_config::<M>(config))
     }
 
-    fn create_generic_with_config<M>(config: M::Config) -> ModuleWrapperPair
+    fn create_generic_with_config<M>(config: M::Config) -> Box<dyn ModuleContainer>
     where
         M: Module + 'static,
     {
-        let shared_config = Arc::new(Mutex::new(config));
-
-        let container = InternalModuleContainer::<M>::new(shared_config.clone());
-        let renderer = InternalBoundModuleRenderer::<M>::new(shared_config);
-
-        (Box::new(container), Box::new(renderer))
+        let container = InternalModuleContainer::<M>::new(M::create_renderer(), config);
+        Box::new(container)
     }
 
     /// Creates a new instance of the module with its default configuration.
-    pub fn create_with_default_config(&self) -> ModuleWrapperPair {
+    pub fn create_with_default_config(&self) -> Box<dyn ModuleContainer> {
         (self.create)()
     }
 
@@ -100,34 +94,33 @@ impl ModuleWrapper {
     pub fn deserialize_from_config(
         &self,
         config: serde_json::Value,
-    ) -> Result<ModuleWrapperPair, ModuleConfigError> {
+    ) -> Result<Box<dyn ModuleContainer>, ModuleConfigError> {
         (self.deserialize)(config)
     }
 }
 
-/// Helper type for configurations shared between a renderer and a container.
-type SharedConfig<M> = Arc<Mutex<<M as Module>::Config>>;
-
-/// Helper trait to represent this module in the user interface and make it configurable.
 pub trait ModuleContainer {
     fn serialize_config(&self) -> Result<serde_json::Value, ModuleConfigError>;
 
     fn module_type(&self) -> String;
+
+    fn run_frame<'a>(&mut self, data: &mut SceneData<'a>);
 }
 
 struct InternalModuleContainer<M>
 where
     M: Module,
 {
-    config: SharedConfig<M>,
+    renderer: M::Renderer,
+    config: M::Config,
 }
 
 impl<M> InternalModuleContainer<M>
 where
     M: Module,
 {
-    pub fn new(config: SharedConfig<M>) -> Self {
-        Self { config }
+    pub fn new(renderer: M::Renderer, config: M::Config) -> Self {
+        Self { renderer, config }
     }
 }
 
@@ -136,66 +129,15 @@ where
     M: Module,
 {
     fn serialize_config(&self) -> Result<serde_json::Value, ModuleConfigError> {
-        let config = self
-            .config
-            .lock()
-            .expect("Failed to lock serialization config");
-
-        serde_json::to_value(config.deref()).map_err(ModuleConfigError::Serialize)
+        serde_json::to_value(&self.config).map_err(ModuleConfigError::Serialize)
     }
 
     fn module_type(&self) -> String {
         M::name()
     }
-}
 
-/// Helper trait for a generic renderer bound with a config.
-///
-/// Instances of this are bound to their config container and scheduled to be removed as soon
-/// as the config container is dropped.
-pub trait BoundModuleRenderer: Send {
-    /// Renders the module to the scene.
-    fn render<'a>(&mut self, data: &'a mut SceneData<'a>);
-
-    /// Determines whether this module should be removed because its config container
-    /// has been dropped.
-    fn should_remove(&self) -> bool;
-}
-
-/// Combines a renderer and its associated config into an abstracted type which can
-/// be made into a trait object.
-struct InternalBoundModuleRenderer<M>
-where
-    M: Module,
-{
-    config: SharedConfig<M>,
-    renderer: M::Renderer,
-}
-
-impl<M> InternalBoundModuleRenderer<M>
-where
-    M: Module,
-{
-    /// Creates a new module renderer from the given shared configuration.
-    fn new(config: SharedConfig<M>) -> Self {
-        Self {
-            config,
-            renderer: M::create_renderer(),
-        }
-    }
-}
-
-impl<M> BoundModuleRenderer for InternalBoundModuleRenderer<M>
-where
-    M: Module,
-{
-    fn render<'a>(&mut self, data: &'a mut SceneData<'a>) {
-        let config = self.config.lock().expect("Failed to lock renderer config");
-        self.renderer.render(&*config, data)
-    }
-
-    fn should_remove(&self) -> bool {
-        Arc::strong_count(&self.config) == 1
+    fn run_frame<'a>(&mut self, data: &mut SceneData<'a>) {
+        self.renderer.render(&self.config, data)
     }
 }
 

@@ -4,13 +4,12 @@ use std::time::Instant;
 use skia_safe::Surface;
 
 use crate::rendering::display::Display;
-use crate::scene::module::BoundModuleRenderer;
+use crate::scene::module::ModuleContainer;
 use crate::scene::SceneData;
 use crate::SnowlandRenderer;
 
 pub mod display;
 pub mod fonts;
-pub mod state;
 
 /// Contains the renderer and control over it.
 pub struct RendererContainer<R>
@@ -22,7 +21,7 @@ where
     width: u64,
     height: u64,
     last_frame_time: Instant,
-    modules: Vec<Box<dyn BoundModuleRenderer>>,
+    modules: Vec<Box<dyn ModuleContainer>>,
     primary_display: Display,
     displays: HashMap<String, Display>,
 }
@@ -55,17 +54,29 @@ where
 
         self.render_frame()?;
 
-        self.modules.retain(|m| {
-            let remove = m.should_remove();
-
-            if remove {
-                log::debug!("Removing module as it expired!")
-            }
-
-            !remove
-        });
-
         Ok(())
+    }
+
+    /// Updates the available displays.
+    pub fn update_displays(&mut self, displays: Vec<Display>) {
+        self.primary_display = displays
+            .iter()
+            .find(|d| d.primary())
+            .or_else(|| displays.first())
+            .map(Clone::clone)
+            .unwrap_or_else(Display::uninitialized);
+
+        self.displays = displays.into_iter().map(|d| (d.id().clone(), d)).collect();
+    }
+
+    /// Replaces the currently active list of modules.
+    pub fn replace_modules(&mut self, modules: Vec<Box<dyn ModuleContainer>>) {
+        self.modules = modules;
+    }
+
+    /// Retrieves the currently installed list of modules.
+    pub fn get_modules(&self) -> &Vec<Box<dyn ModuleContainer>> {
+        &self.modules
     }
 
     /// Resizes the internal surface if required.
@@ -97,7 +108,7 @@ where
                 height,
                 last_frame_time.elapsed(),
             );
-            module.render(&mut data);
+            module.run_frame(&mut data);
         }
 
         self.surface.flush_and_submit();

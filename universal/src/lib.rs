@@ -1,10 +1,14 @@
 #![feature(drain_filter, once_cell)]
 
 use crate::host::SnowlandRenderer;
+use crate::io::ConfigIO;
+use crate::rendering::display::Display;
 use crate::rendering::RendererContainer;
+use crate::scene::module::ModuleConfigError;
 use std::any::Any;
 use std::time::SystemTimeError;
 use thiserror::Error;
+
 pub mod control;
 pub mod host;
 pub mod io;
@@ -24,13 +28,29 @@ impl<R> Snowland<R>
 where
     R: SnowlandRenderer,
 {
+    /// Creates the snowland instance using the given renderer backend.
     pub fn create(renderer: R) -> Result<Self, Error<R::Error>> {
         let container = RendererContainer::new(renderer).map_err(Error::RendererError)?;
         Ok(Self { container })
     }
 
+    /// Draws a frame using the underlying renderer.
     pub fn draw_frame(&mut self) -> Result<(), Error<R::Error>> {
         self.container.draw_frame().map_err(Error::RendererError)
+    }
+
+    /// Updates the displays used by renderer.
+    pub fn update_displays(&mut self, displays: Vec<Display>) {
+        self.container.update_displays(displays);
+    }
+
+    /// Loads the module configuration from disk.
+    pub fn load_configuration_from_disk(&mut self) -> Result<(), ModuleConfigError> {
+        log::info!("Loading module configuration from disk...");
+        let modules = ConfigIO::load()?;
+        self.container.replace_modules(modules);
+
+        Ok(())
     }
 }
 

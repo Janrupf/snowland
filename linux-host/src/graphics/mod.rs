@@ -2,73 +2,29 @@ use skia_safe::gpu::gl::{FramebufferInfo, Interface};
 use skia_safe::gpu::{BackendRenderTarget, DirectContext, SurfaceOrigin};
 use skia_safe::{ColorType, Surface};
 use snowland_universal::host::SnowlandRenderer;
-use snowland_x11_wrapper::{GLXContext, GLXError, XDisplay, XDrawable, XLibError, XWindow, GLX};
-use std::pin::Pin;
+use snowland_x11_wrapper::{GLXContext, GLXError, XDrawable, XLibError, XWindow, GLX};
 use thiserror::Error;
 
 const GL_RGBA8: u32 = 0x8058;
 
-struct Inner {
+pub struct SnowlandX11Renderer<'a> {
     skia_context: DirectContext,
-    context: GLXContext<'static>,
-    window: XWindow<'static>,
-    display: Pin<Box<XDisplay>>,
+    context: GLXContext<'a>,
+    window: &'a XWindow<'a>,
 }
 
-impl Inner {
-    pub fn init(window: Option<u64>) -> Result<Self, Error> {
-        let display = Box::pin(XDisplay::open(None)?);
-
-        // TODO: This entire lifetime extension is more than hacky, find a better way!
-        let display_static: &'static XDisplay =
-            unsafe { &*(display.as_ref().get_ref() as *const _) };
-        let glx = GLX::create(display_static)?;
-
-        let window = match window {
-            None => display_static.default_screen().root_window(),
-            // TODO: This is untrusted user input and WILL crash if invalid
-            Some(id) => unsafe { XWindow::new(id, display_static) },
-        };
+impl<'a> SnowlandX11Renderer<'a> {
+    pub fn init(window: &'a XWindow<'a>) -> Result<Self, Error> {
+        let glx = GLX::create(window.display())?;
 
         let attributes = window.get_attributes();
         let visual = attributes.visual();
         let screen = attributes.screen();
 
-        /* TODO: Display configuration!
-        let displays = screen
-            .get_monitors()
-            .into_iter()
-            .enumerate()
-            .map(|(i, monitor)| {
-                let fake_data = format!("Monitor {}", i);
-
-                let name = format!(
-                    "{}: {}",
-                    i,
-                    monitor.monitor_name.as_ref().unwrap_or(&fake_data)
-                );
-                let serial = monitor
-                    .monitor_serial
-                    .map(|i| i.to_string())
-                    .unwrap_or(fake_data);
-
-                Display::new(
-                    name,
-                    serial,
-                    monitor.primary,
-                    monitor.x,
-                    monitor.y,
-                    monitor.width,
-                    monitor.height,
-                )
-            })
-            .collect();
-            */
-        
         let framebuffer_config = glx.find_framebuffer_config(screen, visual)?;
         let context = glx.create_context(screen, &framebuffer_config)?;
 
-        context.make_current(&window);
+        context.make_current(window);
 
         let skia_interface = Interface::new_load_with(|proc| {
             if proc.starts_with("egl") {
@@ -93,22 +49,11 @@ impl Inner {
             skia_context,
             context,
             window,
-            display,
         })
     }
 }
 
-pub struct SnowlandX11Renderer {
-    inner: Inner,
-}
-
-impl SnowlandX11Renderer {
-    pub fn init(window: Option<u64>) -> Result<Self, Error> {
-        Inner::init(window).map(|inner| Self { inner })
-    }
-}
-
-impl SnowlandRenderer for SnowlandX11Renderer {
+impl<'a> SnowlandRenderer for SnowlandX11Renderer<'a> {
     type Error = Error;
 
     fn create_surface(&mut self, width: u64, height: u64) -> Result<Surface, Self::Error> {
@@ -125,7 +70,7 @@ impl SnowlandRenderer for SnowlandX11Renderer {
             BackendRenderTarget::new_gl((width as _, height as _), None, 0, framebuffer);
 
         let surface = Surface::from_backend_render_target(
-            &mut self.inner.skia_context,
+            &mut self.skia_context,
             &render_target,
             SurfaceOrigin::BottomLeft,
             ColorType::RGBA8888,
@@ -137,13 +82,12 @@ impl SnowlandRenderer for SnowlandX11Renderer {
     }
 
     fn present(&self) -> Result<(), Self::Error> {
-        self.inner.context.swap_buffers(&self.inner.window);
-        self.inner.display.sync(true);
+        self.context.swap_buffers(self.window);
         Ok(())
     }
 
     fn get_size(&self) -> Result<(u64, u64), Self::Error> {
-        let geometry = self.inner.window.get_geometry();
+        let geometry = self.window.get_geometry();
         Ok((geometry.width as _, geometry.height as _))
     }
 }

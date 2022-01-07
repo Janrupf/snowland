@@ -72,6 +72,11 @@ impl<'a> XScreen<'a> {
         Self { handle, display }
     }
 
+    /// Retrieves the display this screen belongs to.
+    pub fn display(&self) -> &'a XDisplay {
+        self.display
+    }
+
     /// Retrieves the underlying platform native X11 pointer.
     pub fn handle(&self) -> *mut xlib_sys::Screen {
         self.handle
