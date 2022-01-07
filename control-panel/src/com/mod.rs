@@ -1,3 +1,3 @@
 //! UI communication module
-mod test_channel;
-pub use test_channel::*;
+mod dart_to_native;
+pub use dart_to_native::*;

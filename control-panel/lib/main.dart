@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:nativeshell/nativeshell.dart';
-import 'package:snowland_control_panel/com/test_channel.dart';
+import 'package:snowland_control_panel/startup.dart';
 
 void main() {
   runApp(const SnowlandControlPanel());
@@ -26,7 +26,7 @@ class SnowlandControlPanelState extends WindowState {
         style: TextStyle(
           fontSize: 14,
         ),
-        child: WindowLayoutProbe(child: TestPage()),
+        child: WindowLayoutProbe(child: StartupPage()),
       ));
 
   @override
@@ -34,16 +34,3 @@ class SnowlandControlPanelState extends WindowState {
       WindowSizingMode.atLeastIntrinsicSize;
 }
 
-class TestPage extends StatelessWidget {
-  const TestPage({Key? key}) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) => Center(
-        child: ElevatedButton(
-          child: const Text("Click me!"),
-          onPressed: () {
-            TestChannel.greet("World").then((value) => print(value));
-          },
-        ),
-      );
-}

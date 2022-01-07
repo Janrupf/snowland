@@ -1,3 +1,4 @@
+mod attr;
 mod call_handler;
 
 use proc_macro::TokenStream;
@@ -26,9 +27,5 @@ pub fn method_channel_call_handler(attr: TokenStream, item: TokenStream) -> Toke
         );
     }
 
-    let out = call_handler::process_call_handler(item.into()).into();
-
-    println!("{}", out);
-
-    out
+    call_handler::process_call_handler(item.into()).into()
 }

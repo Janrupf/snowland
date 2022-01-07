@@ -1,18 +1,9 @@
 use proc_macro2::TokenStream;
 
+use crate::attr::CallHandlerArgumentAttribute;
 use syn::{FnArg, ImplItem, ImplItemMethod, Index, ItemImpl, Visibility};
 
 pub fn process_call_handler(input: TokenStream) -> TokenStream {
-    let wrapper = generate_wrapper(input.clone());
-
-    quote::quote! {
-        #input
-
-        #wrapper
-    }
-}
-
-fn generate_wrapper(input: TokenStream) -> TokenStream {
     let im = match syn::parse2::<ItemImpl>(input) {
         Ok(v) => v,
         Err(err) => {
@@ -21,6 +12,33 @@ fn generate_wrapper(input: TokenStream) -> TokenStream {
         }
     };
 
+    let cleaned = clean_input(&im);
+    let wrapper = generate_wrapper(&im);
+
+    quote::quote! {
+        #cleaned
+
+        #wrapper
+    }
+}
+
+fn clean_input(im: &ItemImpl) -> ItemImpl {
+    let mut out = im.clone();
+
+    for item in &mut out.items {
+        if let ImplItem::Method(method) = item {
+            for arg in &mut method.sig.inputs {
+                if let FnArg::Typed(t) = arg {
+                    CallHandlerArgumentAttribute::clean(&mut t.attrs);
+                }
+            }
+        }
+    }
+
+    out
+}
+
+fn generate_wrapper(im: &ItemImpl) -> TokenStream {
     let generics = &im.generics;
     let im_name = &im.self_ty;
 
@@ -69,15 +87,31 @@ fn generate_arm(tr: &ItemImpl, method: &ImplItemMethod) -> Option<TokenStream> {
         .iter()
         .any(|i| matches!(i, FnArg::Receiver(_)));
 
-    let input_types = method
+    let mut arg_pos = 0;
+
+    let (args, tuple_types): (Vec<_>, Vec<_>) = method
         .sig
         .inputs
         .iter()
         .filter_map(|i| match i {
             FnArg::Receiver(_) => None,
-            FnArg::Typed(t) => Some(&t.ty),
+            FnArg::Typed(t) => Some(t),
         })
-        .collect::<Vec<_>>();
+        .map(|t| {
+            let attrs = CallHandlerArgumentAttribute::from_attrs(&t.attrs);
+
+            if attrs.contains(&CallHandlerArgumentAttribute::Engine) {
+                (quote::quote! { engine }, None)
+            } else {
+                let index = Index::from(arg_pos);
+                arg_pos += 1;
+
+                (quote::quote! { args.#index }, Some(&t.ty))
+            }
+        })
+        .unzip();
+
+    let tuple_types = tuple_types.into_iter().flatten().collect::<Vec<_>>();
 
     let call_prefix = if requires_self {
         quote::quote! { self. }
@@ -85,20 +119,16 @@ fn generate_arm(tr: &ItemImpl, method: &ImplItemMethod) -> Option<TokenStream> {
         quote::quote! { Self:: }
     };
 
-    let call_args = (0..input_types.len())
-        .map(Index::from)
-        .map(|i| quote::quote! { args.#i });
-
     let call = quote::quote! {
-        #call_prefix #name (#(#call_args,)*)
+        #call_prefix #name (#(#args,)*)
     };
 
-    let arguments_type = if input_types.is_empty() {
+    let arguments_type = if tuple_types.is_empty() {
         quote::quote! { type Args = () }
     } else {
         quote::quote! {
             #[derive(::serde::Deserialize)]
-            struct Args(#(#input_types,)*)
+            struct Args(#(#tuple_types,)*)
         }
     };
 

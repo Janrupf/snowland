@@ -3,7 +3,7 @@ mod util;
 
 pub use control_panel_macro as mcr;
 
-use crate::com::TestCommunicationChannel;
+use crate::com::DartToNativeChannel;
 use nativeshell::codec::Value;
 use nativeshell::shell::ContextOptions;
 use nativeshell::Context;
@@ -35,8 +35,10 @@ fn main() {
         std::process::exit(1);
     }
 
-    let _test_channel = TestCommunicationChannel::register(&context);
+    log::debug!("Registering method channels...");
+    let _dart_to_native = DartToNativeChannel::register(&context);
 
+    log::debug!("Starting run loop...");
     context.run_loop.borrow().run();
 
     log::info!("Snowland control panel shutting down!");
