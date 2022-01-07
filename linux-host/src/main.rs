@@ -1,4 +1,4 @@
-use crate::host::LinuxHost;
+use crate::graphics::SnowlandX11Renderer;
 use snowland_universal::Snowland;
 
 mod cli;
@@ -17,7 +17,15 @@ fn main() {
         env!("CARGO_PKG_VERSION")
     );
 
-    let snowland = match Snowland::create_with(|notifier| LinuxHost::new(notifier, cli)) {
+    let renderer = match SnowlandX11Renderer::init(cli.window) {
+        Ok(v) => v,
+        Err(err) => {
+            log::error!("Failed to create renderer: {}", err);
+            std::process::exit(1);
+        }
+    };
+
+    let mut snowland = match Snowland::create(renderer) {
         Ok(v) => v,
         Err(err) => {
             log::error!("Failed to make it snow: {}", err);
@@ -25,14 +33,7 @@ fn main() {
         }
     };
 
-    match snowland.run() {
-        Ok(()) => {
-            log::debug!("Snowland finished successfully!");
-            std::process::exit(0);
-        }
-        Err(err) => {
-            log::error!("Snowland finished with error: {}", err);
-            std::process::exit(1);
-        }
+    loop {
+        snowland.draw_frame().expect("Failed to draw frame");
     }
 }
