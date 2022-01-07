@@ -1,10 +1,7 @@
-use imgui::Ui;
-
 use crate::scene::module::part::ColorSetting;
 use crate::scene::module::{Module, ModuleConfig, ModuleRenderer};
 use crate::scene::SceneData;
 
-use crate::ui::context::Context;
 use serde::{Deserialize, Serialize};
 
 pub(super) struct ClearModule;
@@ -27,11 +24,7 @@ pub struct ClearModuleConfig {
     color: ColorSetting,
 }
 
-impl ModuleConfig for ClearModuleConfig {
-    fn represent(&mut self, ui: &Ui, ctx: &Context<'_>) {
-        self.color.represent(ui, ctx);
-    }
-}
+impl ModuleConfig for ClearModuleConfig {}
 
 pub struct ClearModuleRenderer;
 

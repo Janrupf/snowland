@@ -1,14 +1,12 @@
 use std::fmt::{Display, Formatter};
 
 use chrono::{DateTime, Datelike, Local, NaiveTime};
-use imgui::{TreeNodeFlags, Ui};
 use serde::{Deserialize, Serialize};
 use skia_safe::Point;
 
 use crate::scene::module::part::{FontSetting, ModulePosition, PaintSetting};
 use crate::scene::module::{Module, ModuleConfig, ModuleRenderer};
 use crate::scene::SceneData;
-use crate::ui::context::Context;
 
 pub(super) struct CountdownModule;
 
@@ -97,9 +95,7 @@ impl Default for CountdownTarget {
     }
 }
 
-impl ModuleConfig for CountdownTarget {
-    fn represent(&mut self, _ui: &Ui, _ctx: &Context<'_>) {}
-}
+impl ModuleConfig for CountdownTarget {}
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct CountdownModuleConfig {
@@ -109,30 +105,7 @@ pub struct CountdownModuleConfig {
     font: FontSetting,
 }
 
-impl ModuleConfig for CountdownModuleConfig {
-    fn represent(&mut self, ui: &imgui::Ui, ctx: &Context<'_>) {
-        if ui.collapsing_header("Position", TreeNodeFlags::FRAMED) {
-            self.position.represent(ui, ctx);
-        }
-
-        if ui.collapsing_header("Color", TreeNodeFlags::FRAMED) {
-            self.paint.represent(ui, ctx);
-        }
-
-        if ui.collapsing_header("Module", TreeNodeFlags::FRAMED) {
-            let mut current_type_ordinal = self.target.ordinal();
-            if ui.combo_simple_string(
-                "Type",
-                &mut current_type_ordinal,
-                CountdownTarget::names().as_slice(),
-            ) {
-                self.target = CountdownTarget::from_ordinal(current_type_ordinal);
-            }
-
-            self.target.represent(ui, ctx);
-        }
-    }
-}
+impl ModuleConfig for CountdownModuleConfig {}
 
 pub struct CountdownModuleRenderer;
 

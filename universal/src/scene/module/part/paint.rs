@@ -1,13 +1,11 @@
 use std::fmt::Formatter;
 
-use imgui::{ColorEdit, EditableColor, Slider, Ui};
 use serde::de::{MapAccess, SeqAccess, Visitor};
 use serde::ser::{SerializeSeq, SerializeStruct};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use skia_safe::{paint::Style, scalar, Color4f, Paint};
 
 use crate::scene::module::ModuleConfig;
-use crate::ui::context::Context;
 
 #[derive(Debug, Clone)]
 pub struct ColorSetting(Color4f);
@@ -25,12 +23,7 @@ impl Default for ColorSetting {
     }
 }
 
-impl ModuleConfig for ColorSetting {
-    fn represent(&mut self, ui: &Ui, _ctx: &Context<'_>) {
-        let color_data = self.0.as_array_mut();
-        ColorEdit::new("Color", EditableColor::Float4(color_data)).build(ui);
-    }
-}
+impl ModuleConfig for ColorSetting {}
 
 impl<'de> Deserialize<'de> for ColorSetting {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
@@ -109,54 +102,7 @@ impl Default for PaintSetting {
     }
 }
 
-impl ModuleConfig for PaintSetting {
-    fn represent(&mut self, ui: &Ui, _ctx: &Context<'_>) {
-        let mut color = self.0.color4f();
-        let color_data = color.as_array_mut();
-
-        if ColorEdit::new("Color", EditableColor::Float4(color_data)).build(ui) {
-            self.0.set_color4f(
-                unsafe { std::mem::transmute_copy::<_, Color4f>(color_data) },
-                None,
-            );
-        }
-
-        let mut anti_alias = self.0.is_anti_alias();
-        if ui.checkbox("Anti alias", &mut anti_alias) {
-            self.0.set_anti_alias(anti_alias);
-        }
-
-        let mut dither = self.0.is_dither();
-        if ui.checkbox("Dither", &mut dither) {
-            self.0.set_dither(dither);
-        }
-
-        let style = self.0.style();
-        let mut stroked = style == Style::Stroke;
-        if ui.checkbox("Stroke", &mut stroked) {
-            self.0.set_stroke(stroked);
-        }
-
-        if stroked {
-            let mut stroke_width = self.0.stroke_width();
-            if Slider::new("Stroke width", 0.0, 100.0)
-                .display_format("%.0f")
-                .build(ui, &mut stroke_width)
-            {
-                log::debug!("Setting width {}", stroke_width);
-                self.0.set_stroke_width(stroke_width);
-            }
-
-            let mut stroke_miter = self.0.stroke_miter();
-            if Slider::new("Stroke miter", 0.0, 100.0)
-                .display_format("%.0f")
-                .build(ui, &mut stroke_miter)
-            {
-                self.0.set_stroke_miter(stroke_miter);
-            }
-        }
-    }
-}
+impl ModuleConfig for PaintSetting {}
 
 #[derive(Serialize, Deserialize)]
 enum StrokeSetting {

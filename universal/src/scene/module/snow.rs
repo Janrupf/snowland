@@ -1,4 +1,3 @@
-use imgui::{Drag, DragRange, SliderFlags, TreeNodeFlags, Ui};
 use rand::rngs::ThreadRng;
 use rand::Rng;
 use serde::{Deserialize, Serialize};
@@ -6,7 +5,6 @@ use skia_safe::{Color4f, Paint};
 
 use crate::scene::module::{Module, ModuleConfig, ModuleRenderer};
 use crate::scene::SceneData;
-use crate::ui::context::Context;
 
 pub(super) struct SnowModule;
 
@@ -48,34 +46,6 @@ pub struct SnowModuleConfig {
     falling_speed_max: f32,
 }
 
-impl SnowModuleConfig {
-    #[allow(clippy::too_many_arguments)]
-    fn range<T>(
-        ui: &Ui,
-        label: T,
-        min: f32,
-        max: f32,
-        current_min: &mut f32,
-        current_max: &mut f32,
-        default_min: f32,
-        default_max: f32,
-    ) where
-        T: AsRef<str>,
-    {
-        DragRange::new(label.as_ref())
-            .range(min, max)
-            .flags(SliderFlags::ALWAYS_CLAMP)
-            .build(ui, current_min, current_max);
-
-        ui.table_next_column();
-
-        if ui.button(format!("Reset###{}", label.as_ref())) {
-            *current_min = default_min;
-            *current_max = default_max;
-        }
-    }
-}
-
 impl Default for SnowModuleConfig {
     fn default() -> Self {
         Self {
@@ -91,82 +61,7 @@ impl Default for SnowModuleConfig {
     }
 }
 
-impl ModuleConfig for SnowModuleConfig {
-    fn represent(&mut self, ui: &Ui, _ctx: &Context<'_>) {
-        if ui.collapsing_header("Module", TreeNodeFlags::FRAMED) {
-            if let Some(_tab) = ui.begin_table("Values", 3) {
-                ui.table_next_row();
-                ui.table_next_column();
-
-                Drag::new("Pixel to flake ratio")
-                    .range(100, i32::MAX)
-                    .flags(SliderFlags::ALWAYS_CLAMP)
-                    .build(ui, &mut self.pixel_flake_ratio);
-
-                ui.table_next_column();
-
-                if ui.button("Reset###ratio") {
-                    self.pixel_flake_ratio = DEFAULT_PIXEL_FLAKE_RATIO;
-                }
-
-                ui.table_next_row();
-                ui.table_next_column();
-
-                Drag::new("Fade time")
-                    .range(0.0, self.time_to_live_min)
-                    .build(ui, &mut self.fade_time);
-
-                ui.table_next_column();
-
-                if ui.button("Reset###fade") {
-                    self.fade_time = f32::min(DEFAULT_FADE_TIME, self.time_to_live_min);
-                }
-
-                ui.table_next_row();
-                ui.table_next_column();
-
-                let ranges = [
-                    (
-                        "Time to live",
-                        0.0,
-                        1000000.0,
-                        &mut self.time_to_live_min,
-                        &mut self.time_to_live_max,
-                        DEFAULT_TIME_TO_LIVE_MIN,
-                        DEFAULT_TIME_TO_LIVE_MAX,
-                    ),
-                    (
-                        "Tumbling modifier",
-                        0.0,
-                        100.0,
-                        &mut self.tumbling_min,
-                        &mut self.tumbling_max,
-                        DEFAULT_TUMBLING_MIN,
-                        DEFAULT_TUMBLING_MAX,
-                    ),
-                    (
-                        "Falling speed",
-                        0.0,
-                        100.0,
-                        &mut self.falling_speed_min,
-                        &mut self.falling_speed_max,
-                        DEFAULT_FALLING_SPEED_MIN,
-                        DEFAULT_FALLING_SPEED_MAX,
-                    ),
-                ];
-
-                for range in ranges {
-                    Self::range(
-                        ui, range.0, range.1, range.2, range.3, range.4, range.5, range.6,
-                    );
-
-                    ui.table_next_row();
-                    ui.table_next_column();
-                }
-            }
-        }
-    }
-}
+impl ModuleConfig for SnowModuleConfig {}
 
 pub struct SnowModuleRenderer {
     flakes: Vec<Snowflake>,

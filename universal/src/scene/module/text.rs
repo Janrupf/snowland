@@ -1,11 +1,9 @@
-use imgui::{InputText, TreeNodeFlags};
 use serde::{Deserialize, Serialize};
 use skia_safe::Point;
 
 use crate::scene::module::part::{FontSetting, ModulePosition, PaintSetting};
 use crate::scene::module::{Module, ModuleConfig, ModuleRenderer};
 use crate::scene::SceneData;
-use crate::ui::context::Context;
 
 pub(super) struct TextModule;
 
@@ -41,21 +39,7 @@ impl Default for TextModuleConfig {
     }
 }
 
-impl ModuleConfig for TextModuleConfig {
-    fn represent(&mut self, ui: &imgui::Ui, ctx: &Context<'_>) {
-        if ui.collapsing_header("Position", TreeNodeFlags::FRAMED) {
-            self.position.represent(ui, ctx);
-        }
-
-        if ui.collapsing_header("Color", TreeNodeFlags::FRAMED) {
-            self.paint.represent(ui, ctx);
-        }
-
-        if ui.collapsing_header("Text", TreeNodeFlags::FRAMED) {
-            InputText::new(ui, "Value", &mut self.value).build();
-        }
-    }
-}
+impl ModuleConfig for TextModuleConfig {}
 
 pub struct TextModuleRenderer;
 

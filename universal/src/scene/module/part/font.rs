@@ -1,10 +1,8 @@
-use imgui::Ui;
 use serde::{Deserialize, Serialize};
 use skia_safe::Font;
 
 use crate::rendering::fonts;
 use crate::scene::module::ModuleConfig;
-use crate::ui::context::Context;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct FontSetting {
@@ -56,6 +54,4 @@ impl Default for FontSetting {
     }
 }
 
-impl ModuleConfig for FontSetting {
-    fn represent(&mut self, _ui: &Ui, _ctx: &Context<'_>) {}
-}
+impl ModuleConfig for FontSetting {}

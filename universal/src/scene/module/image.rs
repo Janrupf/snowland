@@ -1,12 +1,9 @@
-use imgui::{InputText, TreeNodeFlags, Ui};
-use native_dialog::FileDialog;
 use serde::{Deserialize, Serialize};
 use skia_safe::Image;
 
 use crate::scene::module::part::{ModulePosition, PaintSetting};
 use crate::scene::module::{Module, ModuleConfig, ModuleRenderer};
 use crate::scene::SceneData;
-use crate::ui::context::Context;
 use crate::util::OwnedCodec;
 
 pub(super) struct ImageModule;
@@ -43,40 +40,7 @@ impl Default for ImageModuleConfig {
     }
 }
 
-impl ModuleConfig for ImageModuleConfig {
-    fn represent(&mut self, ui: &Ui, ctx: &Context<'_>) {
-        if ui.collapsing_header("Position", TreeNodeFlags::FRAMED) {
-            self.position.represent(ui, ctx);
-        }
-
-        if ui.collapsing_header("Module", TreeNodeFlags::FRAMED) {
-            if let Some(_tok) = ui.begin_table("Module Options", 2) {
-                ui.table_next_row();
-                ui.table_next_column();
-
-                InputText::new(ui, "Path", &mut self.path).build();
-                ui.table_next_column();
-                if ui.small_button("...") {
-                    match FileDialog::new().show_open_single_file() {
-                        Ok(None) => {}
-                        Ok(Some(p)) => self.path = p.to_string_lossy().into(),
-                        Err(err) => {
-                            log::error!("Failed to show a file dialog: {}", err)
-                        }
-                    };
-                }
-            }
-        }
-
-        if ui.collapsing_header("Paint", TreeNodeFlags::FRAMED) {
-            ui.checkbox("Enable paint override", &mut self.paint_enabled);
-
-            if self.paint_enabled {
-                self.paint.represent(ui, ctx);
-            }
-        }
-    }
-}
+impl ModuleConfig for ImageModuleConfig {}
 
 pub struct ImageModuleRenderer {
     current_path: String,
