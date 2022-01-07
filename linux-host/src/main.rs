@@ -6,7 +6,6 @@ use snowland_x11_wrapper::{XDisplay, XScreen, XWindow};
 
 mod cli;
 mod graphics;
-mod host;
 
 fn main() {
     pretty_env_logger::init();
