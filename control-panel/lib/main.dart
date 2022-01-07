@@ -42,7 +42,7 @@ class TestPage extends StatelessWidget {
         child: ElevatedButton(
           child: const Text("Click me!"),
           onPressed: () {
-            TestChannel.test();
+            TestChannel.greet("World").then((value) => print(value));
           },
         ),
       );

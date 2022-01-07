@@ -1,4 +1,7 @@
 mod com;
+mod util;
+
+pub use control_panel_macro as mcr;
 
 use crate::com::TestCommunicationChannel;
 use nativeshell::codec::Value;
