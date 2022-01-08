@@ -13,3 +13,4 @@ skia-safe = { version = "0.45.1", features = ["gl"] }
 snowland-universal = { path = "../universal" }
 snowland-x11-wrapper = { path = "../x11-wrapper" }
 
+libc = "0.2.112"

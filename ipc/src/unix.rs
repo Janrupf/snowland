@@ -22,6 +22,7 @@ where
     S: IPCMessage,
     R: IPCMessage,
 {
+    socket_path: PathBuf,
     listener: Option<UnixListener>,
     stream: Option<UnixStream>,
     read_buffer_real_size: usize,
@@ -39,12 +40,41 @@ impl SnowlandIPCBackend<ServerMessage, ClientMessage> {
     /// Creates the IPC server and socket.
     pub fn create_server() -> Result<Self, SnowlandIPCError> {
         let socket_path = Self::determine_socket_path();
-        let listener = UnixListener::bind(socket_path)?;
+
+        if socket_path.exists() {
+            /* Now this _could_ be a problem...
+             * there are 2 possible scenarios:
+             * 1. Snowland is running already
+             * 2. The socket is a leftover from a crashed instance
+             *
+             * Only the first is a problem, in the second case
+             * we simply delete the socket and re-crate it.
+             *
+             * Lets try to open the file!
+             */
+
+            match std::fs::File::open(&socket_path) {
+                Ok(_) => {
+                    /* Looks like snowland is still running! */
+                    return Err(SnowlandIPCError::Duplicated);
+                }
+                Err(_) => {
+                    log::warn!("Deleting old socket at {}", socket_path.display());
+                    if let Err(err) = std::fs::remove_file(&socket_path) {
+                        log::error!("Failed to delete old socket: {}", err);
+                        log::error!("Be aware that binding to the socket may fail!");
+                    }
+                }
+            }
+        }
+
+        let listener = UnixListener::bind(&socket_path)?;
 
         #[cfg(not(feature = "poll"))]
         listener.set_nonblocking(true)?;
 
         Ok(Self {
+            socket_path,
             listener: Some(listener),
             stream: None,
             read_buffer_real_size: 0,
@@ -58,7 +88,7 @@ impl SnowlandIPCBackend<ClientMessage, ServerMessage> {
     /// Connects the IPC client.
     pub fn connect_client() -> Result<Self, SnowlandIPCError> {
         let socket_path = Self::determine_socket_path();
-        let stream = UnixStream::connect(socket_path).map_err(|e| {
+        let stream = UnixStream::connect(&socket_path).map_err(|e| {
             if e.kind() == std::io::ErrorKind::NotFound {
                 SnowlandIPCError::Disconnected
             } else {
@@ -70,6 +100,7 @@ impl SnowlandIPCBackend<ClientMessage, ServerMessage> {
         stream.set_nonblocking(true)?;
 
         Ok(Self {
+            socket_path,
             listener: None,
             stream: Some(stream),
             read_buffer_real_size: 0,
@@ -325,5 +356,24 @@ where
         }
 
         Ok(decoded)
+    }
+}
+
+impl<S, R> Drop for SnowlandIPCBackend<S, R>
+where
+    S: IPCMessage,
+    R: IPCMessage,
+{
+    fn drop(&mut self) {
+        if self.listener.is_some() {
+            log::debug!(
+                "Found own socket at {}, deleting!",
+                self.socket_path.display()
+            );
+
+            if let Err(err) = std::fs::remove_file(&self.socket_path) {
+                log::warn!("Failed to delete own socket: {}", err);
+            }
+        }
     }
 }

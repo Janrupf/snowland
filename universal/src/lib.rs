@@ -5,6 +5,8 @@ use crate::io::ConfigIO;
 use crate::rendering::display::Display;
 use crate::rendering::RendererContainer;
 use crate::scene::module::ModuleConfigError;
+use snowland_ipc::protocol::{ClientMessage, ServerMessage};
+use snowland_ipc::{SnowlandIPC, SnowlandIPCError};
 use std::any::Any;
 use std::time::SystemTimeError;
 use thiserror::Error;
@@ -22,6 +24,7 @@ where
     R: SnowlandRenderer,
 {
     container: RendererContainer<R>,
+    ipc: SnowlandIPC<ServerMessage, ClientMessage>,
 }
 
 impl<R> Snowland<R>
@@ -31,12 +34,22 @@ where
     /// Creates the snowland instance using the given renderer backend.
     pub fn create(renderer: R) -> Result<Self, Error<R::Error>> {
         let container = RendererContainer::new(renderer).map_err(Error::RendererError)?;
-        Ok(Self { container })
+        let ipc = SnowlandIPC::create_server()?;
+        Ok(Self { container, ipc })
     }
 
     /// Draws a frame using the underlying renderer.
     pub fn draw_frame(&mut self) -> Result<(), Error<R::Error>> {
         self.container.draw_frame().map_err(Error::RendererError)
+    }
+
+    /// Performs IPC related tasks.
+    pub fn tick_ipc(&mut self) -> Result<(), Error<R::Error>> {
+        if !self.ipc.is_connected() && self.ipc.nonblocking_accept()? {
+            log::info!("IPC client connected!");
+        }
+
+        Ok(())
     }
 
     /// Updates the displays used by renderer.
@@ -67,6 +80,9 @@ where
 
     #[error("failed to calculate frame time: {0}")]
     TimeError(#[from] SystemTimeError),
+
+    #[error("an error occurred on the ipc: {0}")]
+    Ipc(#[from] SnowlandIPCError),
 
     #[error("generic error: {description} ({cause:?})")]
     Generic {

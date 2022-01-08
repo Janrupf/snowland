@@ -10,7 +10,7 @@ mod platform;
 
 use platform::SnowlandIPCBackend;
 
-mod protocol;
+pub mod protocol;
 
 use crate::protocol::{ClientMessage, IPCMessage, ServerMessage};
 use thiserror::Error;

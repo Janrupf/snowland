@@ -3,9 +3,13 @@ use crate::graphics::SnowlandX11Renderer;
 use snowland_universal::rendering::display::Display;
 use snowland_universal::Snowland;
 use snowland_x11_wrapper::{XDisplay, XScreen, XWindow};
+use std::mem::MaybeUninit;
+use std::sync::atomic::{AtomicBool, Ordering};
 
 mod cli;
 mod graphics;
+
+static SHOULD_SHUTDOWN: AtomicBool = AtomicBool::new(false);
 
 fn main() {
     pretty_env_logger::init();
@@ -18,6 +22,8 @@ fn main() {
         env!("CARGO_PKG_NAME"),
         env!("CARGO_PKG_VERSION")
     );
+
+    setup_signal_handler();
 
     let display = match XDisplay::open(None) {
         Ok(v) => v,
@@ -51,9 +57,12 @@ fn main() {
         .load_configuration_from_disk()
         .expect("Failed to load modules from disk");
 
-    loop {
+    while !SHOULD_SHUTDOWN.load(Ordering::Relaxed) {
         snowland.draw_frame().expect("Failed to draw frame");
+        snowland.tick_ipc().expect("Failed to tick IPC");
     }
+
+    log::info!("Shutting down snowland...");
 }
 
 /// Retrieves all connected video outputs of the X screen.
@@ -93,5 +102,25 @@ fn get_render_target<'a>(screen: &'a XScreen<'a>, cli: &Cli) -> (XWindow<'a>, bo
     match cli.window {
         None => (screen.root_window(), true),
         Some(i) => (unsafe { XWindow::new(i as _, screen.display()) }, true),
+    }
+}
+
+unsafe extern "system" fn sigint_handler(
+    _signal: libc::c_int,
+    _info: *mut libc::siginfo_t,
+    _data: *mut libc::c_void,
+) {
+    SHOULD_SHUTDOWN.store(true, Ordering::Relaxed);
+}
+
+fn setup_signal_handler() {
+    unsafe {
+        let mut action: libc::sigaction = MaybeUninit::zeroed().assume_init();
+        // This assigns sa_handler, which is not there in the libc crate...
+        action.sa_sigaction = sigint_handler as _;
+        libc::sigemptyset(&mut action.sa_mask);
+        action.sa_flags = 0;
+
+        libc::sigaction(libc::SIGINT, &action, std::ptr::null_mut());
     }
 }
