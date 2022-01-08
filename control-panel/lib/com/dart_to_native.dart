@@ -11,4 +11,8 @@ class DartToNativeCommunicator {
   void connectToIpc() {
       _dartToNativeChannel.invokeMethod("connect_to_ipc");
   }
+
+  void log(String component, String level, String message) {
+    _dartToNativeChannel.invokeMethod("log", [component, level, message]);
+  }
 }

@@ -5,5 +5,5 @@ fn main() {
         ..Default::default()
     };
 
-    // Flutter::build(options).expect("Failed to build flutter");
+    Flutter::build(options).expect("Failed to build flutter");
 }

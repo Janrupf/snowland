@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:snowland_control_panel/com/dart_to_native.dart';
 import 'package:snowland_control_panel/com/native_to_dart.dart';
+import 'package:snowland_control_panel/logger.dart';
+
+const logger = Logger("startup");
 
 class StartupPage extends StatefulWidget {
   const StartupPage({Key? key}) : super(key: key);
@@ -38,6 +41,8 @@ class _StartupPageState extends State<StartupPage> {
       );
 
   Future _setConnected(dynamic args) async {
+    print("XYZ");
+
     setState(() {
       _isConnected = args as bool;
     });
