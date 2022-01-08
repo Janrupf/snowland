@@ -11,6 +11,7 @@ use std::os::unix::net::{UnixListener, UnixStream};
 use mio::net::{UnixListener, UnixStream};
 
 use crate::protocol::{ClientMessage, IPCMessage, ServerMessage};
+use bincode::error::DecodeError;
 use std::path::PathBuf;
 
 const BINCODE_CONFIGURATION: bincode::config::Configuration =
@@ -153,7 +154,7 @@ where
     #[cfg(feature = "poll")]
     pub fn process_event(
         &mut self,
-        event: mio::event::Event,
+        event: &mio::event::Event,
         registry: &mio::Registry,
     ) -> Result<Vec<R>, SnowlandIPCError> {
         match event.token() {
@@ -321,38 +322,20 @@ where
     fn decode_messages(&mut self) -> Result<Vec<R>, SnowlandIPCError> {
         let mut decoded = Vec::new();
 
-        while self.read_buffer_real_size > 4 {
-            let packet_len = u32::from_ne_bytes([
-                self.read_buffer[0],
-                self.read_buffer[1],
-                self.read_buffer[2],
-                self.read_buffer[3],
-            ]);
+        while self.read_buffer_real_size > 0 {
+            let (message, read_size) =
+                match bincode::decode_from_slice(&self.read_buffer, BINCODE_CONFIGURATION) {
+                    Ok(v) => v,
+                    Err(DecodeError::UnexpectedEnd) => {
+                        break;
+                    }
+                    Err(err) => return Err(SnowlandIPCError::DecodeFailed(err)),
+                };
 
-            if packet_len < 1 {
-                return Err(SnowlandIPCError::InvalidPacketLength(packet_len));
-            }
+            decoded.push(message);
 
-            if self.read_buffer_real_size >= (packet_len + 4) as usize {
-                let data = &self.read_buffer[4..(packet_len as usize)];
-
-                let (message, read_length) =
-                    bincode::decode_from_slice(data, BINCODE_CONFIGURATION)?;
-
-                if read_length != (packet_len as usize) {
-                    return Err(SnowlandIPCError::PacketLengthMismatch(
-                        packet_len,
-                        read_length,
-                    ));
-                }
-
-                self.read_buffer_real_size -= (packet_len + 1) as usize;
-                self.read_buffer.drain(0..(packet_len + 4) as usize);
-
-                decoded.push(message);
-            } else {
-                break;
-            }
+            self.read_buffer_real_size -= read_size;
+            self.read_buffer.drain(0..read_size);
         }
 
         Ok(decoded)

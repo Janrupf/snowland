@@ -49,6 +49,12 @@ where
             log::info!("IPC client connected!");
         }
 
+        if self.ipc.is_connected() {
+            if let Err(err) = self.ipc.nonblocking_write(ServerMessage::Heartbeat) {
+                log::warn!("Failed to write IPC heartbeat: {}", err);
+            }
+        }
+
         Ok(())
     }
 

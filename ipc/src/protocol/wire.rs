@@ -4,7 +4,9 @@ use bincode::{Decode, Encode};
 pub enum ClientMessage {}
 
 #[derive(Debug, Encode, Decode)]
-pub enum ServerMessage {}
+pub enum ServerMessage {
+    Heartbeat,
+}
 
 pub trait IPCMessage: std::fmt::Debug + Decode + Encode + Sized {}
 

@@ -12,6 +12,9 @@ use platform::SnowlandIPCBackend;
 
 pub mod protocol;
 
+#[cfg(feature = "poll")]
+pub use mio;
+
 use crate::protocol::{ClientMessage, IPCMessage, ServerMessage};
 use thiserror::Error;
 
@@ -64,7 +67,7 @@ where
     #[cfg(feature = "poll")]
     pub fn process_event(
         &mut self,
-        event: mio::event::Event,
+        event: &mio::event::Event,
         registry: &mio::Registry,
     ) -> Result<Vec<R>, SnowlandIPCError> {
         self.backend.process_event(event, registry)
