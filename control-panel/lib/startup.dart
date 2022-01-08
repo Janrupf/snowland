@@ -38,6 +38,8 @@ class _StartupPageState extends State<StartupPage> {
       );
 
   Future _setConnected(dynamic args) async {
-    _isConnected = args as bool;
+    setState(() {
+      _isConnected = args as bool;
+    });
   }
 }

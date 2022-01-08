@@ -25,7 +25,7 @@ pub struct XGeometry {
     pub depth: u32,
 }
 
-/// Represents a drawable object in the X11 protocol.
+/// Represents a drawable object in the X11 mod.
 ///
 /// This is usually implemented for windows and pixmap's.
 pub trait XDrawable<'a>
