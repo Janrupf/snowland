@@ -1,10 +1,10 @@
 mod com;
-mod util;
 mod ipc;
+mod util;
 
 pub use control_panel_macro as mcr;
 
-use crate::com::DartToNativeChannel;
+use crate::com::{DartToNativeChannel, IpcStateEventChannel};
 use nativeshell::codec::Value;
 use nativeshell::shell::ContextOptions;
 use nativeshell::Context;
@@ -39,8 +39,6 @@ impl InitData {
 fn main() {
     pretty_env_logger::init();
     log::info!("Starting snowland control panel...");
-
-    ipc_test();
 
     // Set up a context for flutter
     let context = match Context::new(ContextOptions {
@@ -77,6 +75,7 @@ fn main() {
     // We also need to register some communication channels with dart
     log::debug!("Registering method channels...");
     let _dart_to_native = DartToNativeChannel::register(&context);
+    let _ipc_state_event = IpcStateEventChannel::register(&context);
 
     // Setup is done, we can now start the application run loop (and thus basically hand of control
     // to flutter)
@@ -85,31 +84,4 @@ fn main() {
 
     // Reaching this point means the flutter main window was closed. We can do some cleanup here
     log::info!("Snowland control panel shutting down!");
-}
-
-fn ipc_test() {
-    std::thread::spawn(|| {
-        ipc_main().unwrap();
-    });
-}
-
-fn ipc_main() -> Result<(), Box<dyn std::error::Error>> {
-    log::debug!("Connecting IPC client...");
-    let mut ipc = SnowlandIPC::connect_client()?;
-
-    let mut poll = Poll::new()?;
-    ipc.register(poll.registry())?;
-
-    let mut events = Events::with_capacity(1024);
-
-    loop {
-        poll.poll(&mut events, None)?;
-
-        for event in events.iter() {
-            if ipc.consumes_event(event) {
-                let messages = ipc.process_event(event, poll.registry())?;
-                log::debug!("Received {} ipc messages: {:#?}", messages.len(), messages);
-            }
-        }
-    }
 }

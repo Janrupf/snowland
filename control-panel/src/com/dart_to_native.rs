@@ -51,16 +51,7 @@ impl DartToNativeChannel {
     ) -> Result<(), IPCDispatcherError> {
         log::debug!("Attempting to connect to IPC...");
 
-        self.ipc_handle.start_connecting()?;
-
-        /* let context = Context::current().unwrap();
-
-        let invoker = context
-            .message_manager
-            .borrow()
-            .get_method_invoker(engine, "snowland_native_to_dart");
-
-        invoker.call_method("set_connected", Value::Bool(true), |_| {})?; */
+        self.ipc_handle.start_connecting(engine)?;
 
         Ok(())
     }

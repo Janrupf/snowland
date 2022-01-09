@@ -3,11 +3,11 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:nativeshell/nativeshell.dart';
 import 'package:snowland_control_panel/logger.dart';
-import 'package:snowland_control_panel/startup.dart';
+import 'package:snowland_control_panel/view/main_view_wrapper.dart';
 
 /// Entry point of the application, runs **after** rust has started
 /// executing!
-/// 
+///
 /// The main function here takes care of setting up a zone, in which
 /// we catch print messages and delegate them to a rust logger.
 void main() => runZoned(() => runApp(const SnowlandControlPanel()),
@@ -30,6 +30,8 @@ ZoneSpecification _buildRootZone() =>
 /// Main logger for everything in this file.
 const mainLogger = Logger("main");
 
+/// Main widget which provides the required integration with
+/// nativeshell.
 class SnowlandControlPanel extends StatelessWidget {
   const SnowlandControlPanel({Key? key}) : super(key: key);
 
@@ -47,15 +49,23 @@ class SnowlandControlPanel extends StatelessWidget {
 
 class SnowlandControlPanelState extends WindowState {
   @override
-  Widget build(BuildContext context) => const MaterialApp(
-          home: DefaultTextStyle(
+  Future<void> initializeWindow(Size contentSize) {
+    return super.initializeWindow(const Size(640, 480));
+  }
+
+  @override
+  Widget build(BuildContext context) => MaterialApp(
+      theme: ThemeData.light(),
+      darkTheme: ThemeData.dark(),
+      themeMode: ThemeMode.system,
+      home: const DefaultTextStyle(
         style: TextStyle(
           fontSize: 14,
         ),
-        child: WindowLayoutProbe(child: StartupPage()),
+        child: MainViewWrapper(),
       ));
 
   @override
   WindowSizingMode get windowSizingMode =>
-      WindowSizingMode.atLeastIntrinsicSize;
+      WindowSizingMode.manual;
 }

@@ -2,10 +2,9 @@ mod dispatcher;
 
 pub use crate::ipc::dispatcher::IPCDispatcherError;
 use crate::ipc::dispatcher::{ipc_dispatcher_main, IPCDispatcherState};
-use nativeshell::shell::RunLoopSender;
+use nativeshell::shell::{EngineHandle, RunLoopSender};
 use snowland_ipc::protocol::ClientMessage;
 use snowland_misc::delayed::Delayed;
-use std::sync::atomic::Ordering;
 use std::sync::{Arc, Mutex};
 use std::thread::JoinHandle;
 
@@ -27,7 +26,7 @@ impl IPCHandle {
     }
 
     /// Starts connecting the IPC if it is not connected already.
-    pub fn start_connecting(&mut self) -> Result<(), IPCDispatcherError> {
+    pub fn start_connecting(&mut self, engine: EngineHandle) -> Result<(), IPCDispatcherError> {
         if self.is_running() {
             return Ok(());
         }
@@ -39,7 +38,7 @@ impl IPCHandle {
         let (sender, sender_resolver) = Delayed::new();
 
         let ipc_thread = std::thread::spawn(move || {
-            ipc_dispatcher_main(run_loop_sender, state, sender_resolver);
+            ipc_dispatcher_main(run_loop_sender, state, sender_resolver, engine);
         });
 
         let sender = sender.wait()?;

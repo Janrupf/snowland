@@ -9,7 +9,7 @@ class DartToNativeCommunicator {
   static final DartToNativeCommunicator instance = DartToNativeCommunicator._();
 
   void connectToIpc() {
-      _dartToNativeChannel.invokeMethod("connect_to_ipc");
+    _dartToNativeChannel.invokeMethod("connect_to_ipc");
   }
 
   void log(String component, String level, String message) {

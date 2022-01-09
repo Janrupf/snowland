@@ -3,8 +3,10 @@ use mio::{Events, Poll, Token, Waker};
 use mio_misc::channel::Sender;
 use mio_misc::queue::NotificationQueue;
 use mio_misc::NotificationId;
-use nativeshell::shell::RunLoopSender;
-use snowland_ipc::protocol::ServerMessage;
+use nativeshell::shell::{EngineHandle, RunLoopSender};
+use nativeshell::Context;
+use serde::{Serialize, Serializer};
+use snowland_ipc::protocol::{ClientMessage, ServerMessage};
 use snowland_ipc::{mio, SnowlandIPC, SnowlandIPCError};
 use snowland_misc::delayed::DelayedResolver;
 use std::sync::mpsc::Receiver;
@@ -17,6 +19,7 @@ pub(super) fn ipc_dispatcher_main(
     sender: RunLoopSender,
     state: Arc<Mutex<IPCDispatcherState>>,
     sender_resolver: DelayedResolver<Result<Sender<InternalMessage>, IPCDispatcherError>>,
+    engine: EngineHandle,
 ) {
     log::debug!("Starting ipc dispatcher...");
 
@@ -47,32 +50,21 @@ pub(super) fn ipc_dispatcher_main(
     // to the ipc dispatcher.
     let (resolved, receiver) = mio_misc::channel::channel(queue, channel_id);
 
-    // Since we have created the channel, we can now set the state to running.
-    let mut state_lock = state.lock().unwrap();
-    *state_lock = IPCDispatcherState::Running;
-    drop(state_lock);
-
     // Give the platform thread a way to send to our channel.
     sender_resolver.resolve(Ok(resolved));
 
     log::debug!("IPC dispatcher started, entering loop...");
 
     // Now IPC can start...
-    match ipc_dispatcher_loop(poll, receiver, sender) {
+    match ipc_dispatcher_loop(poll, receiver, &sender, &state, engine) {
         Ok(()) => {
             log::debug!("IPC dispatcher finished successfully!");
-
-            let mut state_lock = state.lock().unwrap();
-            *state_lock = IPCDispatcherState::NotRunning;
-            drop(state_lock);
+            set_state(&sender, &state, IPCDispatcherState::NotRunning, engine);
         }
 
         Err(err) => {
             log::error!("IPC dispatcher terminated with an error: {}", err);
-
-            let mut state_lock = state.lock().unwrap();
-            *state_lock = IPCDispatcherState::Errored(err);
-            drop(state_lock);
+            set_state(&sender, &state, IPCDispatcherState::Errored(err), engine);
         }
     }
 }
@@ -80,11 +72,24 @@ pub(super) fn ipc_dispatcher_main(
 fn ipc_dispatcher_loop(
     mut poll: Poll,
     receiver: Receiver<InternalMessage>,
-    sender: RunLoopSender,
+    sender: &RunLoopSender,
+    state: &Arc<Mutex<IPCDispatcherState>>,
+    engine: EngineHandle,
 ) -> Result<(), IPCDispatcherError> {
     // Attempt to connect to the IPC or fail the operation.
-    let mut ipc = SnowlandIPC::connect_client()?;
+    let mut ipc = match SnowlandIPC::connect_client() {
+        Ok(v) => v,
+        Err(SnowlandIPCError::Disconnected) => {
+            log::warn!("IPC is daemon is not running, nothing to do!");
+            return Ok(());
+        }
+        Err(err) => return Err(err.into()),
+    };
+
     ipc.register(poll.registry())?;
+
+    // Since we have created the channel, we can now set the state to running.
+    set_state(sender, state, IPCDispatcherState::Running, engine);
 
     let mut events = Events::with_capacity(1024);
 
@@ -96,7 +101,7 @@ fn ipc_dispatcher_loop(
                 let messages = ipc.process_event(event, poll.registry())?;
 
                 for message in messages {
-                    handle_ipc_message(message, &sender);
+                    handle_ipc_message(message, sender);
                 }
             } else if event.token() == IPC_DISPATCHER_WAKER_TOKEN && event.is_readable() {
                 let message = match receiver.try_recv() {
@@ -120,6 +125,47 @@ fn ipc_dispatcher_loop(
 
 fn handle_ipc_message(message: ServerMessage, sender: &RunLoopSender) {}
 
+/// Helper function to set the state on both the Rust side and signal the change to flutter.
+fn set_state(
+    sender: &RunLoopSender,
+    state: &Arc<Mutex<IPCDispatcherState>>,
+    new_state: IPCDispatcherState,
+    engine: EngineHandle,
+) {
+    log::debug!("Changing IPC state to {:?}", new_state);
+
+    // Convert the state into a value which can be sent to flutter
+    let serialized_state =
+        crate::util::reserialize(&new_state).expect("Failed to serialize IPC state");
+
+    // Set the state on the Rust side
+    let mut state_lock = state.lock().unwrap();
+    *state_lock = new_state;
+    drop(state_lock);
+
+    sender.send(move || {
+        // This executes in the flutter thread, so we _should_ have a context...
+        let context = match Context::current() {
+            None => {
+                // Should probably never happen
+                log::error!("No context in thread where the flutter loop resides!");
+                return;
+            }
+            Some(v) => v,
+        };
+
+        if let Err(err) = context
+            .message_manager
+            .borrow()
+            .get_event_sender(engine, "ipc_state_event")
+            .send_event(&serialized_state)
+        {
+            // This should never happen neither...
+            log::error!("Failed to dispatch ipc state change to flutter: {}", err);
+        };
+    });
+}
+
 #[derive(Debug, Error)]
 pub enum IPCDispatcherError {
     #[error("I/O error in IPC dispatcher: {0}")]
@@ -129,6 +175,16 @@ pub enum IPCDispatcherError {
     IPCError(#[from] SnowlandIPCError),
 }
 
+impl Serialize for IPCDispatcherError {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        serializer.serialize_str(&self.to_string())
+    }
+}
+
+#[derive(Debug, Serialize)]
 pub(super) enum IPCDispatcherState {
     NotRunning,
 
