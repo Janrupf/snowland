@@ -13,6 +13,8 @@ thiserror = "1.0.30"
 
 control-panel-macro = { path = "../control-panel-macro" }
 snowland-ipc = { path = "../ipc", features = ["poll"] }
+snowland-misc = { path = "../misc" }
+mio-misc = "2.0.0"
 
 [build-dependencies]
 cargo-emit = "0.2.1"

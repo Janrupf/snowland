@@ -59,7 +59,7 @@ where
 
     /// Determines whether the event is consumed by this ipc.
     #[cfg(feature = "poll")]
-    pub fn consumes_event(&mut self, event: &mio::event::Event) -> bool {
+    pub fn consumes_event(&self, event: &mio::event::Event) -> bool {
         self.backend.consumes_event(event)
     }
 

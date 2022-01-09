@@ -2392,12 +2392,14 @@ dependencies = [
  "cargo-emit",
  "control-panel-macro",
  "log",
+ "mio-misc 2.0.0",
  "nativeshell",
  "nativeshell_build",
  "pretty_env_logger",
  "serde",
  "serde_json",
  "snowland-ipc",
+ "snowland-misc",
  "thiserror",
 ]
 
@@ -2425,6 +2427,10 @@ dependencies = [
  "snowland-x11-wrapper",
  "thiserror",
 ]
+
+[[package]]
+name = "snowland-misc"
+version = "0.1.0"
 
 [[package]]
 name = "snowland-universal"

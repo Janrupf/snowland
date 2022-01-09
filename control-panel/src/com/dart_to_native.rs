@@ -1,19 +1,27 @@
-use crate::com::CommunicationError;
+use crate::ipc::{IPCDispatcherError, IPCHandle};
 use crate::mcr;
-use nativeshell::codec::Value;
 use nativeshell::shell::{ContextRef, EngineHandle, MethodChannel};
-use nativeshell::Context;
 
-pub struct DartToNativeChannel;
+pub struct DartToNativeChannel {
+    ipc_handle: IPCHandle,
+}
 
 impl DartToNativeChannel {
     pub fn register(context: &ContextRef) -> MethodChannel {
-        let instance = DartToNativeChannel {};
+        context.run_loop.borrow().new_sender();
+
+        let ipc_handle = IPCHandle::new(context.run_loop.borrow().new_sender());
+
+        let instance = DartToNativeChannel { ipc_handle };
 
         MethodChannel::new(context.weak(), "snowland_dart_to_native", instance)
     }
 }
 
+/// These log levels correspond to 2 things at the same time:
+///
+/// * the log level of the [`log`] crate - these are translated to [`log::Level`] instances
+/// * the log level used by the flutter application - see [logger.dart](../../lib/logger.dart)
 #[derive(Debug, serde::Deserialize)]
 pub enum LogLevel {
     Trace,
@@ -37,21 +45,27 @@ impl LogLevel {
 
 #[mcr::method_channel_call_handler]
 impl DartToNativeChannel {
-    pub fn connect_to_ipc(#[engine] engine: EngineHandle) -> Result<(), CommunicationError> {
+    pub fn connect_to_ipc(
+        &mut self,
+        #[engine] engine: EngineHandle,
+    ) -> Result<(), IPCDispatcherError> {
         log::debug!("Attempting to connect to IPC...");
 
-        let context = Context::current().unwrap();
+        self.ipc_handle.start_connecting()?;
+
+        /* let context = Context::current().unwrap();
 
         let invoker = context
             .message_manager
             .borrow()
             .get_method_invoker(engine, "snowland_native_to_dart");
 
-        invoker.call_method("set_connected", Value::Bool(true), |_| {})?;
+        invoker.call_method("set_connected", Value::Bool(true), |_| {})?; */
 
         Ok(())
     }
 
+    /// This is used to dispatch log messages from dart to the Rust logger.
     pub fn log(
         component: String,
         level: LogLevel,
