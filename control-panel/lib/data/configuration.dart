@@ -20,8 +20,7 @@ class Configuration {
       throw ArgumentError.value(modules, "data.modules", "Not a List");
     }
 
-    final installed =
-        modules.map((m) => InstalledModule.fromData(m)).toList(growable: false);
+    final installed = modules.map((m) => InstalledModule.fromData(m)).toList();
 
     return Configuration._(installed);
   }

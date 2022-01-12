@@ -1,11 +1,20 @@
 import 'package:flutter/material.dart';
+import 'package:snowland_control_panel/data/configuration.dart';
 
-typedef ModuleSelectedCallback = void Function(int);
+typedef ModuleSelectedCallback = void Function(InstalledModule mod);
+typedef ModuleOrderCallback = void Function(int oldIndex, int newIndex);
 
 class ModuleList extends StatefulWidget {
   final ModuleSelectedCallback onSelected;
+  final ModuleOrderCallback onReorder;
+  final Configuration configuration;
 
-  const ModuleList({Key? key, required this.onSelected}) : super(key: key);
+  const ModuleList({
+    Key? key,
+    required this.onSelected,
+    required this.onReorder,
+    required this.configuration,
+  }) : super(key: key);
 
   @override
   State<StatefulWidget> createState() => _ModuleListState();
@@ -24,13 +33,27 @@ class _ModuleListState extends State<ModuleList> {
           scrollController: _scrollController,
           onReorder: _handleReorder));
 
-  List<Widget> _getModules() => List.generate(
-      40,
-      (index) => ListTile(
-            key: Key("$index"),
-            onTap: () => widget.onSelected(index),
-            title: Text("Module $index"),
-          ));
+  List<Widget> _getModules() =>
+      List.generate(widget.configuration.modules.length, (index) {
+        final mod = widget.configuration.modules[index];
 
-  void _handleReorder(int oldIndex, int newIndex) {}
+        return ListTile(
+          key: Key("mod$index"),
+          title: Text(mod.type),
+          onTap: () => widget.onSelected(mod),
+        );
+      });
+
+  void _handleReorder(int oldIndex, int newIndex) {
+    setState(() {
+      if(oldIndex < newIndex) {
+        newIndex -= 1;
+      }
+
+      InstalledModule mod = widget.configuration.modules.removeAt(oldIndex);
+      widget.configuration.modules.insert(newIndex, mod);
+    });
+
+    widget.onReorder(oldIndex, newIndex);
+  }
 }

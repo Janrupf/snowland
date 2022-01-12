@@ -43,18 +43,28 @@ class _ConnectedViewState extends State<ConnectedView> {
   ) {
     logger.debug("Received configuration from daemon: $configuration");
 
-    return Row(children: [_buildSidebar(context)]);
+    return Row(
+      children: [
+        _buildSidebar(
+          context,
+          configuration,
+        ),
+      ],
+    );
   }
 
-  Widget _buildSidebar(BuildContext context) => Container(
+  Widget _buildSidebar(BuildContext context, Configuration configuration) =>
+      Container(
         constraints: const BoxConstraints(maxWidth: 200),
         child: Material(
             child: ModuleList(
-          onSelected: _onWidgetSelected,
+          configuration: configuration,
+          onSelected: _onModuleSelected,
+          onReorder: _onModuleReorder,
         )),
       );
 
-  void _onWidgetSelected(int widget) {
-    logger.debug("Selected widget $widget");
-  }
+  void _onModuleSelected(InstalledModule module) {}
+
+  void _onModuleReorder(int oldIndex, int newIndex) {}
 }
