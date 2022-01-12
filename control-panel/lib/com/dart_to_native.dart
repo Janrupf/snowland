@@ -19,4 +19,8 @@ class DartToNativeCommunicator {
   void queryConfiguration() {
     _dartToNativeChannel.invokeMethod("query_configuration");
   }
+
+  void reorderModules(int oldIndex, int newIndex) {
+    _dartToNativeChannel.invokeMethod("reorder_modules", [oldIndex, newIndex]);
+  }
 }

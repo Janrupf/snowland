@@ -79,4 +79,17 @@ impl DartToNativeChannel {
 
         Ok(())
     }
+
+    /// Asks the IPC dispatcher to send a [`ClientMessage::ReorderModules`] message over IPC to the
+    /// daemon.
+    pub fn reorder_modules(
+        &mut self,
+        old_index: usize,
+        new_index: usize,
+    ) -> Result<(), std::convert::Infallible> {
+        self.ipc_handle
+            .send_message(ClientMessage::ReorderModules(old_index, new_index));
+
+        Ok(())
+    }
 }

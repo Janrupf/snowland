@@ -77,6 +77,9 @@ where
         for message in messages {
             match message {
                 ClientMessage::QueryConfiguration => self.send_configuration_over_ipc(),
+                ClientMessage::ReorderModules(old_index, new_index) => {
+                    self.container.reorder_modules(old_index, new_index);
+                }
             }
         }
     }

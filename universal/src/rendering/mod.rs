@@ -1,3 +1,4 @@
+use skia_safe::luma_color_filter::new;
 use std::collections::HashMap;
 use std::time::Instant;
 
@@ -77,6 +78,12 @@ where
     /// Retrieves the currently installed list of modules.
     pub fn get_modules(&self) -> &Vec<Box<dyn ModuleContainer>> {
         &self.modules
+    }
+
+    /// Changes the order of modules.
+    pub fn reorder_modules(&mut self, old_index: usize, new_index: usize) {
+        let m = self.modules.remove(old_index);
+        self.modules.insert(new_index, m);
     }
 
     /// Resizes the internal surface if required.

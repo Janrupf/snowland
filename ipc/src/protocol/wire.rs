@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Serialize, Deserialize)]
 pub enum ClientMessage {
     QueryConfiguration,
+    ReorderModules(usize, usize),
 }
 
 #[derive(Debug, Serialize, Deserialize)]

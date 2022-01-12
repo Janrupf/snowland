@@ -45,11 +45,11 @@ class _ModuleListState extends State<ModuleList> {
       });
 
   void _handleReorder(int oldIndex, int newIndex) {
-    setState(() {
-      if(oldIndex < newIndex) {
-        newIndex -= 1;
-      }
+    if(oldIndex < newIndex) {
+      newIndex -= 1;
+    }
 
+    setState(() {
       InstalledModule mod = widget.configuration.modules.removeAt(oldIndex);
       widget.configuration.modules.insert(newIndex, mod);
     });

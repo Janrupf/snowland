@@ -66,5 +66,8 @@ class _ConnectedViewState extends State<ConnectedView> {
 
   void _onModuleSelected(InstalledModule module) {}
 
-  void _onModuleReorder(int oldIndex, int newIndex) {}
+  void _onModuleReorder(int oldIndex, int newIndex) {
+    logger.debug("Moving module from position $oldIndex to $newIndex");
+    DartToNativeCommunicator.instance.reorderModules(oldIndex, newIndex);
+  }
 }
