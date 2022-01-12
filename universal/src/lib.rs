@@ -5,7 +5,7 @@ use crate::io::ConfigIO;
 use crate::rendering::display::Display;
 use crate::rendering::RendererContainer;
 use crate::scene::module::ModuleConfigError;
-use snowland_ipc::protocol::{ClientMessage, ServerMessage};
+use snowland_ipc::protocol::{ClientMessage, Configuration, InstalledModule, ServerMessage};
 use snowland_ipc::{SnowlandIPC, SnowlandIPCError};
 use std::any::Any;
 use std::time::SystemTimeError;
@@ -52,10 +52,58 @@ where
         if self.ipc.is_connected() {
             if let Err(err) = self.ipc.nonblocking_write(ServerMessage::Heartbeat) {
                 log::warn!("Failed to write IPC heartbeat: {}", err);
+            } else {
+                self.process_messages();
             }
         }
 
         Ok(())
+    }
+
+    /// Processes incoming messages and sends replies if required.
+    fn process_messages(&mut self) {
+        let messages = match self.ipc.nonblocking_read() {
+            Ok(v) => v,
+            Err(err) => {
+                log::error!("Failed to read IPC messages: {}", err);
+                return;
+            }
+        };
+
+        if !messages.is_empty() {
+            log::trace!("Received IPC messages = {:?}", messages);
+        }
+
+        for message in messages {
+            match message {
+                ClientMessage::QueryConfiguration => self.send_configuration_over_ipc(),
+            }
+        }
+    }
+
+    /// Collects details about the current snowland configuration and sends the details
+    /// over IPC.
+    fn send_configuration_over_ipc(&mut self) {
+        let installed = self
+            .container
+            .get_modules()
+            .iter()
+            .map(|m| InstalledModule {
+                ty: m.module_type(),
+            })
+            .collect();
+
+        let configuration = Configuration { modules: installed };
+
+        self.dispatch_message(ServerMessage::UpdateConfiguration(configuration));
+    }
+
+    /// Dispatches an IPC message and logs in case of an error
+    fn dispatch_message(&mut self, message: ServerMessage) {
+        log::trace!("Dispatching IPC message {:#?}", message);
+        if let Err(err) = self.ipc.nonblocking_write(message) {
+            log::warn!("Failed to write IPC message: {}", err);
+        }
     }
 
     /// Updates the displays used by renderer.

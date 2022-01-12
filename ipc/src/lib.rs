@@ -69,7 +69,10 @@ where
         &mut self,
         event: &mio::event::Event,
         registry: &mio::Registry,
-    ) -> Result<Vec<R>, SnowlandIPCError> {
+    ) -> Result<Vec<R>, SnowlandIPCError>
+    where
+        R: for<'de> serde::Deserialize<'de>,
+    {
         self.backend.process_event(event, registry)
     }
 
@@ -91,7 +94,10 @@ where
 
     /// Attempts to read incoming messages in a nonblocking way.
     #[cfg(not(feature = "poll"))]
-    pub fn nonblocking_read(&mut self) -> Result<Vec<R>, SnowlandIPCError> {
+    pub fn nonblocking_read(&mut self) -> Result<Vec<R>, SnowlandIPCError>
+    where
+        R: for<'de> serde::Deserialize<'de>,
+    {
         self.backend.nonblocking_read()
     }
 

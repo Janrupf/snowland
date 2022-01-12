@@ -76,3 +76,45 @@ class _NativeCallWidgetState extends State<NativeCallWidget> {
   @override
   Widget build(BuildContext context) => widget.child;
 }
+
+/// Function which is called when a [NativeCallReceiver] updates in response
+/// to a method being called.
+typedef NativeCallReceiverBuilder = Widget Function(
+    BuildContext context, dynamic data);
+
+/// A widget which listens to native method calls and then rebuilds each time
+/// the native method is called.
+class NativeCallReceiver extends StatefulWidget {
+  final String methodName;
+  final NativeCallReceiverBuilder builder;
+
+  const NativeCallReceiver({
+    Key? key,
+    required this.methodName,
+    required this.builder,
+  }) : super(key: key);
+
+  @override
+  State<StatefulWidget> createState() => _NativeCallReceiverState();
+}
+
+class _NativeCallReceiverState extends State<NativeCallReceiver> {
+  dynamic _currentData;
+
+  @override
+  Widget build(BuildContext context) => NativeCallWidget(
+        methodName: widget.methodName,
+        handler: _updateData,
+        child: widget.builder(context, _currentData),
+      );
+
+  Future _updateData(dynamic newData) {
+    if (mounted) {
+      setState(() {
+        _currentData = newData;
+      });
+    }
+
+    return Future.value();
+  }
+}

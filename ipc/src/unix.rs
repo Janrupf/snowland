@@ -1,7 +1,7 @@
 //! Unix specific IPC backend.
 
 use crate::SnowlandIPCError;
-use std::io::Read;
+use std::io::{Read, Write};
 use std::marker::PhantomData;
 
 #[cfg(not(feature = "poll"))]
@@ -12,6 +12,7 @@ use mio::net::{UnixListener, UnixStream};
 
 use crate::protocol::{ClientMessage, IPCMessage, ServerMessage};
 use bincode::error::DecodeError;
+use bincode::serde::Compat;
 use std::path::PathBuf;
 
 const BINCODE_CONFIGURATION: bincode::config::Configuration =
@@ -156,7 +157,10 @@ where
         &mut self,
         event: &mio::event::Event,
         registry: &mio::Registry,
-    ) -> Result<Vec<R>, SnowlandIPCError> {
+    ) -> Result<Vec<R>, SnowlandIPCError>
+    where
+        R: for<'de> serde::Deserialize<'de>,
+    {
         match event.token() {
             tokens::ACCEPT => {
                 let (mut stream, _) = self
@@ -217,8 +221,11 @@ where
             Some(v) => v,
         };
 
-        match bincode::encode_into_std_write(message, stream, BINCODE_CONFIGURATION) {
-            Ok(_) => Ok(()),
+        match bincode::encode_into_std_write(Compat(message), stream, BINCODE_CONFIGURATION) {
+            Ok(_) => {
+                stream.flush()?;
+                Ok(())
+            }
             Err(err) => {
                 self.disconnect(registry);
                 Err(SnowlandIPCError::EncodeFailed(err))
@@ -235,6 +242,7 @@ where
             .accept()
         {
             Ok((stream, _)) => {
+                stream.set_nonblocking(true)?;
                 self.stream = Some(stream);
                 Ok(true)
             }
@@ -244,7 +252,10 @@ where
     }
 
     #[cfg(not(feature = "poll"))]
-    pub fn nonblocking_read(&mut self) -> Result<Vec<R>, SnowlandIPCError> {
+    pub fn nonblocking_read(&mut self) -> Result<Vec<R>, SnowlandIPCError>
+    where
+        R: for<'de> serde::Deserialize<'de>,
+    {
         if self.stream.is_none() {
             return Err(SnowlandIPCError::Disconnected);
         }
@@ -268,7 +279,7 @@ where
             Some(v) => v,
         };
 
-        match bincode::encode_into_std_write(message, stream, BINCODE_CONFIGURATION) {
+        match bincode::encode_into_std_write(Compat(message), stream, BINCODE_CONFIGURATION) {
             Ok(_) => Ok(()),
             Err(err) => {
                 self.disconnect();
@@ -319,18 +330,24 @@ where
         }
     }
 
-    fn decode_messages(&mut self) -> Result<Vec<R>, SnowlandIPCError> {
+    fn decode_messages(&mut self) -> Result<Vec<R>, SnowlandIPCError>
+    where
+        R: for<'de> serde::Deserialize<'de>,
+    {
         let mut decoded = Vec::new();
 
         while self.read_buffer_real_size > 0 {
-            let (message, read_size) =
-                match bincode::decode_from_slice(&self.read_buffer, BINCODE_CONFIGURATION) {
-                    Ok(v) => v,
-                    Err(DecodeError::UnexpectedEnd) => {
-                        break;
-                    }
-                    Err(err) => return Err(SnowlandIPCError::DecodeFailed(err)),
-                };
+            let (message, read_size) = match bincode::decode_from_slice(
+                &self.read_buffer[0..self.read_buffer_real_size],
+                BINCODE_CONFIGURATION,
+            ) {
+                Ok((Compat(v), s)) => (v, s),
+                Err(DecodeError::UnexpectedEnd) => {
+                    log::trace!("Failed to decode more messages as not enough data is available");
+                    break;
+                }
+                Err(err) => return Err(SnowlandIPCError::DecodeFailed(err)),
+            };
 
             decoded.push(message);
 

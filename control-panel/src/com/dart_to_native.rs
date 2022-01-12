@@ -1,6 +1,7 @@
 use crate::ipc::{IPCDispatcherError, IPCHandle};
 use crate::mcr;
 use nativeshell::shell::{ContextRef, EngineHandle, MethodChannel};
+use snowland_ipc::protocol::ClientMessage;
 
 pub struct DartToNativeChannel {
     ipc_handle: IPCHandle,
@@ -66,6 +67,15 @@ impl DartToNativeChannel {
         let target = format!("{{{{dart}}}}::{}", component);
 
         log::log!(target: &target, level, "{}", message);
+
+        Ok(())
+    }
+
+    /// Asks the IPC dispatcher to send a [`ClientMessage::QueryConfiguration`] message over IPC
+    /// to the daemon.
+    pub fn query_configuration(&mut self) -> Result<(), std::convert::Infallible> {
+        self.ipc_handle
+            .send_message(ClientMessage::QueryConfiguration);
 
         Ok(())
     }

@@ -3,10 +3,11 @@ use mio::{Events, Poll, Token, Waker};
 use mio_misc::channel::Sender;
 use mio_misc::queue::NotificationQueue;
 use mio_misc::NotificationId;
+use nativeshell::codec::{MethodCallResult, Value};
 use nativeshell::shell::{EngineHandle, RunLoopSender};
 use nativeshell::Context;
 use serde::{Serialize, Serializer};
-use snowland_ipc::protocol::{ClientMessage, ServerMessage};
+use snowland_ipc::protocol::ServerMessage;
 use snowland_ipc::{mio, SnowlandIPC, SnowlandIPCError};
 use snowland_misc::delayed::DelayedResolver;
 use std::sync::mpsc::Receiver;
@@ -101,7 +102,7 @@ fn ipc_dispatcher_loop(
                 let messages = ipc.process_event(event, poll.registry())?;
 
                 for message in messages {
-                    handle_ipc_message(message, sender);
+                    handle_ipc_message(message, sender, engine);
                 }
             } else if event.token() == IPC_DISPATCHER_WAKER_TOKEN && event.is_readable() {
                 let message = match receiver.try_recv() {
@@ -113,7 +114,10 @@ fn ipc_dispatcher_loop(
                 };
 
                 match message {
-                    InternalMessage::SendIPC(msg) => ipc.evented_write(msg, poll.registry())?,
+                    InternalMessage::SendIPC(msg) => {
+                        log::trace!("Sending client message over dispatcher: {:#?}", msg);
+                        ipc.evented_write(msg, poll.registry())?
+                    }
                     InternalMessage::Shutdown => return Ok(()),
                 }
             } else {
@@ -123,7 +127,60 @@ fn ipc_dispatcher_loop(
     }
 }
 
-fn handle_ipc_message(message: ServerMessage, sender: &RunLoopSender) {}
+fn handle_ipc_message(message: ServerMessage, sender: &RunLoopSender, engine: EngineHandle) {
+    match message {
+        ServerMessage::UpdateConfiguration(configuration) => {
+            invoke_dart_method(sender, engine, "update_configuration", configuration);
+        }
+        ServerMessage::Heartbeat => {}
+    }
+}
+
+fn invoke_dart_method<V: Serialize + Send>(
+    sender: &RunLoopSender,
+    engine: EngineHandle,
+    name: impl Into<String>,
+    arg: V,
+) {
+    let value = match crate::util::reserialize(arg) {
+        Err(err) => {
+            log::error!("Failed to reserialize value: {}", err);
+            return;
+        }
+        Ok(v) => v,
+    };
+
+    let name = name.into();
+
+    log::trace!("Scheduling to invoke dart method {}", name);
+
+    sender.send(move || {
+        let context = match Context::current() {
+            None => {
+                log::error!("No context found in run loop!");
+                return;
+            }
+            Some(v) => v,
+        };
+
+        let invoker = context
+            .message_manager
+            .borrow()
+            .get_method_invoker(engine, "snowland_native_to_dart");
+
+        log::trace!("Invoking dart method {} with argument {:#?}", name, value);
+
+        if let Err(err) = invoker.call_method(&name, value, handle_call_result) {
+            log::error!("Failed to invoke dart method {}: {}", name, err);
+        }
+    });
+}
+
+fn handle_call_result(call_result: MethodCallResult<Value>) {
+    if let Err(err) = call_result {
+        log::error!("The invoked dart method failed: {}", err);
+    }
+}
 
 /// Helper function to set the state on both the Rust side and signal the change to flutter.
 fn set_state(

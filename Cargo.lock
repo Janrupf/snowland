@@ -146,6 +146,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "817259376ced58f50df7685cf1096352d8c5a50a761cde102f07c2188a1d9209"
 dependencies = [
  "bincode_derive",
+ "serde",
 ]
 
 [[package]]
@@ -2411,6 +2412,7 @@ dependencies = [
  "log",
  "mio 0.8.0",
  "mio-misc 2.0.0",
+ "serde",
  "thiserror",
 ]
 

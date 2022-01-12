@@ -1,14 +1,27 @@
-use bincode::{Decode, Encode};
+use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Encode, Decode)]
-pub enum ClientMessage {}
+#[derive(Debug, Serialize, Deserialize)]
+pub enum ClientMessage {
+    QueryConfiguration,
+}
 
-#[derive(Debug, Encode, Decode)]
+#[derive(Debug, Serialize, Deserialize)]
 pub enum ServerMessage {
+    UpdateConfiguration(Configuration),
     Heartbeat,
 }
 
-pub trait IPCMessage: std::fmt::Debug + Decode + Encode + Sized {}
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Configuration {
+    pub modules: Vec<InstalledModule>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct InstalledModule {
+    pub ty: String,
+}
+
+pub trait IPCMessage: std::fmt::Debug + Serialize + Sized {}
 
 impl IPCMessage for ClientMessage {}
 impl IPCMessage for ServerMessage {}

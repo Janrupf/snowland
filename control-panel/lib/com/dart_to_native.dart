@@ -15,4 +15,8 @@ class DartToNativeCommunicator {
   void log(String component, String level, String message) {
     _dartToNativeChannel.invokeMethod("log", [component, level, message]);
   }
+
+  void queryConfiguration() {
+    _dartToNativeChannel.invokeMethod("query_configuration");
+  }
 }
