@@ -1,7 +1,7 @@
 use skia_safe::gpu::gl::{FramebufferInfo, Interface};
 use skia_safe::gpu::{BackendRenderTarget, DirectContext, SurfaceOrigin};
 use skia_safe::{ColorType, Surface};
-use snowland_universal::host::SnowlandRenderer;
+use snowland_core::host::SnowlandRenderer;
 use snowland_x11_wrapper::{GLXContext, GLXError, XDrawable, XLibError, XWindow, GLX};
 use thiserror::Error;
 

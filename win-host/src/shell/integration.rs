@@ -16,8 +16,8 @@ use windows::Win32::UI::WindowsAndMessaging::{
     TPM_RETURNCMD, WM_CREATE, WM_DESTROY, WM_DISPLAYCHANGE, WM_USER,
 };
 
-use snowland_universal::control::ControlMessage;
-use snowland_universal::util::{Notifier, NotifierImpl};
+use snowland_core::control::ControlMessage;
+use snowland_core::util::{Notifier, NotifierImpl};
 
 use crate::shell::ShellIntegrationStartupData;
 use crate::WinApiError;

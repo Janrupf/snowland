@@ -1,5 +1,5 @@
 [workspace]
-members = ["control-panel", "control-panel-macro", "ipc", "misc", "win-host", "linux-host", "x11-wrapper", "universal"]
+members = ["control-panel", "control-panel-macro", "ipc", "misc", "win-host", "linux-host", "x11-wrapper", "core"]
 
 [profile.release]
 lto = true

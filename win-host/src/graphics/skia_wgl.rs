@@ -5,7 +5,7 @@ use thiserror::Error;
 use windows::Win32::Graphics::Dwm::DwmFlush;
 use windows::Win32::Graphics::OpenGL::GL_RGBA8;
 
-use snowland_universal::host::SnowlandRenderer;
+use snowland_core::host::SnowlandRenderer;
 
 use crate::graphics::WGLContext;
 use crate::{Graphics, ProgMan, WinApiError, Worker};

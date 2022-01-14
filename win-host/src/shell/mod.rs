@@ -16,8 +16,8 @@ use windows::Win32::UI::WindowsAndMessaging::{
 };
 
 use integration::*;
-use snowland_universal::control::ControlMessage;
-use snowland_universal::util::{Delayed, DelayedResolver, Notifier};
+use snowland_core::control::ControlMessage;
+use snowland_core::util::{Delayed, DelayedResolver, Notifier};
 
 use crate::WinApiError;
 

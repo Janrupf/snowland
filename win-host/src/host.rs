@@ -2,9 +2,9 @@ use std::thread::JoinHandle;
 
 use thiserror::Error;
 
-use snowland_universal::control::ControlMessage;
-use snowland_universal::host::{RendererResult, SnowlandHost};
-use snowland_universal::util::Notifier;
+use snowland_core::control::ControlMessage;
+use snowland_core::host::{RendererResult, SnowlandHost};
+use snowland_core::util::Notifier;
 
 use crate::{start_shell_integration, SkiaWGLSnowlandRender};
 

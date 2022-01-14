@@ -15,7 +15,7 @@ winit = "0.25.0"
 raw-window-handle = "0.4.1"
 rand = "0.8.4"
 
-snowland-universal = { path = "../universal" }
+snowland-core = { path = "../core" }
 
 [dependencies.windows]
 version = "0.28.0"

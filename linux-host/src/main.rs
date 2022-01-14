@@ -1,7 +1,7 @@
 use crate::cli::Cli;
 use crate::graphics::SnowlandX11Renderer;
-use snowland_universal::rendering::display::Display;
-use snowland_universal::Snowland;
+use snowland_core::rendering::display::Display;
+use snowland_core::Snowland;
 use snowland_x11_wrapper::{XDisplay, XScreen, XWindow};
 use std::mem::MaybeUninit;
 use std::sync::atomic::{AtomicBool, Ordering};

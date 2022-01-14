@@ -18,7 +18,7 @@ use windows::Win32::UI::WindowsAndMessaging::{
     GetSystemMetrics, MONITORINFOF_PRIMARY, SM_XVIRTUALSCREEN, SM_YVIRTUALSCREEN,
 };
 
-use snowland_universal::rendering::display::Display;
+use snowland_core::rendering::display::Display;
 
 use crate::util::extensions::FromWideNull;
 use crate::WinApiError;

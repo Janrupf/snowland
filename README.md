@@ -39,7 +39,7 @@ The resulting binary can be found in `target/release`, look for a file called
 ## Project structure
 
 The Snowland project structure is split into multiple parts:
-- [universal](./universal) - The snowland core implementation, OS independent
+- [core](./core) - The snowland core implementation, OS independent
 - [win-host](./win-host) - Windows specific implementation, responsible for bootstrapping
   on Windows
 

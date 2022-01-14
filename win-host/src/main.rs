@@ -1,6 +1,6 @@
 #![windows_subsystem = "windows"]
 
-use snowland_universal::Snowland;
+use snowland_core::Snowland;
 
 use crate::graphics::{Graphics, SkiaWGLSnowlandRender};
 use crate::host::WinHost;

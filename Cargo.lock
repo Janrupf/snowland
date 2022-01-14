@@ -2405,6 +2405,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "snowland-core"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "glium",
+ "log",
+ "rand",
+ "serde",
+ "serde_json",
+ "skia-safe",
+ "snowland-ipc",
+ "thiserror",
+]
+
+[[package]]
 name = "snowland-ipc"
 version = "0.1.0"
 dependencies = [
@@ -2425,7 +2440,7 @@ dependencies = [
  "log",
  "pretty_env_logger",
  "skia-safe",
- "snowland-universal",
+ "snowland-core",
  "snowland-x11-wrapper",
  "thiserror",
 ]
@@ -2433,21 +2448,6 @@ dependencies = [
 [[package]]
 name = "snowland-misc"
 version = "0.1.0"
-
-[[package]]
-name = "snowland-universal"
-version = "0.1.0"
-dependencies = [
- "chrono",
- "glium",
- "log",
- "rand",
- "serde",
- "serde_json",
- "skia-safe",
- "snowland-ipc",
- "thiserror",
-]
 
 [[package]]
 name = "snowland-win-host"
@@ -2459,7 +2459,7 @@ dependencies = [
  "rand",
  "raw-window-handle 0.4.2",
  "skia-safe",
- "snowland-universal",
+ "snowland-core",
  "thiserror",
  "windows",
  "winit",
