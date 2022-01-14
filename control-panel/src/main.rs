@@ -2,7 +2,7 @@ mod com;
 mod ipc;
 mod util;
 
-pub use control_panel_macro as mcr;
+pub use snowland_control_panel_macro as mcr;
 
 use crate::com::{DartToNativeChannel, IpcStateEventChannel};
 use nativeshell::codec::Value;
