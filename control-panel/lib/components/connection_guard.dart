@@ -1,9 +1,14 @@
+import 'dart:collection';
+
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:snowland_control_panel/logger.dart';
+import 'package:snowland_control_panel/view/connected_view.dart';
 
 const ipcStateChannel = EventChannel("ipc_state_event");
 const connectionGuardLogger = Logger("connection_guard");
+
+typedef IPCErrorWidgetBuilder = Widget Function(BuildContext context, String message);
 
 /// Helper widget for displaying different widgets based on the connection state
 /// of the IPC.
@@ -12,7 +17,7 @@ class IPCConnectionGuard extends StatelessWidget {
   final WidgetBuilder disconnectedBuilder;
 
   /// Builder called when the IPC errored.
-  final WidgetBuilder erroredBuilder;
+  final IPCErrorWidgetBuilder erroredBuilder;
 
   /// Builder called when the IPC is connected.
   final WidgetBuilder connectedBuilder;
@@ -32,14 +37,22 @@ class IPCConnectionGuard extends StatelessWidget {
           return disconnectedBuilder(context);
         }
 
-        if(snapshot.data == "NotRunning") {
-          return disconnectedBuilder(context);
-        } else if(snapshot.data == "Running") {
-          return connectedBuilder(context);
-        }
+        final data = snapshot.data;
 
-        connectionGuardLogger
-            .debug("Received ipc state change ${snapshot.data.runtimeType}");
-        return disconnectedBuilder(context);
+        switch(data) {
+          case "NotRunning":
+            return disconnectedBuilder(context);
+
+          case "Running":
+            return connectedBuilder(context);
+
+          default: // Error
+            if(data is! LinkedHashMap) {
+              connectionGuardLogger.error("Received invalid error value $data");
+              return erroredBuilder(context, "Unknown error");
+            } else {
+              return erroredBuilder(context, data["Errored"]);
+            }
+        }
       });
 }

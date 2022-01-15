@@ -23,4 +23,9 @@ class DartToNativeCommunicator {
   void reorderModules(int oldIndex, int newIndex) {
     _dartToNativeChannel.invokeMethod("reorder_modules", [oldIndex, newIndex]);
   }
+
+  void updateConfiguration(int module, Map newConfiguration) {
+    _dartToNativeChannel
+        .invokeMethod("change_configuration", [module, newConfiguration]);
+  }
 }

@@ -31,13 +31,16 @@ class InstalledModule {
   /// The type of the module
   final String type;
 
-  const InstalledModule._(this.type);
+  /// The configuration structure of the module
+  final Map configuration;
+
+  const InstalledModule._(this.type, this.configuration);
 
   factory InstalledModule.fromData(dynamic data) {
     if (data is! LinkedHashMap) {
       throw ArgumentError.value(data, "data", "Not a LinkedHashMap");
     }
 
-    return InstalledModule._(data["ty"]);
+    return InstalledModule._(data["ty"], data["configuration"]);
   }
 }

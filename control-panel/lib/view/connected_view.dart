@@ -42,29 +42,67 @@ class _ConnectedViewState extends State<ConnectedView> {
     Configuration configuration,
   ) {
     logger.debug("Received configuration from daemon: $configuration");
+    return _ConnectedViewConfigurationContainer(configuration: configuration);
+  }
+}
 
+class _ConnectedViewConfigurationContainer extends StatefulWidget {
+  final Configuration configuration;
+
+  const _ConnectedViewConfigurationContainer({
+    Key? key,
+    required this.configuration,
+  }) : super(key: key);
+
+  @override
+  State<StatefulWidget> createState() =>
+      _ConnectedViewConfigurationContainerState();
+}
+
+class _ConnectedViewConfigurationContainerState
+    extends State<_ConnectedViewConfigurationContainer> {
+  InstalledModule? _selectedModule;
+
+  @override
+  Widget build(BuildContext context) {
     return Row(
       children: [
-        _buildSidebar(
-          context,
-          configuration,
-        ),
+        _buildSidebar(context),
+        _buildConfigurationArea(context),
       ],
     );
   }
 
-  Widget _buildSidebar(BuildContext context, Configuration configuration) =>
-      Container(
+  Widget _buildSidebar(BuildContext context) => Container(
         constraints: const BoxConstraints(maxWidth: 200),
         child: Material(
             child: ModuleList(
-          configuration: configuration,
+          configuration: widget.configuration,
           onSelected: _onModuleSelected,
           onReorder: _onModuleReorder,
         )),
       );
 
-  void _onModuleSelected(InstalledModule module) {}
+  Widget _buildConfigurationArea(BuildContext context) {
+    if (_selectedModule == null) {
+      return const Center(
+        child: Text(
+          "Select a module on the left to configure",
+          style: TextStyle(fontSize: 20),
+        ),
+      );
+    }
+
+    return const Center(
+      child: Text("TODO"),
+    );
+  }
+
+  void _onModuleSelected(InstalledModule module) {
+    setState(() {
+      _selectedModule = module;
+    });
+  }
 
   void _onModuleReorder(int oldIndex, int newIndex) {
     logger.debug("Moving module from position $oldIndex to $newIndex");

@@ -80,6 +80,9 @@ where
                 ClientMessage::ReorderModules(old_index, new_index) => {
                     self.container.reorder_modules(old_index, new_index);
                 }
+                ClientMessage::ChangeConfiguration(change) => {
+                    log::debug!("Received configuration change request: {:#?}", change);
+                }
             }
         }
     }
@@ -87,18 +90,28 @@ where
     /// Collects details about the current snowland configuration and sends the details
     /// over IPC.
     fn send_configuration_over_ipc(&mut self) {
-        let installed = self
+        let installed: Result<Vec<_>, ModuleConfigError> = self
             .container
             .get_modules()
             .iter()
-            .map(|m| InstalledModule {
-                ty: m.module_type(),
+            .map(|m| {
+                Ok(InstalledModule {
+                    ty: m.module_type(),
+                    configuration: m.serialize_config()?,
+                })
             })
             .collect();
 
-        let configuration = Configuration { modules: installed };
+        match installed {
+            Ok(v) => {
+                let configuration = Configuration { modules: v };
 
-        self.dispatch_message(ServerMessage::UpdateConfiguration(configuration));
+                self.dispatch_message(ServerMessage::UpdateConfiguration(configuration));
+            }
+            Err(err) => {
+                log::error!("Failed to serialize module configurations: {}", err);
+            }
+        }
     }
 
     /// Dispatches an IPC message and logs in case of an error

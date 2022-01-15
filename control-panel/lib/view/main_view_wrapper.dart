@@ -9,16 +9,15 @@ class MainViewWrapper extends StatelessWidget {
   @override
   Widget build(BuildContext context) => IPCConnectionGuard(
         connectedBuilder: _buildConnected,
-        erroredBuilder: _erroredBuilder,
+        erroredBuilder: _buildErrored,
         disconnectedBuilder: _buildDisconnected,
       );
 
-  Widget _buildConnected(BuildContext context) => ConnectedView();
+  Widget _buildConnected(BuildContext context) => const ConnectedView();
 
-  Widget _erroredBuilder(BuildContext context) {
-    // TODO:
-    throw UnimplementedError();
-  }
+  Widget _buildErrored(BuildContext context, String error) => DisconnectedView(
+        error: error,
+      );
 
   Widget _buildDisconnected(BuildContext context) => const DisconnectedView();
 }
