@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:snowland_control_panel/com/dart_to_native.dart';
 import 'package:snowland_control_panel/com/native_to_dart.dart';
 import 'package:snowland_control_panel/components/module_list.dart';
+import 'package:snowland_control_panel/components/modules/module_editor.dart';
 import 'package:snowland_control_panel/data/configuration.dart';
 import 'package:snowland_control_panel/logger.dart';
 
@@ -96,9 +97,7 @@ class _ConnectedViewConfigurationContainerState
       );
     }
 
-    return const Center(
-      child: Text("TODO"),
-    );
+    return ModuleEditor.createEditor(_selectedModule!);
   }
 
   void _onModuleSelected(InstalledModule module) {
