@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use crate::protocol::structure::Structure;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub enum ClientMessage {
@@ -21,13 +22,13 @@ pub struct Configuration {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct InstalledModule {
     pub ty: String,
-    pub configuration: serde_json::Value,
+    pub configuration: Structure,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ChangeConfiguration {
     pub module: usize,
-    pub new_configuration: serde_json::Value,
+    pub new_configuration: Structure,
 }
 
 pub trait IPCMessage: std::fmt::Debug + Serialize + Sized {}

@@ -97,7 +97,7 @@ where
             .map(|m| {
                 Ok(InstalledModule {
                     ty: m.module_type(),
-                    configuration: m.serialize_config()?,
+                    configuration: m.serialize_config()?.into(),
                 })
             })
             .collect();

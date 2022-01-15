@@ -2,6 +2,7 @@ use crate::ipc::{IPCDispatcherError, IPCHandle};
 use crate::mcr;
 use nativeshell::shell::{ContextRef, EngineHandle, MethodChannel};
 use snowland_ipc::protocol::{ChangeConfiguration, ClientMessage};
+use crate::util::value_to_structure;
 
 pub struct DartToNativeChannel {
     ipc_handle: IPCHandle,
@@ -98,12 +99,12 @@ impl DartToNativeChannel {
     pub fn change_configuration(
         &mut self,
         module: usize,
-        new_configuration: serde_json::Value,
+        new_configuration: nativeshell::codec::Value,
     ) -> Result<(), std::convert::Infallible> {
         self.ipc_handle
             .send_message(ClientMessage::ChangeConfiguration(ChangeConfiguration {
                 module,
-                new_configuration,
+                new_configuration: value_to_structure(new_configuration),
             }));
 
         Ok(())

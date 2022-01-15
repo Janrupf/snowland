@@ -1,4 +1,5 @@
 use crate::ipc::InternalMessage;
+use crate::util::structure_to_value;
 use mio::{Events, Poll, Token, Waker};
 use mio_misc::channel::Sender;
 use mio_misc::queue::NotificationQueue;
@@ -7,6 +8,7 @@ use nativeshell::codec::{MethodCallResult, Value};
 use nativeshell::shell::{EngineHandle, RunLoopSender};
 use nativeshell::Context;
 use serde::{Serialize, Serializer};
+use snowland_ipc::protocol::structure::Structure;
 use snowland_ipc::protocol::ServerMessage;
 use snowland_ipc::{mio, SnowlandIPC, SnowlandIPCError};
 use snowland_misc::delayed::DelayedResolver;
@@ -130,6 +132,38 @@ fn ipc_dispatcher_loop(
 fn handle_ipc_message(message: ServerMessage, sender: &RunLoopSender, engine: EngineHandle) {
     match message {
         ServerMessage::UpdateConfiguration(configuration) => {
+            /*
+             * The configuration needs to be convert into a dart friendly representation.
+             *
+             * All of this dance is required because a serde_json::Value can't be sent over IPC and
+             * thus has to be converted into a snowland_ipc::protocol::structure::Structure. However,
+             * since the structure uses strong typing which results in artifacts and a bad object
+             * structure, we have to convert it back to a dart value before serializing the entire
+             * struct into a dart value.
+             */
+
+            #[derive(serde::Serialize)]
+            struct InstalledModuleDart {
+                pub ty: String,
+                pub configuration: nativeshell::codec::Value,
+            }
+
+            #[derive(serde::Serialize)]
+            struct ConfigurationDart {
+                pub modules: Vec<InstalledModuleDart>,
+            }
+
+            let configuration = ConfigurationDart {
+                modules: configuration
+                    .modules
+                    .into_iter()
+                    .map(|m| InstalledModuleDart {
+                        ty: m.ty,
+                        configuration: structure_to_value(m.configuration),
+                    })
+                    .collect(),
+            };
+
             invoke_dart_method(sender, engine, "update_configuration", configuration);
         }
         ServerMessage::Heartbeat => {}

@@ -85,10 +85,13 @@ class _ConnectedViewConfigurationContainerState
 
   Widget _buildConfigurationArea(BuildContext context) {
     if (_selectedModule == null) {
-      return const Center(
-        child: Text(
-          "Select a module on the left to configure",
-          style: TextStyle(fontSize: 20),
+      return const Expanded(
+        child: Center(
+          child: Text(
+            "Select a module on the left to configure",
+            style: TextStyle(fontSize: 20),
+            textAlign: TextAlign.center,
+          ),
         ),
       );
     }
