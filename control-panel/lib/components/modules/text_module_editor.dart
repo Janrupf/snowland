@@ -7,6 +7,8 @@ class TextModuleEditor extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => const Material(
-        child: SingleLineEditor(property: ConfigurationProperty(["value"])),
+        child: SingleLineEditor(
+          property: ConfigurationProperty(["value"]),
+        ),
       );
 }

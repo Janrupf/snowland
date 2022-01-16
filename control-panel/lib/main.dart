@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:nativeshell/nativeshell.dart';
 import 'package:snowland_control_panel/logger.dart';
+import 'package:snowland_control_panel/theme/dark.dart';
 import 'package:snowland_control_panel/view/main_view_wrapper.dart';
 
 /// Entry point of the application, runs **after** rust has started
@@ -56,7 +57,7 @@ class SnowlandControlPanelState extends WindowState {
   @override
   Widget build(BuildContext context) => MaterialApp(
       theme: ThemeData.light(),
-      darkTheme: ThemeData.dark(),
+      darkTheme: DarkTheme.data(),
       themeMode: ThemeMode.system,
       home: const DefaultTextStyle(
         style: TextStyle(

@@ -3,10 +3,14 @@ import 'package:flutter/material.dart';
 import 'package:snowland_control_panel/data/property.dart';
 
 class ColorPropertyEditor extends StatefulWidget {
+  final bool enableOpacity;
   final ConfigurationPropertyList<double> property;
 
-  const ColorPropertyEditor({Key? key, required this.property})
-      : super(key: key);
+  const ColorPropertyEditor({
+    Key? key,
+    this.enableOpacity = false,
+    required this.property,
+  }) : super(key: key);
 
   @override
   State<StatefulWidget> createState() => _ColorPropertyEditorState();
@@ -22,18 +26,26 @@ class _ColorPropertyEditorState extends State<ColorPropertyEditor> {
   }
 
   @override
-  Widget build(BuildContext context) => IntrinsicHeight(
-        child: ColorPicker(
-          color: _initialColor,
-          pickersEnabled: const {
-            ColorPickerType.primary: false,
-            ColorPickerType.accent: false,
-            ColorPickerType.wheel: true,
-          },
-          onColorChanged: (newColor) =>
-              widget.property.set(context, _encodeColor(newColor)),
-        ),
-      );
+  Widget build(BuildContext context) => ColorPicker(
+    color: _initialColor,
+    showColorCode: true,
+    colorCodeHasColor: true,
+    enableOpacity: widget.enableOpacity,
+    opacityTrackHeight: 20,
+    copyPasteBehavior: ColorPickerCopyPasteBehavior(
+      copyFormat: widget.enableOpacity
+          ? ColorPickerCopyFormat.hexAARRGGBB
+          : ColorPickerCopyFormat.numHexRRGGBB,
+    ),
+    enableShadesSelection: false,
+    pickersEnabled: const {
+      ColorPickerType.primary: false,
+      ColorPickerType.accent: false,
+      ColorPickerType.wheel: true,
+    },
+    onColorChanged: (newColor) =>
+        widget.property.set(context, _encodeColor(newColor)),
+  );
 
   Color _decodeColor(List<double> data) {
     final r = data[0];

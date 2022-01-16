@@ -10,7 +10,6 @@ use thiserror::Error;
 pub fn reserialize<'a, I: Serialize, O: Deserialize<'a>>(input: I) -> Result<O, ReserializeError> {
     let intermediate =
         serde_json::to_value(input).map_err(ReserializeError::SerializationFailed)?;
-    log::trace!("Reserialization intermediate: {:#?}", intermediate);
     let output = O::deserialize(intermediate).map_err(ReserializeError::DeserializationFailed)?;
 
     Ok(output)
