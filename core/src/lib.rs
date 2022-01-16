@@ -5,6 +5,7 @@ use crate::io::ConfigIO;
 use crate::rendering::display::Display;
 use crate::rendering::RendererContainer;
 use crate::scene::module::ModuleConfigError;
+use snowland_ipc::protocol::ChangeConfiguration;
 use snowland_ipc::protocol::{ClientMessage, Configuration, InstalledModule, ServerMessage};
 use snowland_ipc::{SnowlandIPC, SnowlandIPCError};
 use std::any::Any;
@@ -80,8 +81,18 @@ where
                 ClientMessage::ReorderModules(old_index, new_index) => {
                     self.container.reorder_modules(old_index, new_index);
                 }
-                ClientMessage::ChangeConfiguration(change) => {
-                    log::debug!("Received configuration change request: {:#?}", change);
+                ClientMessage::ChangeConfiguration(ChangeConfiguration {
+                    module,
+                    new_configuration,
+                }) => {
+                    log::trace!(
+                        "Received configuration change request: {:#?}",
+                        new_configuration
+                    );
+                    let new_configuration = new_configuration.into_json();
+
+                    self.container
+                        .replace_module_configuration(module, new_configuration);
                 }
             }
         }

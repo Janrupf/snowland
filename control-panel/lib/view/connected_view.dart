@@ -117,6 +117,21 @@ class _ConnectedViewConfigurationContainerState
   }
 
   void _onConfigurationChanged() {
-    logger.trace("Configuration changed for module ${_selectedModule?.type}");
+    if (_selectedModule == null) {
+      logger
+          .error("Tried to update configuration while no module was selected!");
+      return;
+    }
+
+    final idx = widget.configuration.modules.indexOf(_selectedModule!);
+    if (idx < 0) {
+      logger.error(
+          "Module to update configuration for not found in installed modules!");
+      return;
+    }
+
+    logger.trace("Configuration changed for module ${_selectedModule!.type}");
+    DartToNativeCommunicator.instance
+        .updateConfiguration(idx, _selectedModule!.configuration);
   }
 }

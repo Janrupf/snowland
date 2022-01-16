@@ -86,6 +86,22 @@ where
         self.modules.insert(new_index, m);
     }
 
+    /// Updates the configuration of a module.
+    pub fn replace_module_configuration(
+        &mut self,
+        index: usize,
+        new_configuration: serde_json::Value,
+    ) {
+        if index > self.modules.len() {
+            log::error!("Tried to update configuration for out of bounds module index {}, only {} modules are installed", index, self.modules.len());
+            return;
+        }
+
+        if let Err(err) = self.modules[index].update_config(new_configuration) {
+            log::error!("Failed to update module configuration: {}", err);
+        }
+    }
+
     /// Resizes the internal surface if required.
     fn resize(&mut self, width: u64, height: u64) -> Result<(), R::Error> {
         let needs_surface_recreation = self.width != width || self.height != height;

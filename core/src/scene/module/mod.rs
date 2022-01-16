@@ -2,6 +2,7 @@ use std::ops::Deref;
 
 use serde::de::DeserializeOwned;
 use serde::Serialize;
+use serde_json::Value;
 use thiserror::Error;
 
 pub use known::*;
@@ -102,6 +103,8 @@ impl ModuleWrapper {
 pub trait ModuleContainer {
     fn serialize_config(&self) -> Result<serde_json::Value, ModuleConfigError>;
 
+    fn update_config(&mut self, new_config: serde_json::Value) -> Result<(), ModuleConfigError>;
+
     fn module_type(&self) -> String;
 
     fn run_frame<'a>(&mut self, data: &mut SceneData<'a>);
@@ -130,6 +133,11 @@ where
 {
     fn serialize_config(&self) -> Result<serde_json::Value, ModuleConfigError> {
         serde_json::to_value(&self.config).map_err(ModuleConfigError::Serialize)
+    }
+
+    fn update_config(&mut self, new_config: Value) -> Result<(), ModuleConfigError> {
+        self.config = serde_json::from_value(new_config).map_err(ModuleConfigError::Deserialize)?;
+        Ok(())
     }
 
     fn module_type(&self) -> String {
