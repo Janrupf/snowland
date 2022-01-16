@@ -13,18 +13,18 @@ class ColorPropertyEditor extends StatefulWidget {
 }
 
 class _ColorPropertyEditorState extends State<ColorPropertyEditor> {
-  late Color _currentColor;
+  late final Color _initialColor;
 
   @override
   void initState() {
     super.initState();
-    _currentColor = _decodeColor(widget.property.obtain(context));
+    _initialColor = _decodeColor(widget.property.obtain(context));
   }
 
   @override
   Widget build(BuildContext context) => IntrinsicHeight(
         child: ColorPicker(
-          color: _currentColor,
+          color: _initialColor,
           pickersEnabled: const {
             ColorPickerType.primary: false,
             ColorPickerType.accent: false,
