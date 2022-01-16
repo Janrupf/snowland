@@ -1,16 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:snowland_control_panel/data/property.dart';
 
-class SingleLineEditor extends StatefulWidget {
+class SingleLinePropertyEditor extends StatefulWidget {
   final ConfigurationProperty<String> property;
 
-  const SingleLineEditor({Key? key, required this.property}) : super(key: key);
+  const SingleLinePropertyEditor({Key? key, required this.property})
+      : super(key: key);
 
   @override
-  State<StatefulWidget> createState() => _SingleLineEditorState();
+  State<StatefulWidget> createState() => _SingleLinePropertyEditorState();
 }
 
-class _SingleLineEditorState extends State<SingleLineEditor> {
+class _SingleLinePropertyEditorState extends State<SingleLinePropertyEditor> {
   late final String _initialValue;
   late final TextEditingController _controller;
 

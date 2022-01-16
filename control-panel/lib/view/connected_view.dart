@@ -37,7 +37,9 @@ class _ConnectedViewState extends State<ConnectedView> {
       );
 
   Widget _buildWaitingForConfiguration() =>
-      const Center(child: CircularProgressIndicator());
+      // TODO: The progress indicator seems to block the event loop sometimes,
+      // causing the the update_configuration method never to be invoked.
+      const Center(/*child: CircularProgressIndicator()*/);
 
   Widget _buildWithConfiguration(
     BuildContext context,
@@ -99,10 +101,19 @@ class _ConnectedViewConfigurationContainerState
     }
 
     return Expanded(
-      child: ConfigurationProvider(
-        configuration: _selectedModule!.configuration,
-        onChange: _onConfigurationChanged,
-        child: ModuleEditor.createEditor(_selectedModule!.type),
+      child: LayoutBuilder(
+        builder: (context, viewportConstraints) => SingleChildScrollView(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              minHeight: viewportConstraints.maxHeight,
+            ),
+            child: ConfigurationProvider(
+              configuration: _selectedModule!.configuration,
+              onChange: _onConfigurationChanged,
+              child: ModuleEditor.createEditor(_selectedModule!.type),
+            ),
+          ),
+        ),
       ),
     );
   }

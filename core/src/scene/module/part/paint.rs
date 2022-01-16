@@ -105,9 +105,9 @@ impl Default for PaintSetting {
 impl ModuleConfig for PaintSetting {}
 
 #[derive(Serialize, Deserialize)]
-enum StrokeSetting {
-    Disabled,
-    Enabled { width: scalar, miter: scalar },
+struct StrokeSetting {
+    pub width: scalar,
+    pub miter: scalar,
 }
 
 impl<'de> Deserialize<'de> for PaintSetting {
@@ -171,7 +171,7 @@ impl<'de> Deserialize<'de> for PaintSetting {
                                 return Err(serde::de::Error::duplicate_field("stroke"));
                             }
 
-                            stroke = Some(map.next_value::<StrokeSetting>()?);
+                            stroke = map.next_value::<Option<StrokeSetting>>()?;
                         }
                     }
                 }
@@ -180,13 +180,12 @@ impl<'de> Deserialize<'de> for PaintSetting {
                 let anti_alias =
                     anti_alias.ok_or_else(|| serde::de::Error::missing_field("anti_alias"))?;
                 let dither = dither.ok_or_else(|| serde::de::Error::missing_field("dither"))?;
-                let stroke = stroke.ok_or_else(|| serde::de::Error::missing_field("stroke"))?;
 
                 let mut paint = Paint::new(color, None);
                 paint.set_anti_alias(anti_alias);
                 paint.set_dither(dither);
 
-                if let StrokeSetting::Enabled { width, miter } = stroke {
+                if let Some(StrokeSetting { width, miter }) = stroke {
                     paint.set_style(Style::Stroke);
                     paint.set_stroke_width(width);
                     paint.set_stroke_miter(miter);
@@ -221,13 +220,13 @@ impl Serialize for PaintSetting {
         if paint.style() == Style::Stroke {
             serializer.serialize_field(
                 "stroke",
-                &StrokeSetting::Enabled {
+                &Some(StrokeSetting {
                     width: paint.stroke_width(),
                     miter: paint.stroke_miter(),
-                },
+                }),
             )?;
         } else {
-            serializer.serialize_field("stroke", &StrokeSetting::Disabled)?;
+            serializer.serialize_field("stroke", &(None as Option<StrokeSetting>))?;
         }
 
         serializer.end()

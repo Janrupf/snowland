@@ -83,6 +83,32 @@ class ConfigurationProviderState extends State<ConfigurationProvider> {
   }
 }
 
+class ConfigurationPropertyGroup {
+  final List<String> path;
+
+  const ConfigurationPropertyGroup(this.path);
+
+  ConfigurationProperty<T> property<T>(List<String> subPath) {
+    return ConfigurationProperty(path + subPath);
+  }
+
+  ConfigurationPropertyList<T> listProperty<T>(List<String> subPath) {
+    return ConfigurationPropertyList(path + subPath);
+  }
+
+  ConfigurationPropertyGroup group(List<String> subPath) {
+    return ConfigurationPropertyGroup(path + subPath);
+  }
+
+  ConfigurationProperty<T> self<T>() {
+    return property([]);
+  }
+
+  ConfigurationPropertyList<T> listSelf<T>() {
+    return listProperty([]);
+  }
+}
+
 class ConfigurationProperty<T> {
   final List<String> path;
 

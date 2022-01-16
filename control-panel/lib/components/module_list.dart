@@ -64,28 +64,32 @@ class _ModuleListState extends State<ModuleList> {
         // ListTile's have problems with reorderable lists leading to
         // unreasonable animations and the background color sticking
         // instead of moving with the widget.
-        return InkWell(
-          customBorder: theme.shape,
-          onTap: () {
-            _activeWidget = index;
-
-            widget.onSelected(mod);
-          },
+        return Semantics(
           key: ValueKey(mod),
-          child: Container(
-            decoration: decoration,
-            alignment: Alignment.centerLeft,
-            child: Padding(
-              padding: padding,
-              child: Text(
-                mod.type,
-                style: TextStyle(
-                  color: textColor,
-                  fontSize: 15,
+          container: true,
+          selected: _activeWidget == index,
+          child: InkWell(
+            customBorder: theme.shape,
+            onTap: () {
+              _activeWidget = index;
+
+              widget.onSelected(mod);
+            },
+            child: Container(
+              decoration: decoration,
+              alignment: Alignment.centerLeft,
+              child: Padding(
+                padding: padding,
+                child: Text(
+                  mod.type,
+                  style: TextStyle(
+                    color: textColor,
+                    fontSize: 15,
+                  ),
                 ),
               ),
+              height: 40,
             ),
-            height: 40,
           ),
         );
       });
