@@ -1,33 +1,29 @@
 import 'package:flutter/material.dart';
-import 'package:snowland_control_panel/data/configuration.dart';
-
-typedef _ModuleEditorFactory = Widget Function(InstalledModule module);
+import 'package:snowland_control_panel/components/modules/clear_module_editor.dart';
 
 abstract class ModuleEditor {
   ModuleEditor._();
 
-  static const Map<String, _ModuleEditorFactory> factories = {};
+  static const Map<String, Widget> factories = {"Clear": ClearModuleEditor()};
 
-  static Widget createEditor(InstalledModule module) {
-    final factory = factories[module.type];
+  static Widget createEditor(String type) {
+    final widget = factories[type];
 
-    if (factory == null) {
+    if (widget == null) {
       return _NoEditorAvailable();
     }
 
-    return factory(module);
+    return widget;
   }
 }
 
 class _NoEditorAvailable extends StatelessWidget {
   @override
-  Widget build(BuildContext context) => const Expanded(
-        child: Center(
-          child: Text(
-            "Currently there is no editor available for this module",
-            style: TextStyle(fontSize: 20),
-            textAlign: TextAlign.center,
-          ),
+  Widget build(BuildContext context) => const Center(
+        child: Text(
+          "Currently there is no editor available for this module",
+          style: TextStyle(fontSize: 20),
+          textAlign: TextAlign.center,
         ),
       );
 }

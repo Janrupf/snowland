@@ -31,6 +31,7 @@ dependencies:
     sdk: flutter
 
   nativeshell: ^0.1.10
+  flex_color_picker: ^2.2.0
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.

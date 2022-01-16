@@ -4,6 +4,7 @@ import 'package:snowland_control_panel/com/native_to_dart.dart';
 import 'package:snowland_control_panel/components/module_list.dart';
 import 'package:snowland_control_panel/components/modules/module_editor.dart';
 import 'package:snowland_control_panel/data/configuration.dart';
+import 'package:snowland_control_panel/data/property.dart';
 import 'package:snowland_control_panel/logger.dart';
 
 const logger = Logger("connected_view");
@@ -86,18 +87,22 @@ class _ConnectedViewConfigurationContainerState
 
   Widget _buildConfigurationArea(BuildContext context) {
     if (_selectedModule == null) {
-      return const Expanded(
-        child: Center(
-          child: Text(
-            "Select a module on the left to configure",
-            style: TextStyle(fontSize: 20),
-            textAlign: TextAlign.center,
-          ),
+      return const Center(
+        child: Text(
+          "Select a module on the left to configure",
+          style: TextStyle(fontSize: 20),
+          textAlign: TextAlign.center,
         ),
       );
     }
 
-    return ModuleEditor.createEditor(_selectedModule!);
+    return Expanded(
+      child: ConfigurationProvider(
+        configuration: _selectedModule!.configuration,
+        onChange: _onConfigurationChanged,
+        child: ModuleEditor.createEditor(_selectedModule!.type),
+      ),
+    );
   }
 
   void _onModuleSelected(InstalledModule module) {
@@ -109,5 +114,9 @@ class _ConnectedViewConfigurationContainerState
   void _onModuleReorder(int oldIndex, int newIndex) {
     logger.debug("Moving module from position $oldIndex to $newIndex");
     DartToNativeCommunicator.instance.reorderModules(oldIndex, newIndex);
+  }
+
+  void _onConfigurationChanged() {
+    logger.trace("Configuration changed for module ${_selectedModule?.type}");
   }
 }
