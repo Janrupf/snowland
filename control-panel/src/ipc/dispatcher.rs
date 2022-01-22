@@ -1,5 +1,5 @@
 use crate::ipc::InternalMessage;
-use crate::util::structure_to_value;
+use crate::util::{structure_to_value, ReserializeError};
 use mio::{Events, Poll, Token, Waker};
 use mio_misc::channel::Sender;
 use mio_misc::queue::NotificationQueue;
@@ -8,7 +8,6 @@ use nativeshell::codec::{MethodCallResult, Value};
 use nativeshell::shell::{EngineHandle, RunLoopSender};
 use nativeshell::Context;
 use serde::{Serialize, Serializer};
-use snowland_ipc::protocol::structure::Structure;
 use snowland_ipc::protocol::ServerMessage;
 use snowland_ipc::{mio, SnowlandIPC, SnowlandIPCError};
 use snowland_misc::delayed::DelayedResolver;
@@ -166,6 +165,10 @@ fn handle_ipc_message(message: ServerMessage, sender: &RunLoopSender, engine: En
 
             invoke_dart_method(sender, engine, "update_configuration", configuration);
         }
+        ServerMessage::UpdateDisplays(displays) => {
+            send_event(sender, engine, "ipc_display_event", displays)
+                .expect("Failed to serialize displays")
+        }
         ServerMessage::Heartbeat => {}
     }
 }
@@ -225,14 +228,24 @@ fn set_state(
 ) {
     log::debug!("Changing IPC state to {:?}", new_state);
 
-    // Convert the state into a value which can be sent to flutter
-    let serialized_state =
-        crate::util::reserialize(&new_state).expect("Failed to serialize IPC state");
+    send_event(sender, engine, "ipc_state_event", &new_state)
+        .expect("Failed to serialize IPC state");
 
     // Set the state on the Rust side
     let mut state_lock = state.lock().unwrap();
     *state_lock = new_state;
     drop(state_lock);
+}
+
+/// Sends an event to a flutter event channel.
+fn send_event<V: Serialize>(
+    sender: &RunLoopSender,
+    engine: EngineHandle,
+    channel: impl Into<String>,
+    value: V,
+) -> Result<(), ReserializeError> {
+    let channel = channel.into();
+    let serialized_value = crate::util::reserialize(value)?;
 
     sender.send(move || {
         // This executes in the flutter thread, so we _should_ have a context...
@@ -248,13 +261,15 @@ fn set_state(
         if let Err(err) = context
             .message_manager
             .borrow()
-            .get_event_sender(engine, "ipc_state_event")
-            .send_event(&serialized_state)
+            .get_event_sender(engine, channel.as_ref())
+            .send_event(&serialized_value)
         {
             // This should never happen neither...
-            log::error!("Failed to dispatch ipc state change to flutter: {}", err);
+            log::error!("Failed to dispatch event to flutter: {}", err);
         };
     });
+
+    Ok(())
 }
 
 #[derive(Debug, Error)]

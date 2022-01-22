@@ -70,6 +70,11 @@ where
         self.displays = displays.into_iter().map(|d| (d.id().clone(), d)).collect();
     }
 
+    /// Retrieves the available displays.
+    pub fn get_displays(&self) -> impl Iterator<Item = &Display> {
+        self.displays.values()
+    }
+
     /// Replaces the currently active list of modules.
     pub fn replace_modules(&mut self, modules: Vec<Box<dyn ModuleContainer>>) {
         self.modules = modules;

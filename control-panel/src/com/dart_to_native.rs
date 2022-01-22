@@ -2,18 +2,13 @@ use crate::ipc::{IPCDispatcherError, IPCHandle};
 use crate::mcr;
 use nativeshell::shell::{ContextRef, EngineHandle, MethodChannel};
 use snowland_ipc::protocol::{ChangeConfiguration, ClientMessage};
-use crate::util::value_to_structure;
 
 pub struct DartToNativeChannel {
     ipc_handle: IPCHandle,
 }
 
 impl DartToNativeChannel {
-    pub fn register(context: &ContextRef) -> MethodChannel {
-        context.run_loop.borrow().new_sender();
-
-        let ipc_handle = IPCHandle::new(context.run_loop.borrow().new_sender());
-
+    pub fn register(context: &ContextRef, ipc_handle: IPCHandle) -> MethodChannel {
         let instance = DartToNativeChannel { ipc_handle };
 
         MethodChannel::new(context.weak(), "snowland_dart_to_native", instance)
@@ -104,7 +99,7 @@ impl DartToNativeChannel {
         self.ipc_handle
             .send_message(ClientMessage::ChangeConfiguration(ChangeConfiguration {
                 module,
-                new_configuration: value_to_structure(new_configuration),
+                new_configuration: crate::util::value_to_structure(new_configuration),
             }));
 
         Ok(())

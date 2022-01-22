@@ -8,6 +8,7 @@ use snowland_misc::delayed::Delayed;
 use std::sync::{Arc, Mutex};
 use std::thread::JoinHandle;
 
+#[derive(Clone)]
 pub struct IPCHandle {
     sender: RunLoopSender,
     state: Arc<Mutex<IPCDispatcherState>>,
@@ -37,12 +38,12 @@ impl IPCHandle {
 
         let (sender, sender_resolver) = Delayed::new();
 
-        let ipc_thread = std::thread::spawn(move || {
+        std::thread::spawn(move || {
             ipc_dispatcher_main(run_loop_sender, state, sender_resolver, engine);
         });
 
         let sender = sender.wait()?;
-        self.inner = Some(InnerIPCHandle { ipc_thread, sender });
+        self.inner = Some(InnerIPCHandle { sender });
 
         Ok(())
     }
@@ -68,8 +69,8 @@ impl IPCHandle {
     }
 }
 
+#[derive(Clone)]
 struct InnerIPCHandle {
-    ipc_thread: JoinHandle<()>,
     sender: mio_misc::channel::Sender<InternalMessage>,
 }
 

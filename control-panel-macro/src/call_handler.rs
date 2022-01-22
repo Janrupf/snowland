@@ -44,7 +44,7 @@ fn generate_wrapper(im: &ItemImpl) -> TokenStream {
 
     let arms = im.items.iter().filter_map(|item| {
         if let ImplItem::Method(method) = item {
-            generate_arm(&im, method)
+            generate_arm(im, method)
         } else {
             None
         }
@@ -88,6 +88,7 @@ fn generate_arm(tr: &ItemImpl, method: &ImplItemMethod) -> Option<TokenStream> {
         .any(|i| matches!(i, FnArg::Receiver(_)));
 
     let mut arg_pos = 0;
+    let mut has_responder = false;
 
     let (args, tuple_types): (Vec<_>, Vec<_>) = method
         .sig
@@ -102,6 +103,9 @@ fn generate_arm(tr: &ItemImpl, method: &ImplItemMethod) -> Option<TokenStream> {
 
             if attrs.contains(&CallHandlerArgumentAttribute::Engine) {
                 (quote::quote! { engine }, None)
+            } else if attrs.contains(&CallHandlerArgumentAttribute::Responder) {
+                has_responder = true;
+                (quote::quote! { responder }, None)
             } else {
                 let index = Index::from(arg_pos);
                 arg_pos += 1;
@@ -132,53 +136,39 @@ fn generate_arm(tr: &ItemImpl, method: &ImplItemMethod) -> Option<TokenStream> {
         }
     };
 
+    let call_handler = if has_responder {
+        quote::quote! {
+            let _: () = #call
+        }
+    } else {
+        quote::quote! {
+            let res: Result<_, _> = #call;
+            responder.result(res)
+        }
+    };
+
     Some(quote::quote! {
         #name_str => {
             #arguments_type;
 
+            let responder = crate::com::Responder::new(&call, reply);
             let args: Args = match crate::util::reserialize(call.args) {
                 Ok(v) => v,
                 Err(err) => {
-                    reply.send_error(
+                    responder.failed(
                         "INVALID_ARGS",
-                        Some(&format!(
+                        Some(format!(
                             "Failed to convert arguments for method {}: {}",
                             call.method,
                             err
                         )),
-                        ::nativeshell::codec::Value::String(call.method),
+                        Some(::nativeshell::codec::Value::String(call.method))
                     );
                     return;
                 }
             };
 
-            let res: Result<_, Box<dyn std::error::Error>> = #call.map_err(std::convert::Into::into);
-
-            match res {
-                Ok(v) => {
-                    match crate::util::reserialize(v) {
-                        Ok(v) => reply.send_ok(v),
-                        Err(err) => {
-                            reply.send_error(
-                                "INVALID_RETURN_VALUE",
-                                Some(&format!(
-                                    "Failed to convert the return value of method {}: {}",
-                                    call.method,
-                                    err
-                                )),
-                                ::nativeshell::codec::Value::String(call.method)
-                            )
-                        }
-                    }
-                },
-                Err(err) => {
-                    reply.send_error(
-                        "EXECUTION_FAILED",
-                        Some(&err.to_string()),
-                        ::nativeshell::codec::Value::Null
-                    )
-                }
-            };
+            #call_handler;
         }
     })
 }

@@ -3,6 +3,7 @@ use syn::Attribute;
 #[derive(Debug, Ord, PartialOrd, Eq, PartialEq)]
 pub enum CallHandlerArgumentAttribute {
     Engine,
+    Responder,
 }
 
 impl CallHandlerArgumentAttribute {
@@ -19,6 +20,7 @@ impl CallHandlerArgumentAttribute {
             .get_ident()
             .and_then(|i| match i.to_string().as_str() {
                 "engine" => Some(Self::Engine),
+                "responder" => Some(Self::Responder),
                 _ => None,
             })
     }

@@ -1,4 +1,4 @@
-import 'dart:collection';
+import 'package:snowland_control_panel/data/ipc_data_ext.dart';
 
 /// Represents the entire snowland daemon configuration, including installed
 /// [modules].
@@ -9,17 +9,7 @@ class Configuration {
 
   /// Converts the native [data] into a dart instance of the [Configuration].
   factory Configuration.fromData(dynamic data) {
-    if (data is! LinkedHashMap) {
-      throw ArgumentError.value(data, "data", "Not a LinkedHashMap");
-    }
-
-    final d = data;
-    final modules = d["modules"];
-
-    if (modules is! List) {
-      throw ArgumentError.value(modules, "data.modules", "Not a List");
-    }
-
+    final modules = IPCDataHelper.property<List>(data, "modules");
     final installed = modules.map((m) => InstalledModule.fromData(m)).toList();
 
     return Configuration._(installed);
@@ -37,10 +27,9 @@ class InstalledModule {
   const InstalledModule._(this.type, this.configuration);
 
   factory InstalledModule.fromData(dynamic data) {
-    if (data is! LinkedHashMap) {
-      throw ArgumentError.value(data, "data", "Not a LinkedHashMap");
-    }
-
-    return InstalledModule._(data["ty"], data["configuration"]);
+    return InstalledModule._(
+      IPCDataHelper.property<String>(data, "ty"),
+      IPCDataHelper.property<Map>(data, "configuration"),
+    );
   }
 }

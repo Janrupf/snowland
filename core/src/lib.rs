@@ -78,6 +78,7 @@ where
         for message in messages {
             match message {
                 ClientMessage::QueryConfiguration => self.send_configuration_over_ipc(),
+                ClientMessage::QueryDisplays => self.send_displays_over_ipc(),
                 ClientMessage::ReorderModules(old_index, new_index) => {
                     self.container.reorder_modules(old_index, new_index);
                 }
@@ -123,6 +124,18 @@ where
                 log::error!("Failed to serialize module configurations: {}", err);
             }
         }
+    }
+
+    /// Collects the available displays and sends the details over IPC.
+    fn send_displays_over_ipc(&mut self) {
+        let displays = self
+            .container
+            .get_displays()
+            .cloned()
+            .map(Into::into)
+            .collect();
+
+        self.dispatch_message(ServerMessage::UpdateDisplays(displays));
     }
 
     /// Dispatches an IPC message and logs in case of an error

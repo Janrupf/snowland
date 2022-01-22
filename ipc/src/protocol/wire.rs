@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Serialize, Deserialize)]
 pub enum ClientMessage {
     QueryConfiguration,
+    QueryDisplays,
     ReorderModules(usize, usize),
     ChangeConfiguration(ChangeConfiguration),
 }
@@ -11,6 +12,7 @@ pub enum ClientMessage {
 #[derive(Debug, Serialize, Deserialize)]
 pub enum ServerMessage {
     UpdateConfiguration(Configuration),
+    UpdateDisplays(Vec<Display>),
     Heartbeat,
 }
 
