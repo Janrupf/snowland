@@ -1,4 +1,5 @@
 import 'package:flutter/widgets.dart';
+import 'package:snowland_control_panel/data/ipc_data_ext.dart';
 
 typedef ConfigurationChangeCallback = void Function();
 
@@ -126,6 +127,20 @@ class ConfigurationProperty<T> {
     }
 
     return value;
+  }
+
+  T? obtainWhenValid(
+    BuildContext context, {
+    bool? allowNull
+  }) {
+    final realAllowNull = allowNull ?? null is T;
+
+    final value = ConfigurationProvider.of(context).lookupProperty(path);
+    if(!realAllowNull && value == null) {
+      throw BadPropertyTypeException(path, T, Null);
+    }
+
+    return value is T ? value : null;
   }
 
   void set(BuildContext context, T newValue) {

@@ -1,5 +1,6 @@
 import 'package:flutter/widgets.dart';
 import 'package:snowland_control_panel/data/ipc_data_ext.dart';
+import 'package:snowland_control_panel/data/property.dart';
 
 class Display {
   static List<Display> fromDataList(dynamic list) {
@@ -64,4 +65,116 @@ class Display {
       // Mix in the hash of the type to have something to distinguish Display
       // instances from instances of String
       hashValues(Display, id);
+}
+
+abstract class DisplaySelection {
+  const DisplaySelection();
+
+  String displayName();
+
+  void write(BuildContext context, ConfigurationPropertyGroup group);
+
+  factory DisplaySelection.fromProperty(
+    BuildContext context,
+    ConfigurationPropertyGroup group,
+  ) {
+    final typed = group.self<String>().obtainWhenValid(context);
+    if (typed != null) {
+      switch (typed) {
+        case "Primary":
+          return PrimaryDisplay.instance;
+
+        case "None":
+          return NoDisplay.instance;
+
+        default:
+          throw ArgumentError.value(
+            typed,
+            group.path.join("->"),
+            "Invalid display selection type $typed",
+          );
+      }
+    } else {
+      final identified = group.group(["Identified"]);
+
+      return IdentifiedDisplay(
+        name: identified.property<String>(["name"]).obtain(context),
+        id: identified.property<String>(["id"]).obtain(context),
+      );
+    }
+  }
+}
+
+class IdentifiedDisplay extends DisplaySelection {
+  final String name;
+  final String id;
+
+  const IdentifiedDisplay({required this.name, required this.id});
+
+  @override
+  String displayName() => name;
+
+  @override
+  void write(BuildContext context, ConfigurationPropertyGroup group) {
+    final out = {
+      "Identified": {
+        "name": name,
+        "id": id
+      }
+    };
+
+    group.self<Map>().set(context, out);
+  }
+
+  @override
+  bool operator ==(Object other) {
+    // We only really care about the id
+    return other is IdentifiedDisplay && other.id == id;
+  }
+
+  @override
+  int get hashCode =>
+      // Mix in the hash of the type to have something to distinguish
+      // IdentifiedDisplay instances from instances of String
+      hashValues(IdentifiedDisplay, id);
+}
+
+class PrimaryDisplay extends DisplaySelection {
+  static const PrimaryDisplay instance = PrimaryDisplay._();
+
+  const PrimaryDisplay._();
+
+  @override
+  String displayName() => "<<primary>>";
+
+  @override
+  void write(BuildContext context, ConfigurationPropertyGroup group) {
+    group.self<String>().set(context, "Primary");
+  }
+
+  @override
+  bool operator ==(Object other) => other is PrimaryDisplay;
+
+  @override
+  int get hashCode => (PrimaryDisplay).hashCode;
+}
+
+class NoDisplay extends DisplaySelection {
+  static const NoDisplay instance = NoDisplay._();
+
+  const NoDisplay._();
+
+  @override
+  String displayName() => "<<none>>";
+
+  @override
+  void write(BuildContext context, ConfigurationPropertyGroup group) {
+    group.self<String>().set(context, "None");
+  }
+
+  @override
+  bool operator ==(Object other) => other is NoDisplay;
+
+  @override
+  int get hashCode => (NoDisplay).hashCode;
 }

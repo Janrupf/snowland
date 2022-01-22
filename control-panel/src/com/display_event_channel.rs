@@ -24,6 +24,8 @@ impl IpcDisplayEventChannel {
     /// In reality this does not perform any listening, but instead queries
     /// the daemon for displays.
     pub fn listen(&mut self) -> Result<(), std::convert::Infallible> {
+        log::debug!("Now listening for display events...");
+
         self.ipc_handle.send_message(ClientMessage::QueryDisplays);
 
         Ok(())

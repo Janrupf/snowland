@@ -5,24 +5,24 @@ use crate::ipc::dispatcher::{ipc_dispatcher_main, IPCDispatcherState};
 use nativeshell::shell::{EngineHandle, RunLoopSender};
 use snowland_ipc::protocol::ClientMessage;
 use snowland_misc::delayed::Delayed;
-use std::sync::{Arc, Mutex};
-use std::thread::JoinHandle;
+use std::sync::{Arc, Mutex, RwLock};
 
 #[derive(Clone)]
 pub struct IPCHandle {
     sender: RunLoopSender,
     state: Arc<Mutex<IPCDispatcherState>>,
-    inner: Option<InnerIPCHandle>,
+    inner: Arc<RwLock<Option<InnerIPCHandle>>>,
 }
 
 impl IPCHandle {
     pub fn new(sender: RunLoopSender) -> Self {
         let state = Arc::new(Mutex::new(IPCDispatcherState::NotRunning));
+        let inner = Arc::new(RwLock::new(None));
 
         Self {
             sender,
             state,
-            inner: None,
+            inner,
         }
     }
 
@@ -43,7 +43,7 @@ impl IPCHandle {
         });
 
         let sender = sender.wait()?;
-        self.inner = Some(InnerIPCHandle { sender });
+        *self.inner.write().unwrap() = Some(InnerIPCHandle { sender });
 
         Ok(())
     }
@@ -53,18 +53,35 @@ impl IPCHandle {
     }
 
     pub fn send_message(&self, message: ClientMessage) {
-        if let Some(inner) = self.running_guard() {
+        log::trace!("Handling message dispatch request...");
+
+        let ok = self.running_guard(|inner| {
             if let Err(err) = inner.sender.send(InternalMessage::SendIPC(message)) {
                 log::warn!("Failed to send message to IPC dispatcher: {}", err);
             }
+        });
+
+        if !ok {
+            log::warn!("Tried to send IPC message while IPC was not running!");
         }
     }
 
-    fn running_guard(&self) -> Option<&InnerIPCHandle> {
+    fn running_guard<F>(&self, callback: F) -> bool
+    where
+        F: FnOnce(&InnerIPCHandle),
+    {
         if self.is_running() {
-            self.inner.as_ref()
+            let guard = self.inner.read().unwrap();
+
+            if let Some(ref inner) = *guard {
+                callback(inner);
+
+                true
+            } else {
+                false
+            }
         } else {
-            None
+            false
         }
     }
 }

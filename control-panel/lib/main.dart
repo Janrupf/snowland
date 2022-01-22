@@ -58,7 +58,7 @@ class SnowlandControlPanelState extends WindowState {
   Widget build(BuildContext context) => MaterialApp(
       theme: ThemeData.light(),
       darkTheme: DarkTheme.data(),
-      themeMode: ThemeMode.system,
+      themeMode: ThemeMode.dark,
       home: const DefaultTextStyle(
         style: TextStyle(
           fontSize: 14,

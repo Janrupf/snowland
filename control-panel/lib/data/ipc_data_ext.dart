@@ -6,7 +6,7 @@ class IPCDataHelper {
   /// Tries to cast the [value] to another one, throwing an [ArgumentError] if
   /// the value can't be casted.
   static T as<T>(dynamic value, String name) {
-    if(value !is T) {
+    if(value is! T) {
       throw ArgumentError.value(value, name, "$name is not a $T");
     }
 
