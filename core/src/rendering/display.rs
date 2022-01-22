@@ -95,10 +95,46 @@ impl Display {
             ..self
         }
     }
+
+    pub fn into_ipc(self) -> snowland_ipc::protocol::Display {
+        snowland_ipc::protocol::Display {
+            name: self.name,
+            id: self.id,
+            x: self.x,
+            y: self.y,
+            width: self.width,
+            height: self.height,
+            primary: self.primary,
+        }
+    }
+
+    pub fn from_ipc(display: snowland_ipc::protocol::Display) -> Self {
+        Self {
+            name: display.name,
+            id: display.id,
+            x: display.x,
+            y: display.y,
+            width: display.width,
+            height: display.height,
+            primary: display.primary,
+        }
+    }
 }
 
 impl std::fmt::Display for Display {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{} {}x{}", self.name, self.width, self.height)
+    }
+}
+
+impl From<Display> for snowland_ipc::protocol::Display {
+    fn from(display: Display) -> Self {
+        display.into_ipc()
+    }
+}
+
+impl From<snowland_ipc::protocol::Display> for Display {
+    fn from(display: snowland_ipc::protocol::Display) -> Self {
+        Self::from_ipc(display)
     }
 }
