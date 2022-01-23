@@ -74,6 +74,8 @@ abstract class DisplaySelection {
 
   void write(BuildContext context, ConfigurationPropertyGroup group);
 
+  bool matches(Display display);
+
   factory DisplaySelection.fromProperty(
     BuildContext context,
     ConfigurationPropertyGroup group,
@@ -127,6 +129,9 @@ class IdentifiedDisplay extends DisplaySelection {
   }
 
   @override
+  bool matches(Display display) => id == display.id;
+
+  @override
   bool operator ==(Object other) {
     // We only really care about the id
     return other is IdentifiedDisplay && other.id == id;
@@ -153,6 +158,9 @@ class PrimaryDisplay extends DisplaySelection {
   }
 
   @override
+  bool matches(Display display) => display.primary;
+
+  @override
   bool operator ==(Object other) => other is PrimaryDisplay;
 
   @override
@@ -171,6 +179,9 @@ class NoDisplay extends DisplaySelection {
   void write(BuildContext context, ConfigurationPropertyGroup group) {
     group.self<String>().set(context, "None");
   }
+
+  @override
+  bool matches(Display display) => false;
 
   @override
   bool operator ==(Object other) => other is NoDisplay;

@@ -40,6 +40,7 @@ class _DisplayPropertyEditorState extends State<DisplayPropertyEditor> {
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (context) => DisplayEditorRoute(
+          currentSelection: _currentSelection,
           onChanged: _onChanged,
         ),
       ),
