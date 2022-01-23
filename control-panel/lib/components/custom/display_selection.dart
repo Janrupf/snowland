@@ -1,9 +1,12 @@
 import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:snowland_control_panel/data/display.dart';
+
+typedef DisplaySelectionCallback = void Function(DisplaySelection newSelection);
 
 /// Widget for selecting a certain display.
 class DisplaySelector extends LeafRenderObjectWidget {
@@ -13,12 +16,17 @@ class DisplaySelector extends LeafRenderObjectWidget {
   /// The list of displays available to be selected.
   final List<Display> displays;
 
+  /// The callback to invoke when the selection changed.
+  final DisplaySelectionCallback onChanged;
+
+  /// The theme to use for the selector.
   final ThemeData? theme;
 
   const DisplaySelector({
     Key? key,
     required this.selection,
     required this.displays,
+    required this.onChanged,
     this.theme,
   }) : super(key: key);
 
@@ -27,6 +35,7 @@ class DisplaySelector extends LeafRenderObjectWidget {
         selection: selection,
         displays: displays,
         theme: _selectTheme(context),
+        onChanged: onChanged,
       );
 
   @override
@@ -37,7 +46,8 @@ class DisplaySelector extends LeafRenderObjectWidget {
     renderObject
       ..selection = selection
       ..displays = displays
-      ..theme = _selectTheme(context);
+      ..theme = _selectTheme(context)
+      ..onChanged = onChanged;
   }
 
   @override
@@ -92,12 +102,17 @@ class DisplayRenderObject extends RenderBox {
     }
   }
 
+  DisplaySelectionCallback onChanged;
+
   final List<_SelectableDisplay> _displaysOnCanvas;
+  Display? _hoveredDisplay;
+  Display? _pendingSelectionDisplay;
 
   DisplayRenderObject({
     required DisplaySelection selection,
     required List<Display> displays,
     required ThemeData theme,
+    required this.onChanged,
   })  : _selection = selection,
         _displays = displays,
         _theme = theme,
@@ -133,18 +148,7 @@ class DisplayRenderObject extends RenderBox {
         display.height.toDouble() * targetAspectRatio,
       );
 
-      final String name;
-      if (display.primary) {
-        name = "${display.name}\n(primary)";
-      } else {
-        name = display.name;
-      }
-
-      final nameSpan = TextSpan(
-          text: name,
-          style: TextStyle(
-            color: theme.buttonTheme.colorScheme?.onBackground ?? Colors.black,
-          ));
+      final nameSpan = _buildDisplaySpan(display);
 
       final namePainter = TextPainter(
           text: nameSpan,
@@ -164,6 +168,38 @@ class DisplayRenderObject extends RenderBox {
           display: display,
         ),
       );
+    }
+  }
+
+  @override
+  bool hitTestSelf(Offset position) => true;
+
+  @override
+  void handleEvent(PointerEvent event, covariant BoxHitTestEntry entry) {
+    assert(debugHandleEvent(event, entry));
+
+    if (event is PointerHoverEvent) {
+      Display? newHoveredDisplay = _findDisplayAt(event.localPosition);
+      if (_hoveredDisplay != newHoveredDisplay) {
+        _hoveredDisplay = newHoveredDisplay;
+        markNeedsPaint();
+      }
+    } else if (event is PointerDownEvent) {
+      _pendingSelectionDisplay = _findDisplayAt(event.localPosition);
+    } else if (event is PointerUpEvent) {
+      Display? upDisplay = _findDisplayAt(event.localPosition);
+      if (upDisplay != null && upDisplay == _pendingSelectionDisplay) {
+        final newSelection = DisplaySelection.fromDisplay(upDisplay);
+
+        if(newSelection != _selection) {
+          onChanged(newSelection);
+        }
+      }
+
+      _pendingSelectionDisplay = null;
+    } else if(event is PointerExitEvent) {
+      _hoveredDisplay = null;
+      markNeedsPaint();
     }
   }
 
@@ -201,6 +237,10 @@ class DisplayRenderObject extends RenderBox {
       ..color = theme.buttonTheme.colorScheme?.primary ?? Colors.blue
       ..style = PaintingStyle.fill;
 
+    final hoveredDisplayBackgroundPaint = Paint()
+      ..color = theme.buttonTheme.colorScheme?.secondary ?? Colors.green
+      ..style = PaintingStyle.fill;
+
     final displayBorderPaint = Paint()
       ..color = theme.buttonTheme.colorScheme?.shadow ?? Colors.red
       ..strokeWidth = 4.0
@@ -210,13 +250,19 @@ class DisplayRenderObject extends RenderBox {
     canvas.drawRRect(widgetRect, borderPaint);
 
     for (final selectable in _displaysOnCanvas) {
-      canvas.drawRect(
-          selectable.area,
-          _selection.matches(selectable.display)
-              ? selectedDisplayBackgroundPaint
-              : displayBackgroundPaint);
+      final Paint backgroundPaint;
+      if (_selection.matches(selectable.display)) {
+        backgroundPaint = selectedDisplayBackgroundPaint;
+      } else if (selectable.display == _hoveredDisplay) {
+        backgroundPaint = hoveredDisplayBackgroundPaint;
+      } else {
+        backgroundPaint = displayBackgroundPaint;
+      }
+
+      canvas.drawRect(selectable.area, backgroundPaint);
       canvas.drawRect(selectable.area, displayBorderPaint);
 
+      selectable.namePainter.text = _buildDisplaySpan(selectable.display);
       selectable.namePainter.paint(canvas, selectable.nameOffset);
     }
 
@@ -264,6 +310,37 @@ class DisplayRenderObject extends RenderBox {
       (leftBorder! - rightBorder!).abs().toDouble(),
       (upperBorder! - lowerBorder!).abs().toDouble(),
     );
+  }
+
+  Display? _findDisplayAt(Offset offset) {
+    for (final selectable in _displaysOnCanvas) {
+      if (selectable.area.contains(offset)) {
+        return selectable.display;
+      }
+    }
+
+    return null;
+  }
+
+  TextSpan _buildDisplaySpan(Display display) {
+    final Color textColor;
+
+    if (_selection.matches(display)) {
+      textColor = theme.buttonTheme.colorScheme?.onPrimary ?? Colors.white;
+    } else if (_hoveredDisplay == display) {
+      textColor = theme.buttonTheme.colorScheme?.onSecondary ?? Colors.white;
+    } else {
+      textColor = theme.buttonTheme.colorScheme?.onBackground ?? Colors.black;
+    }
+
+    final String label;
+    if (display.primary) {
+      label = "${display.name}\n(primary)";
+    } else {
+      label = display.name;
+    }
+
+    return TextSpan(text: label, style: TextStyle(color: textColor));
   }
 }
 

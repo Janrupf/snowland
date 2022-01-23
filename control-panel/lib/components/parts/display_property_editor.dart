@@ -51,5 +51,7 @@ class _DisplayPropertyEditorState extends State<DisplayPropertyEditor> {
     setState(() {
       _currentSelection = selection;
     });
+
+    _currentSelection.write(context, widget.group);
   }
 }

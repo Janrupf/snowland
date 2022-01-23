@@ -65,6 +65,9 @@ class Display {
       // Mix in the hash of the type to have something to distinguish Display
       // instances from instances of String
       hashValues(Display, id);
+
+  @override
+  String toString() => name;
 }
 
 abstract class DisplaySelection {
@@ -105,6 +108,13 @@ abstract class DisplaySelection {
       );
     }
   }
+
+  factory DisplaySelection.fromDisplay(Display display) =>
+      IdentifiedDisplay(name: display.name, id: display.id);
+
+  factory DisplaySelection.primary() => PrimaryDisplay.instance;
+
+  factory DisplaySelection.none() => NoDisplay.instance;
 }
 
 class IdentifiedDisplay extends DisplaySelection {
@@ -119,10 +129,7 @@ class IdentifiedDisplay extends DisplaySelection {
   @override
   void write(BuildContext context, ConfigurationPropertyGroup group) {
     final out = {
-      "Identified": {
-        "name": name,
-        "id": id
-      }
+      "Identified": {"name": name, "id": id}
     };
 
     group.self<Map>().set(context, out);
