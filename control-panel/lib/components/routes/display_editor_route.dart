@@ -21,19 +21,16 @@ class DisplayEditorRoute extends StatelessWidget {
         ),
       );
 
-  Widget _buildLoading(BuildContext context) => Expanded(
+  Widget _buildLoading(BuildContext context) => Center(
         child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Center(
-              child: ElevatedButton(
-                child: const Text("Back"),
-                onPressed: () => Navigator.of(context).pop(),
-              ),
+            ElevatedButton(
+              child: const Text("Back"),
+              onPressed: () => Navigator.of(context).pop(),
             ),
-            const Center(
-              // TODO: A progress indicator seems to block the event loop sometimes
-              child: Text("Waiting for daemon"),
-            ),
+            const SizedBox(height: 20),
+            const Text("Waiting for daemon"),
           ],
         ),
       );
@@ -104,7 +101,7 @@ class _DisplayEditorState extends State<_DisplayEditor> {
   void _changeSelection(DisplaySelection? newSelection) {
     assert(newSelection != null, "The display selection should never be null");
 
-    if(_currentSelection != newSelection) {
+    if (_currentSelection != newSelection) {
       setState(() {
         _currentSelection = newSelection!;
       });

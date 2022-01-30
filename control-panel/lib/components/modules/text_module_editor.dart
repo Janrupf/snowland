@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:snowland_control_panel/components/parts/alignment_property_editor.dart';
 import 'package:snowland_control_panel/components/parts/color_property_editor.dart';
 import 'package:snowland_control_panel/components/parts/display_property_editor.dart';
 import 'package:snowland_control_panel/components/parts/paint_editor.dart';
@@ -44,13 +45,32 @@ class TextModuleEditor extends StatelessWidget {
                   ),
                 ),
                 PropertyCard(
+                  minWidth: 300,
                   title: const Text("Position:"),
-                  child: Row(
+                  child: Column(
                     children: const [
-                      Text("Display: "),
-                      DisplayPropertyEditor(
-                        group:
-                            ConfigurationPropertyGroup(["position", "display"]),
+                      ListTile(
+                        title: Text("Display"),
+                        trailing: DisplayPropertyEditor(
+                          group: ConfigurationPropertyGroup(
+                              ["position", "display"]),
+                        ),
+                      ),
+                      ListTile(
+                        title: Text("Horizontal alignment"),
+                        trailing: AlignmentPropertyEditor(
+                          property:
+                              ConfigurationProperty(["position", "horizontal"]),
+                          type: AlignmentPropertyType.horizontal,
+                        ),
+                      ),
+                      ListTile(
+                        title: Text("Vertical alignment"),
+                        trailing: AlignmentPropertyEditor(
+                          property:
+                              ConfigurationProperty(["position", "vertical"]),
+                          type: AlignmentPropertyType.vertical,
+                        ),
                       ),
                     ],
                   ),

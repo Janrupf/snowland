@@ -7,17 +7,17 @@ use crate::scene::SceneData;
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub enum HorizontalPositionAnchor {
     Left,
-    Middle,
+    Center,
     Right,
 }
 
 impl HorizontalPositionAnchor {
-    const VALUES: [Self; 3] = [Self::Left, Self::Middle, Self::Right];
+    const VALUES: [Self; 3] = [Self::Left, Self::Center, Self::Right];
 
     pub fn compute(&self, available: i32, value: i32) -> i32 {
         match self {
             Self::Left => 0,
-            Self::Middle => (available / 2) - (value / 2),
+            Self::Center => (available / 2) - (value / 2),
             Self::Right => available - value,
         }
     }
@@ -25,7 +25,7 @@ impl HorizontalPositionAnchor {
 
 impl Default for HorizontalPositionAnchor {
     fn default() -> Self {
-        Self::Middle
+        Self::Center
     }
 }
 
@@ -34,17 +34,17 @@ impl ModuleConfig for HorizontalPositionAnchor {}
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub enum VerticalPositionAnchor {
     Top,
-    Middle,
+    Center,
     Bottom,
 }
 
 impl VerticalPositionAnchor {
-    const VALUES: [Self; 3] = [Self::Top, Self::Middle, Self::Bottom];
+    const VALUES: [Self; 3] = [Self::Top, Self::Center, Self::Bottom];
 
     pub fn compute(&self, available: i32, value: i32) -> i32 {
         match self {
             Self::Top => 0,
-            Self::Middle => (available / 2) - (value / 2),
+            Self::Center => (available / 2) - (value / 2),
             Self::Bottom => available - value,
         }
     }
@@ -52,7 +52,7 @@ impl VerticalPositionAnchor {
     pub fn compute_baselined(&self, available: i32, value: i32) -> i32 {
         match self {
             Self::Top => value,
-            Self::Middle => (available / 2) + (value / 2),
+            Self::Center => (available / 2) + (value / 2),
             Self::Bottom => available,
         }
     }
@@ -60,7 +60,7 @@ impl VerticalPositionAnchor {
 
 impl Default for VerticalPositionAnchor {
     fn default() -> Self {
-        Self::Middle
+        Self::Center
     }
 }
 
