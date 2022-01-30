@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:snowland_control_panel/components/parts/alignment_property_editor.dart';
 import 'package:snowland_control_panel/components/parts/color_property_editor.dart';
 import 'package:snowland_control_panel/components/parts/display_property_editor.dart';
+import 'package:snowland_control_panel/components/parts/number_property_editor.dart';
 import 'package:snowland_control_panel/components/parts/paint_editor.dart';
 import 'package:snowland_control_panel/components/parts/property_card.dart';
 import 'package:snowland_control_panel/components/parts/single_line_editor.dart';
@@ -48,15 +49,15 @@ class TextModuleEditor extends StatelessWidget {
                   minWidth: 300,
                   title: const Text("Position:"),
                   child: Column(
-                    children: const [
-                      ListTile(
+                    children: [
+                      const ListTile(
                         title: Text("Display"),
                         trailing: DisplayPropertyEditor(
                           group: ConfigurationPropertyGroup(
                               ["position", "display"]),
                         ),
                       ),
-                      ListTile(
+                      const ListTile(
                         title: Text("Horizontal alignment"),
                         trailing: AlignmentPropertyEditor(
                           property:
@@ -64,12 +65,36 @@ class TextModuleEditor extends StatelessWidget {
                           type: AlignmentPropertyType.horizontal,
                         ),
                       ),
-                      ListTile(
+                      const ListTile(
                         title: Text("Vertical alignment"),
                         trailing: AlignmentPropertyEditor(
                           property:
                               ConfigurationProperty(["position", "vertical"]),
                           type: AlignmentPropertyType.vertical,
+                        ),
+                      ),
+                      ListTile(
+                        title: const Text("X"),
+                        trailing: SizedBox(
+                          width: 200,
+                          child: NumberPropertyEditor<int>(
+                            property: const ConfigurationProperty(
+                              ["position", "x_offset"],
+                            ),
+                            draggable: true,
+                          ),
+                        ),
+                      ),
+                      ListTile(
+                        title: const Text("Y"),
+                        trailing: SizedBox(
+                          width: 200,
+                          child: NumberPropertyEditor<int>(
+                            property: const ConfigurationProperty(
+                                ["position", "y_offset"]
+                            ),
+                            draggable: true,
+                          ),
                         ),
                       ),
                     ],

@@ -61,7 +61,7 @@ class _StrokePropertyEditorState extends State<StrokePropertyEditor> {
               const Text("Width:"),
               const Spacer(),
               Expanded(
-                child: NumberPropertyEditor(
+                child: NumberPropertyEditor<double>(
                   property: widget.group.property(["width"]),
                 ),
               ),
@@ -74,7 +74,7 @@ class _StrokePropertyEditorState extends State<StrokePropertyEditor> {
               const Text("Miter:"),
               const Spacer(),
               Expanded(
-                child: NumberPropertyEditor(
+                child: NumberPropertyEditor<double>(
                   property: widget.group.property(["miter"]),
                 ),
               )
