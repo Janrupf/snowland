@@ -18,10 +18,6 @@ class PaintEditor extends StatelessWidget {
               children: [
                 BooleanPropertyEditor(
                   property: group.property(["anti_alias"]),
-                ),
-                IconButton(
-                  onPressed: _antiAliasHelp,
-                  icon: const Icon(Icons.help),
                 )
               ],
             ),
@@ -33,10 +29,6 @@ class PaintEditor extends StatelessWidget {
               children: [
                 BooleanPropertyEditor(
                   property: group.property(["dither"]),
-                ),
-                IconButton(
-                  onPressed: _ditherHelp,
-                  icon: const Icon(Icons.help),
                 )
               ],
             ),
@@ -48,8 +40,4 @@ class PaintEditor extends StatelessWidget {
           )
         ],
       );
-
-  void _antiAliasHelp() {}
-
-  void _ditherHelp() {}
 }
