@@ -17,7 +17,10 @@ abstract class ModuleEditor {
       return _NoEditorAvailable();
     }
 
-    return widget;
+    return Padding(
+      padding: const EdgeInsets.all(40),
+      child: widget,
+    );
   }
 }
 

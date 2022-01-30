@@ -73,9 +73,7 @@ class _NumberPropertyEditorState<T extends num>
               v = double.parse(newValue) as T;
             }
 
-            _value = v;
-
-            widget.property.set(context, v);
+            _updateValue(v);
           }),
         ),
       );
