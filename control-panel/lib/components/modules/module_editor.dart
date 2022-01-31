@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:snowland_control_panel/components/modules/clear_module_editor.dart';
 import 'package:snowland_control_panel/components/modules/countdown_module_editor.dart';
+import 'package:snowland_control_panel/components/modules/image_module_editor.dart';
 import 'package:snowland_control_panel/components/modules/snow_module_editor.dart';
 import 'package:snowland_control_panel/components/modules/text_module_editor.dart';
 
@@ -12,6 +13,7 @@ abstract class ModuleEditor {
     "Text": TextModuleEditor(),
     "Countdown": CountdownModuleEditor(),
     "Snow": SnowModuleEditor(),
+    "Image": ImageModuleEditor(),
   };
 
   static Widget createEditor(String type) {
