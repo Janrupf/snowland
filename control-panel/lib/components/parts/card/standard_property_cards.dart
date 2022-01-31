@@ -69,6 +69,7 @@ class StandardPropertyCards {
                 width: 200,
                 child: NumberPropertyEditor<int>(
                   property: baseGroup.property(["x_offset"]),
+                  signed: true,
                   draggable: true,
                 ),
               ),
@@ -79,6 +80,7 @@ class StandardPropertyCards {
                 width: 200,
                 child: NumberPropertyEditor<int>(
                   property: baseGroup.property(["y_offset"]),
+                  signed: true,
                   draggable: true,
                 ),
               ),
