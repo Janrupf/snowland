@@ -10,14 +10,22 @@ import 'package:snowland_control_panel/data/property.dart';
 class StandardPropertyCards {
   const StandardPropertyCards._();
 
-  static PropertyCard color(ConfigurationPropertyList<double> property) => PropertyCard(
-    title: const Text("Color"),
-    child: ColorPropertyEditor(
-      property: property,
-    ),
-  );
+  static PropertyCard color([ConfigurationPropertyList<double>? property]) {
+    property ??= ConfigurationPropertyList(["paint", "color"]);
 
-  static PropertyCard paint(ConfigurationPropertyGroup baseGroup) =>
+    return PropertyCard(
+      title: const Text("Color"),
+      child: ColorPropertyEditor(
+        property: property,
+      ),
+    );
+  }
+
+  static PropertyCard paint([
+    ConfigurationPropertyGroup baseGroup = const ConfigurationPropertyGroup(
+      ["paint"],
+    ),
+  ]) =>
       PropertyCard(
         title: const Text("Paint settings:"),
         child: PaintEditor(
@@ -25,7 +33,11 @@ class StandardPropertyCards {
         ),
       );
 
-  static PropertyCard position(ConfigurationPropertyGroup baseGroup) =>
+  static PropertyCard position([
+    ConfigurationPropertyGroup baseGroup = const ConfigurationPropertyGroup(
+      ["position"],
+    ),
+  ]) =>
       PropertyCard(
         minWidth: 300,
         title: const Text("Position:"),

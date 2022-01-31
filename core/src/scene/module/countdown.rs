@@ -1,6 +1,4 @@
-use std::fmt::{Display, Formatter};
-
-use chrono::{DateTime, Datelike, Local, NaiveTime};
+use chrono::{DateTime, Local, TimeZone, Utc};
 use serde::{Deserialize, Serialize};
 use skia_safe::Point;
 
@@ -23,84 +21,10 @@ impl Module for CountdownModule {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum CountdownTarget {
-    Christmas,
-    NewYear,
-}
-
-impl CountdownTarget {
-    pub const fn name(&self) -> &'static str {
-        match self {
-            CountdownTarget::Christmas => "Christmas",
-            CountdownTarget::NewYear => "New Year",
-        }
-    }
-
-    pub const fn ordinal(&self) -> usize {
-        match self {
-            CountdownTarget::Christmas => 0,
-            CountdownTarget::NewYear => 1,
-        }
-    }
-
-    pub const fn from_ordinal(ordinal: usize) -> Self {
-        match ordinal {
-            0 => CountdownTarget::Christmas,
-            1 => CountdownTarget::NewYear,
-            _ => panic!("Invalid countdown target ordinal"),
-        }
-    }
-
-    pub const fn names() -> [&'static str; 2] {
-        [Self::from_ordinal(0).name(), Self::from_ordinal(1).name()]
-    }
-
-    pub fn get_date_time(&self) -> DateTime<Local> {
-        let now = Local::now();
-
-        match self {
-            CountdownTarget::Christmas => Local::today()
-                .with_day(25)
-                .and_then(|d| d.with_month(12))
-                .and_then(|d| {
-                    if now.date() > d {
-                        d.with_year(now.year() + 1)
-                    } else {
-                        Some(d)
-                    }
-                })
-                .and_then(|d| d.and_time(NaiveTime::from_hms(0, 0, 0)))
-                .unwrap(),
-
-            CountdownTarget::NewYear => Local::today()
-                .with_day(1)
-                .and_then(|d| d.with_month(1))
-                .and_then(|d| d.with_year(now.year() + 1))
-                .and_then(|d| d.and_time(NaiveTime::from_hms(0, 0, 0)))
-                .unwrap(),
-        }
-    }
-}
-
-impl Display for CountdownTarget {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.name())
-    }
-}
-
-impl Default for CountdownTarget {
-    fn default() -> Self {
-        Self::NewYear
-    }
-}
-
-impl ModuleConfig for CountdownTarget {}
-
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct CountdownModuleConfig {
     position: ModulePosition,
-    target: CountdownTarget,
+    target: i64,
     paint: PaintSetting,
     font: FontSetting,
 }
@@ -144,7 +68,10 @@ impl ModuleRenderer for CountdownModuleRenderer {
     type Config = CountdownModuleConfig;
 
     fn render<'a>(&mut self, config: &Self::Config, data: &mut SceneData<'a>) {
-        let value = Self::make_countdown_string(config.target.get_date_time());
+        let utc = Utc.timestamp_millis(config.target);
+        let local = DateTime::<Local>::from(utc);
+
+        let value = Self::make_countdown_string(local);
 
         let (_, rect) = config
             .font
