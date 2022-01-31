@@ -1,11 +1,10 @@
-use skia_safe::luma_color_filter::new;
 use std::collections::HashMap;
 use std::time::Instant;
 
 use skia_safe::Surface;
 
 use crate::rendering::display::Display;
-use crate::scene::module::ModuleContainer;
+use crate::scene::module::{KnownModules, ModuleContainer};
 use crate::scene::SceneData;
 use crate::SnowlandRenderer;
 
@@ -89,6 +88,16 @@ where
     pub fn reorder_modules(&mut self, old_index: usize, new_index: usize) {
         let m = self.modules.remove(old_index);
         self.modules.insert(new_index, m);
+    }
+
+    /// Attempts to add a module by its name.
+    pub fn add_module_by_type(&mut self, ty: String) {
+        if let Some(wrapper) = KnownModules::look_up(&ty) {
+            self.modules.push(wrapper.create_with_default_config());
+            log::debug!("Inserted module of type {}", ty);
+        } else {
+            log::error!("Tried to add a module of unknown type {}", ty);
+        }
     }
 
     /// Updates the configuration of a module.

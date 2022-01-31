@@ -3,6 +3,7 @@ import 'package:snowland_control_panel/com/dart_to_native.dart';
 import 'package:snowland_control_panel/com/native_to_dart.dart';
 import 'package:snowland_control_panel/components/module_list.dart';
 import 'package:snowland_control_panel/components/modules/module_editor.dart';
+import 'package:snowland_control_panel/components/routes/add_module_route.dart';
 import 'package:snowland_control_panel/data/configuration.dart';
 import 'package:snowland_control_panel/data/property.dart';
 import 'package:snowland_control_panel/logger.dart';
@@ -80,10 +81,24 @@ class _ConnectedViewConfigurationContainerState
   Widget _buildSidebar(BuildContext context) => Container(
         constraints: const BoxConstraints(maxWidth: 200),
         child: Material(
-            child: ModuleList(
-          configuration: widget.configuration,
-          onSelected: _onModuleSelected,
-          onReorder: _onModuleReorder,
+            child: Column(
+          mainAxisSize: MainAxisSize.max,
+          children: [
+            Expanded(
+              child: ModuleList(
+                configuration: widget.configuration,
+                onSelected: _onModuleSelected,
+                onReorder: _onModuleReorder,
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 20.0),
+              child: ElevatedButton(
+                onPressed: () => _onAddModuleClicked(context),
+                child: const Text("Add new module"),
+              ),
+            ),
+          ],
         )),
       );
 
@@ -146,5 +161,15 @@ class _ConnectedViewConfigurationContainerState
     logger.trace("Configuration changed for module ${_selectedModule!.type}");
     DartToNativeCommunicator.instance
         .updateConfiguration(idx, _selectedModule!.configuration);
+  }
+
+  void _onAddModuleClicked(BuildContext context) {
+    Navigator.of(context).push(MaterialPageRoute<String>(
+      builder: (context) => const AddModuleRoute(),
+    )).then((moduleToAdd) {
+      if(moduleToAdd != null) {
+        DartToNativeCommunicator.instance.addModule(moduleToAdd);
+      }
+    });
   }
 }

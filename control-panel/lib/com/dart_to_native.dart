@@ -28,4 +28,8 @@ class DartToNativeCommunicator {
     _dartToNativeChannel
         .invokeMethod("change_configuration", [module, newConfiguration]);
   }
+
+  void addModule(String type) {
+    _dartToNativeChannel.invokeMethod("add_module", type);
+  }
 }

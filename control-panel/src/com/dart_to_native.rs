@@ -104,4 +104,12 @@ impl DartToNativeChannel {
 
         Ok(())
     }
+
+    /// Asks the IPC dispatcher to send a [`ClientMessage::AddModule`] message over IPC to the
+    /// daemon.
+    pub fn add_module(&mut self, ty: String) -> Result<(), std::convert::Infallible> {
+        self.ipc_handle.send_message(ClientMessage::AddModule(ty));
+
+        Ok(())
+    }
 }

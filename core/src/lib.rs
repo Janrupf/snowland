@@ -95,6 +95,10 @@ where
                     self.container
                         .replace_module_configuration(module, new_configuration);
                 }
+                ClientMessage::AddModule(ty) => {
+                    self.container.add_module_by_type(ty);
+                    self.send_configuration_over_ipc();
+                }
             }
         }
     }

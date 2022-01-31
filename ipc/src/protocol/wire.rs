@@ -7,6 +7,7 @@ pub enum ClientMessage {
     QueryDisplays,
     ReorderModules(usize, usize),
     ChangeConfiguration(ChangeConfiguration),
+    AddModule(String),
 }
 
 #[derive(Debug, Serialize, Deserialize)]

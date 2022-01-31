@@ -101,7 +101,7 @@ class _DateTimeAlertDialogState extends State<_DateTimeAlertDialog> {
               width: 20,
             ),
             SizedBox(
-                height: 300,
+                height: 200,
                 width: 300,
                 child: TimePickerInput(
                   initialSelectedTime: TimeOfDay.fromDateTime(_current),
