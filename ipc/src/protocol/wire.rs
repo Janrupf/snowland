@@ -8,6 +8,7 @@ pub enum ClientMessage {
     ReorderModules(usize, usize),
     ChangeConfiguration(ChangeConfiguration),
     AddModule(String),
+    RemoveModule(usize),
 }
 
 #[derive(Debug, Serialize, Deserialize)]

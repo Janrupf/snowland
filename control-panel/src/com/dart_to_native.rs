@@ -112,4 +112,13 @@ impl DartToNativeChannel {
 
         Ok(())
     }
+
+    /// Asks the IPC dispatcher to send a [`ClientMessage::RemoveModule`] message over IPC to the
+    /// daemon.
+    pub fn remove_module(&mut self, module: usize) -> Result<(), std::convert::Infallible> {
+        self.ipc_handle
+            .send_message(ClientMessage::RemoveModule(module));
+
+        Ok(())
+    }
 }

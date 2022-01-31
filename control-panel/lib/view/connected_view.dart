@@ -117,16 +117,32 @@ class _ConnectedViewConfigurationContainerState
 
     return Expanded(
       child: LayoutBuilder(
-        builder: (context, viewportConstraints) => SingleChildScrollView(
-          child: ConstrainedBox(
-            constraints: BoxConstraints(
-              minHeight: viewportConstraints.maxHeight,
-            ),
-            child: ConfigurationProvider(
-              configuration: _selectedModule!.configuration,
-              onChange: _onConfigurationChanged,
-              child: ModuleEditor.createEditor(_selectedModule!.type),
-            ),
+        builder: (context, viewportConstraints) => ConstrainedBox(
+          constraints: BoxConstraints(
+            minHeight: viewportConstraints.maxHeight,
+            maxHeight: viewportConstraints.maxHeight,
+          ),
+          child: Column(
+            children: [
+              AppBar(
+                title: Text(_selectedModule!.type),
+                actions: [
+                  IconButton(
+                    onPressed: _onDeleteModuleClicked,
+                    icon: const Icon(Icons.delete),
+                  ),
+                ],
+              ),
+              Expanded(
+                child: SingleChildScrollView(
+                  child: ConfigurationProvider(
+                    configuration: _selectedModule!.configuration,
+                    onChange: _onConfigurationChanged,
+                    child: ModuleEditor.createEditor(_selectedModule!.type),
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
       ),
@@ -164,12 +180,33 @@ class _ConnectedViewConfigurationContainerState
   }
 
   void _onAddModuleClicked(BuildContext context) {
-    Navigator.of(context).push(MaterialPageRoute<String>(
+    Navigator.of(context)
+        .push(MaterialPageRoute<String>(
       builder: (context) => const AddModuleRoute(),
-    )).then((moduleToAdd) {
-      if(moduleToAdd != null) {
+    ))
+        .then((moduleToAdd) {
+      if (moduleToAdd != null) {
         DartToNativeCommunicator.instance.addModule(moduleToAdd);
+
+        setState(() {
+          _selectedModule = null;
+        });
       }
+    });
+  }
+
+  void _onDeleteModuleClicked() {
+    final idx = widget.configuration.modules.indexOf(_selectedModule!);
+    if (idx < 0) {
+      logger.error(
+          "Module to delete not found in installed modules!");
+      return;
+    }
+
+    DartToNativeCommunicator.instance.removeModule(idx);
+
+    setState(() {
+      _selectedModule = null;
     });
   }
 }

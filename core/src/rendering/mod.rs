@@ -100,6 +100,11 @@ where
         }
     }
 
+    /// Removes a module from the module list.
+    pub fn remove_module(&mut self, index: usize) {
+        self.modules.remove(index);
+    }
+
     /// Updates the configuration of a module.
     pub fn replace_module_configuration(
         &mut self,

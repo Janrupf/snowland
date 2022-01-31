@@ -32,4 +32,8 @@ class DartToNativeCommunicator {
   void addModule(String type) {
     _dartToNativeChannel.invokeMethod("add_module", type);
   }
+  
+  void removeModule(int module) {
+    _dartToNativeChannel.invokeMethod("remove_module", module);
+  }
 }

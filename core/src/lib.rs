@@ -99,6 +99,10 @@ where
                     self.container.add_module_by_type(ty);
                     self.send_configuration_over_ipc();
                 }
+                ClientMessage::RemoveModule(module) => {
+                    self.container.remove_module(module);
+                    self.send_configuration_over_ipc();
+                }
             }
         }
     }
