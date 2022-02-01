@@ -36,4 +36,6 @@ class DartToNativeCommunicator {
   void removeModule(int module) {
     _dartToNativeChannel.invokeMethod("remove_module", module);
   }
+
+  Future startDaemon() => _dartToNativeChannel.invokeMethod("start_daemon");
 }

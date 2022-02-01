@@ -147,11 +147,28 @@ fn generate_arm(tr: &ItemImpl, method: &ImplItemMethod) -> Option<TokenStream> {
         }
     };
 
+    let responder_constructor = if !has_responder {
+        quote::quote! { crate::com::Responder::<crate::com::DirectInnerResponder>::new(&call, reply) }
+    } else {
+        quote::quote! {
+            {
+                let context = nativeshell::shell::Context::current().unwrap();
+                let sender = context.run_loop.borrow().new_sender();
+
+                crate::com::Responder::<crate::com::ThreadSafeInnerResponder>::new(
+                    &call,
+                    reply,
+                    sender,
+                )
+            }
+        }
+    };
+
     Some(quote::quote! {
         #name_str => {
             #arguments_type;
 
-            let responder = crate::com::Responder::new(&call, reply);
+            let responder = #responder_constructor;
             let args: Args = match crate::util::reserialize(call.args) {
                 Ok(v) => v,
                 Err(err) => {

@@ -63,10 +63,9 @@ class SnowlandControlPanelState extends WindowState {
         style: TextStyle(
           fontSize: 14,
         ),
-        child: MainViewWrapper(),
+        child: Scaffold(body: MainViewWrapper()),
       ));
 
   @override
-  WindowSizingMode get windowSizingMode =>
-      WindowSizingMode.manual;
+  WindowSizingMode get windowSizingMode => WindowSizingMode.manual;
 }

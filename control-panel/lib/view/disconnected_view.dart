@@ -15,9 +15,19 @@ class DisconnectedView extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               _buildText(context),
-              ElevatedButton(
-                  onPressed: _onConnectPressed,
-                  child: const Text("Retry connection"))
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  ElevatedButton(
+                    onPressed: _onConnectPressed,
+                    child: const Text("Retry connection"),
+                  ),
+                  ElevatedButton(
+                    onPressed: () => _onStartPressed(context),
+                    child: const Text("Start daemon"),
+                  )
+                ],
+              ),
             ],
           ),
         ),
@@ -41,5 +51,19 @@ class DisconnectedView extends StatelessWidget {
 
   void _onConnectPressed() {
     DartToNativeCommunicator.instance.connectToIpc();
+  }
+
+  void _onStartPressed(BuildContext context) {
+    DartToNativeCommunicator.instance.startDaemon().then((value) {
+      const snackBar = SnackBar(content: Text("Daemon started!"));
+      ScaffoldMessenger.of(context).showSnackBar(snackBar);
+
+      Future.delayed(const Duration(milliseconds: 50), _onConnectPressed);
+    }, onError: (error) {
+      final snackBar = SnackBar(
+        content: Text("Failed to start daemon: $error"),
+      );
+      ScaffoldMessenger.of(context).showSnackBar(snackBar);
+    });
   }
 }

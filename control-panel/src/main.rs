@@ -74,13 +74,13 @@ fn main() {
     }
 
     // Create the ipc setup
-    let ipc_handle = IPCHandle::new(context.run_loop.borrow().new_sender());
+    let mut ipc_handle = IPCHandle::new(context.run_loop.borrow().new_sender());
 
     // We also need to register some communication channels with dart
     log::debug!("Registering method channels...");
     let _dart_to_native = DartToNativeChannel::register(&context, ipc_handle.clone());
-    let _ipc_state_event = IpcStateEventChannel::register(&context);
-    let _display_change_event = IpcDisplayEventChannel::register(&context, ipc_handle);
+    let _ipc_state_event = IpcStateEventChannel::register(&context, ipc_handle.clone());
+    let _display_change_event = IpcDisplayEventChannel::register(&context, ipc_handle.clone());
 
     // Setup is done, we can now start the application run loop (and thus basically hand of control
     // to flutter)
@@ -89,4 +89,7 @@ fn main() {
 
     // Reaching this point means the flutter main window was closed. We can do some cleanup here
     log::info!("Snowland control panel shutting down!");
+
+    // Terminate the IPC
+    ipc_handle.shutdown();
 }

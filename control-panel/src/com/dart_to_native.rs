@@ -1,3 +1,4 @@
+use crate::com::{Responder, ThreadSafeInnerResponder};
 use crate::ipc::{IPCDispatcherError, IPCHandle};
 use crate::mcr;
 use nativeshell::shell::{ContextRef, EngineHandle, MethodChannel};
@@ -46,8 +47,6 @@ impl DartToNativeChannel {
         &mut self,
         #[engine] engine: EngineHandle,
     ) -> Result<(), IPCDispatcherError> {
-        log::debug!("Attempting to connect to IPC...");
-
         self.ipc_handle.start_connecting(engine)?;
 
         Ok(())
@@ -120,5 +119,13 @@ impl DartToNativeChannel {
             .send_message(ClientMessage::RemoveModule(module));
 
         Ok(())
+    }
+
+    /// Attempts to start the daemon as an external process.
+    pub fn start_daemon(#[responder] responder: Responder<ThreadSafeInnerResponder>) {
+        std::thread::spawn(move || {
+            let start_result = crate::ipc::launcher::start_daemon();
+            responder.result(start_result);
+        });
     }
 }
