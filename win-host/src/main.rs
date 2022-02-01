@@ -3,6 +3,7 @@
 use snowland_core::Snowland;
 
 use crate::graphics::SkiaWGLSnowlandRender;
+use crate::shell::{Error, ShellIntegrationWindow};
 
 mod graphics;
 mod progman;
@@ -41,8 +42,20 @@ fn main() {
         );
     }
 
+    let shell_integration = match ShellIntegrationWindow::new() {
+        Ok(v) => Some(v),
+        Err(err) => {
+            log::warn!("Failed to start shell integration: {}", err);
+            None
+        }
+    };
+
     loop {
         snowland.draw_frame().expect("Failed to draw frame");
         snowland.tick_ipc().expect("Failed to tick IPC");
+
+        if let Some(integration) = &shell_integration {
+            integration.process_messages();
+        }
     }
 }

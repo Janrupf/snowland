@@ -10,43 +10,19 @@ use windows::Win32::Foundation::{HINSTANCE, HWND, LPARAM, LRESULT, PSTR, WPARAM}
 use windows::Win32::System::LibraryLoader::GetModuleHandleA;
 use windows::Win32::UI::WindowsAndMessaging::{
     CreateWindowExA, DefWindowProcA, DestroyWindow, DispatchMessageA, GetMessageA,
-    GetWindowLongPtrA, PostQuitMessage, RegisterClassA, SetWindowLongPtrA, TranslateMessage,
-    UnregisterClassA, CREATESTRUCTA, GWLP_USERDATA, MSG, WINDOW_EX_STYLE, WINDOW_STYLE, WM_DESTROY,
-    WM_NCCREATE, WNDCLASSA,
+    GetWindowLongPtrA, PeekMessageA, PostQuitMessage, RegisterClassA, SetWindowLongPtrA,
+    TranslateMessage, UnregisterClassA, CREATESTRUCTA, GWLP_USERDATA, MSG, PM_REMOVE,
+    WINDOW_EX_STYLE, WINDOW_STYLE, WM_DESTROY, WM_NCCREATE, WNDCLASSA,
 };
 
-use crate::util::WinApiError;
 use integration::*;
 use snowland_core::control::ControlMessage;
 use snowland_core::util::Notifier;
 use snowland_misc::delayed::{Delayed, DelayedResolver};
 
+use crate::util::WinApiError;
+
 mod integration;
-
-/// Starts the shell integration on a new thread.
-pub fn start_shell_integration(
-    notifier: Notifier<ControlMessage>,
-) -> (Notifier<ControlMessage>, JoinHandle<Result<(), Error>>) {
-    let (delayed_notifier, resolver) = Delayed::new();
-
-    let startup_data = ShellIntegrationStartupData::new(notifier, resolver);
-    let handle = std::thread::spawn(|| shell_integration_main(startup_data));
-
-    let notifier = delayed_notifier.wait();
-
-    (notifier, handle)
-}
-
-/// Starts the shell integration on the current thread.
-fn shell_integration_main(data: ShellIntegrationStartupData) -> Result<(), Error> {
-    match ShellIntegrationWindow::new(data) {
-        Ok(v) => v.run(),
-        Err(err) => {
-            log::error!("Shell integration failed to start: {}", err);
-            Err(err)
-        }
-    }
-}
 
 /// The window class name for the shell integration window.
 const WINDOW_CLASS_NAME: &str = "SnowlandWinHostShellIntegration";
@@ -63,12 +39,7 @@ extern "system" fn window_procedure(
     std::panic::catch_unwind(|| {
         match message {
             WM_NCCREATE => {
-                let create_parameters =
-                    unsafe { (NonNull::<CREATESTRUCTA>::new_unchecked(l_param.0 as _)).as_ref() };
-
-                let data = unsafe { Box::from_raw(create_parameters.lpCreateParams as _) };
-
-                let integration = match ShellIntegration::new(*data, window) {
+                let integration = match ShellIntegration::new(window) {
                     Ok(v) => v,
                     Err(err) => {
                         log::error!("Failed to create shell integration: {}", err);
@@ -138,47 +109,19 @@ extern "system" fn window_procedure(
     })
 }
 
-/// Bundle of data required to start the shell integration and wire it with the host.
-pub(crate) struct ShellIntegrationStartupData {
-    /// integration to host notifier
-    notifier: Notifier<ControlMessage>,
-    /// host to integration notifier, depends on the window to be created
-    resolver: DelayedResolver<Notifier<ControlMessage>>,
-}
-
-impl ShellIntegrationStartupData {
-    /// Compiles the startup data to be ready to be sent to the integration thread.
-    fn new(
-        notifier: Notifier<ControlMessage>,
-        resolver: DelayedResolver<Notifier<ControlMessage>>,
-    ) -> Self {
-        Self { notifier, resolver }
-    }
-
-    /// Resolves this startup data by sending back the host notifier and extracting the integration
-    /// notifier.
-    pub fn resolve(self, host_notifier: Notifier<ControlMessage>) -> Notifier<ControlMessage> {
-        let Self { notifier, resolver } = self;
-
-        resolver.resolve(host_notifier);
-
-        notifier
-    }
-}
-
 /// Helper window in order to provide message processing.
 ///
 /// This window will never be visible or directly interacted with by the user, but is required
 /// to for example interact properly with the system tray.
 #[derive(Debug)]
-struct ShellIntegrationWindow {
+pub struct ShellIntegrationWindow {
     h_instance: HINSTANCE,
     window: HWND,
 }
 
 impl ShellIntegrationWindow {
     /// Creates the shell integration window.
-    pub fn new(data: ShellIntegrationStartupData) -> Result<Self, Error> {
+    pub fn new() -> Result<Self, Error> {
         let h_instance = unsafe { GetModuleHandleA(None) };
 
         let mut window_class_name = CString::new(WINDOW_CLASS_NAME).unwrap().into_bytes();
@@ -195,13 +138,6 @@ impl ShellIntegrationWindow {
             return Err(Error::ClassRegistrationFailed(WinApiError::from_win32()));
         }
 
-        // Dispatch a notification about the display configuration
-        data.notifier.notify(ControlMessage::UpdateDisplays(
-            crate::util::display::get_displays(),
-        ));
-
-        let data = Box::into_raw(Box::new(data));
-
         // This creates a very basic window which is not visible.
         let window = unsafe {
             CreateWindowExA(
@@ -216,7 +152,7 @@ impl ShellIntegrationWindow {
                 None,
                 None,
                 h_instance,
-                data as _,
+                std::ptr::null(),
             )
         };
 
@@ -227,21 +163,17 @@ impl ShellIntegrationWindow {
         Ok(ShellIntegrationWindow { h_instance, window })
     }
 
-    /// Runs the windows message loop and processes incoming window messages.
-    pub fn run(&self) -> Result<(), Error> {
+    /// Process all messages in the message queue and then returns control.
+    pub fn process_messages(&self) {
         let mut msg = MSG::default();
 
-        log::debug!("Starting shell integration loop...");
         unsafe {
-            while GetMessageA(&mut msg, None, 0, 0).as_bool() {
+            while PeekMessageA(&mut msg, None, 0, 0, PM_REMOVE).as_bool() {
                 log::debug!("Dispatching message: {:?}", msg);
                 TranslateMessage(&msg);
                 DispatchMessageA(&msg);
             }
         }
-        log::debug!("Shell integration loop finished!");
-
-        Ok(())
     }
 }
 
