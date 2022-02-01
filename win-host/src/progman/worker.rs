@@ -1,7 +1,7 @@
 use windows::Win32::Foundation::HWND;
 use windows::Win32::UI::WindowsAndMessaging::GetWindowRect;
 
-use crate::WinApiError;
+use crate::util::WinApiError;
 
 /// Represents a ProgMan worker window.
 #[derive(Debug)]

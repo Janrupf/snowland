@@ -15,11 +15,11 @@ use windows::Win32::UI::WindowsAndMessaging::{
     WM_NCCREATE, WNDCLASSA,
 };
 
+use crate::util::WinApiError;
 use integration::*;
 use snowland_core::control::ControlMessage;
-use snowland_core::util::{Delayed, DelayedResolver, Notifier};
-
-use crate::WinApiError;
+use snowland_core::util::Notifier;
+use snowland_misc::delayed::{Delayed, DelayedResolver};
 
 mod integration;
 

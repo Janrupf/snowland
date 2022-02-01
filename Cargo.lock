@@ -2461,6 +2461,7 @@ dependencies = [
  "raw-window-handle 0.4.2",
  "skia-safe",
  "snowland-core",
+ "snowland-misc",
  "thiserror",
  "windows",
  "winit",

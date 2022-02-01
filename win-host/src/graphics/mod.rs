@@ -6,12 +6,11 @@ use windows::Win32::Graphics::Gdi::{
 };
 use windows::Win32::Graphics::OpenGL::{ChoosePixelFormat, SetPixelFormat, PIXELFORMATDESCRIPTOR};
 
+use crate::util::WinApiError;
 pub use skia_wgl::Error as SkiaWGLError;
 pub use skia_wgl::*;
 pub use wgl::Error as WGLError;
 pub use wgl::*;
-
-use crate::WinApiError;
 
 mod skia_wgl;
 mod wgl;

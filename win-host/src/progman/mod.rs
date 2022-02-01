@@ -6,7 +6,7 @@ use windows::Win32::UI::WindowsAndMessaging::{
 
 pub use worker::*;
 
-use crate::WinApiError;
+use crate::util::WinApiError;
 
 mod worker;
 

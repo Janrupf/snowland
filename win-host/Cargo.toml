@@ -16,6 +16,7 @@ raw-window-handle = "0.4.1"
 rand = "0.8.4"
 
 snowland-core = { path = "../core" }
+snowland-misc = { path = "../misc" }
 
 [dependencies.windows]
 version = "0.28.0"

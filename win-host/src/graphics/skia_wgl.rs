@@ -7,8 +7,9 @@ use windows::Win32::Graphics::OpenGL::GL_RGBA8;
 
 use snowland_core::host::SnowlandRenderer;
 
-use crate::graphics::WGLContext;
-use crate::{Graphics, ProgMan, WinApiError, Worker};
+use crate::graphics::{Graphics, WGLContext};
+use crate::progman::{ProgMan, Worker};
+use crate::util::WinApiError;
 
 /// Snowland renderer based on WGL.
 #[derive(Debug)]

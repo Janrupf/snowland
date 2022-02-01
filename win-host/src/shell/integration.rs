@@ -20,7 +20,7 @@ use snowland_core::control::ControlMessage;
 use snowland_core::util::{Notifier, NotifierImpl};
 
 use crate::shell::ShellIntegrationStartupData;
-use crate::WinApiError;
+use crate::util::WinApiError;
 
 /// Shell integration of Snowland.
 ///

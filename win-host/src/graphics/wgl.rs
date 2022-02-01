@@ -9,7 +9,7 @@ use windows::Win32::Graphics::OpenGL::{
 };
 use windows::Win32::System::LibraryLoader::{FreeLibrary, GetProcAddress, LoadLibraryA};
 
-use crate::WinApiError;
+use crate::util::WinApiError;
 
 #[derive(Debug)]
 pub struct WGLContext {

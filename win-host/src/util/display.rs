@@ -21,7 +21,7 @@ use windows::Win32::UI::WindowsAndMessaging::{
 use snowland_core::rendering::display::Display;
 
 use crate::util::extensions::FromWideNull;
-use crate::WinApiError;
+use crate::util::WinApiError;
 
 type EnumDisplayMonitorsUserData<'a> = (&'a mut Vec<Display>, &'a HashMap<OsString, MonitorData>);
 
