@@ -53,9 +53,12 @@ fn main() {
     };
 
     snowland.update_displays(get_displays(&screen));
-    snowland
-        .load_configuration_from_disk()
-        .expect("Failed to load modules from disk");
+    if let Err(err) = snowland.load_configuration_from_disk() {
+        log::warn!(
+            "Failed to load module configuration form disk, starting without modules: {}",
+            err
+        );
+    }
 
     while !SHOULD_SHUTDOWN.load(Ordering::Relaxed) {
         snowland.draw_frame().expect("Failed to draw frame");

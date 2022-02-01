@@ -1,5 +1,5 @@
 use std::path::PathBuf;
-use std::process::Command;
+use std::process::{Command, Stdio};
 use thiserror::Error;
 
 #[cfg(target_os = "windows")]
@@ -16,7 +16,7 @@ pub fn start_daemon() -> Result<(), DaemonStartError> {
         Ok(p) => p
             .parent()
             .map(|p| p.to_owned())
-            .unwrap_or(PathBuf::from("/")),
+            .unwrap_or_else(|| PathBuf::from("/")),
         Err(exe_err) => {
             log::warn!(
                 "Failed to retrieve path of own executable, falling back to working directory: {}",
@@ -47,7 +47,12 @@ pub fn start_daemon() -> Result<(), DaemonStartError> {
     // TODO: This might lead to zombie processes on Linux, we should probably set up a
     //       a signal handler for SIGCHLD calling "wait" so that the process is reaped.
     //       However, this would only ever be a problem if the daemon crashes in first place...
-    match Command::new(daemon_path).spawn() {
+    match Command::new(daemon_path)
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .spawn()
+    {
         Ok(v) => {
             log::debug!("Daemon process spawned as PID {}", v.id());
         }
