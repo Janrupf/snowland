@@ -44,7 +44,7 @@ fn generate_wrapper(im: &ItemImpl) -> TokenStream {
 
     let arms = im.items.iter().filter_map(|item| {
         if let ImplItem::Method(method) = item {
-            generate_arm(im, method)
+            generate_arm(method)
         } else {
             None
         }
@@ -73,7 +73,7 @@ fn generate_wrapper(im: &ItemImpl) -> TokenStream {
     }
 }
 
-fn generate_arm(tr: &ItemImpl, method: &ImplItemMethod) -> Option<TokenStream> {
+fn generate_arm(method: &ImplItemMethod) -> Option<TokenStream> {
     if !matches!(method.vis, Visibility::Public(_)) {
         return None;
     }

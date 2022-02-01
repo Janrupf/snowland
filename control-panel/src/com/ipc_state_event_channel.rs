@@ -1,3 +1,4 @@
+use crate::ipc::IPCDispatcherError;
 use crate::{mcr, IPCHandle};
 use nativeshell::shell::{ContextRef, EngineHandle, MethodChannel};
 
@@ -21,15 +22,10 @@ impl IpcStateEventChannel {
     ///
     /// In reality this does not perform any listening, but instead attempts
     /// to connect to the IPC.
-    pub fn listen(
-        &mut self,
-        #[engine] engine: EngineHandle,
-    ) -> Result<(), std::convert::Infallible> {
+    pub fn listen(&mut self, #[engine] engine: EngineHandle) -> Result<(), IPCDispatcherError> {
         log::debug!("Attempting to connect to IPC...");
 
-        self.ipc_handle.start_connecting(engine);
-
-        Ok(())
+        self.ipc_handle.start_connecting(engine)
     }
 
     pub fn cancel() -> Result<(), std::convert::Infallible> {

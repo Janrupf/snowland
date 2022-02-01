@@ -61,7 +61,7 @@ impl IPCHandle {
             let mut guard = self.inner.write().unwrap();
             if let Some(inner) = guard.take() {
                 if let Err(err) = inner.handle.join() {
-                    log::warn!("Failed to join IPC dispatcher thread!");
+                    log::warn!("Failed to join IPC dispatcher thread: {:?}", err);
                 } else {
                     log::debug!("IPC dispatcher thread joined!");
                 }

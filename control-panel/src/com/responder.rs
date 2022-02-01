@@ -70,7 +70,7 @@ impl InnerResponder for ThreadSafeInnerResponder {
         let message = message.map(|s| s.to_owned());
 
         self.with_reply(move |r| {
-            r.send_error(&code, message.as_ref().map(|s| s.as_str()), details);
+            r.send_error(&code, message.as_deref(), details);
         });
     }
 }
