@@ -30,11 +30,6 @@ static KNOWN_MODULES: SyncLazy<HashMap<String, ModuleWrapper>> = SyncLazy::new(|
 pub struct KnownModules;
 
 impl KnownModules {
-    /// Retrieves an iterator for all entries
-    pub fn iter() -> impl Iterator<Item = (&'static String, &'static ModuleWrapper)> {
-        (*KNOWN_MODULES).iter()
-    }
-
     /// Looks up a module by its name.
     pub fn look_up(name: &str) -> Option<&'static ModuleWrapper> {
         (*KNOWN_MODULES).get(name)

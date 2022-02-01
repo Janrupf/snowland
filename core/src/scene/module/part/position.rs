@@ -12,8 +12,6 @@ pub enum HorizontalPositionAnchor {
 }
 
 impl HorizontalPositionAnchor {
-    const VALUES: [Self; 3] = [Self::Left, Self::Center, Self::Right];
-
     pub fn compute(&self, available: i32, value: i32) -> i32 {
         match self {
             Self::Left => 0,
@@ -39,8 +37,6 @@ pub enum VerticalPositionAnchor {
 }
 
 impl VerticalPositionAnchor {
-    const VALUES: [Self; 3] = [Self::Top, Self::Center, Self::Bottom];
-
     pub fn compute(&self, available: i32, value: i32) -> i32 {
         match self {
             Self::Top => 0,

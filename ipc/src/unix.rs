@@ -1,7 +1,7 @@
 //! Unix specific IPC backend.
 
 use crate::SnowlandIPCError;
-use std::io::{Read, Write};
+use std::io::Read;
 use std::marker::PhantomData;
 
 #[cfg(not(feature = "poll"))]
@@ -9,6 +9,9 @@ use std::os::unix::net::{UnixListener, UnixStream};
 
 #[cfg(feature = "poll")]
 use mio::net::{UnixListener, UnixStream};
+
+#[cfg(feature = "poll")]
+use std::io::Write;
 
 use crate::protocol::{ClientMessage, IPCMessage, ServerMessage};
 use bincode::error::DecodeError;
