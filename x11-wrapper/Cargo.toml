@@ -5,7 +5,7 @@ edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
-[dependencies]
+[target.'cfg(target_os = "linux")'.dependencies]
 x11 = { version = "2.19.1", features = ["xlib", "glx", "xrandr"] }
 thiserror = "1.0.30"
 
