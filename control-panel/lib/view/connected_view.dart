@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:snowland_control_panel/com/dart_to_native.dart';
 import 'package:snowland_control_panel/com/native_to_dart.dart';
 import 'package:snowland_control_panel/components/module_list.dart';
-import 'package:snowland_control_panel/components/modules/module_editor.dart';
+import 'package:snowland_control_panel/components/modules/module_registry.dart';
 import 'package:snowland_control_panel/components/routes/add_module_route.dart';
 import 'package:snowland_control_panel/data/configuration.dart';
 import 'package:snowland_control_panel/data/property.dart';
@@ -67,6 +67,7 @@ class _ConnectedViewConfigurationContainer extends StatefulWidget {
 class _ConnectedViewConfigurationContainerState
     extends State<_ConnectedViewConfigurationContainer> {
   InstalledModule? _selectedModule;
+  int _listRebuildKey = 0;
 
   @override
   Widget build(BuildContext context) {
@@ -86,6 +87,7 @@ class _ConnectedViewConfigurationContainerState
           children: [
             Expanded(
               child: ModuleList(
+                key: ValueKey(_listRebuildKey),
                 configuration: widget.configuration,
                 onSelected: _onModuleSelected,
                 onReorder: _onModuleReorder,
@@ -138,7 +140,7 @@ class _ConnectedViewConfigurationContainerState
                   child: ConfigurationProvider(
                     configuration: _selectedModule!.configuration,
                     onChange: _onConfigurationChanged,
-                    child: ModuleEditor.createEditor(_selectedModule!.type),
+                    child: ModuleRegistry.createEditor(_selectedModule!.type),
                   ),
                 ),
               ),
@@ -186,11 +188,12 @@ class _ConnectedViewConfigurationContainerState
     ))
         .then((moduleToAdd) {
       if (moduleToAdd != null) {
-        DartToNativeCommunicator.instance.addModule(moduleToAdd);
-
         setState(() {
           _selectedModule = null;
+          _listRebuildKey++;
         });
+
+        DartToNativeCommunicator.instance.addModule(moduleToAdd);
       }
     });
   }
@@ -207,6 +210,7 @@ class _ConnectedViewConfigurationContainerState
 
     setState(() {
       _selectedModule = null;
+      _listRebuildKey++;
     });
   }
 }
