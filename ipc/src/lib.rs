@@ -4,8 +4,12 @@
 #[cfg(unix)]
 mod platform;
 
-#[path = "windows.rs"]
-#[cfg(windows)]
+#[path = "windows/nonblocking.rs"]
+#[cfg(all(windows, not(feature = "poll")))]
+mod platform;
+
+#[path = "windows/poll.rs"]
+#[cfg(all(windows, feature = "poll"))]
 mod platform;
 
 use platform::SnowlandIPCBackend;
