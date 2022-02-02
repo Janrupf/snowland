@@ -3,22 +3,17 @@
 use std::ffi::CString;
 use std::ops::Not;
 
-
-
 use thiserror::Error;
 use windows::Win32::Foundation::{HINSTANCE, HWND, LPARAM, LRESULT, PSTR, WPARAM};
 use windows::Win32::System::LibraryLoader::GetModuleHandleA;
 use windows::Win32::UI::WindowsAndMessaging::{
-    CreateWindowExA, DefWindowProcA, DestroyWindow, DispatchMessageA,
-    GetWindowLongPtrA, PeekMessageA, PostQuitMessage, RegisterClassA, SetWindowLongPtrA,
-    TranslateMessage, UnregisterClassA, GWLP_USERDATA, MSG, PM_REMOVE,
-    WINDOW_EX_STYLE, WINDOW_STYLE, WM_DESTROY, WM_NCCREATE, WNDCLASSA,
+    CreateWindowExA, DefWindowProcA, DestroyWindow, DispatchMessageA, GetWindowLongPtrA,
+    PeekMessageA, PostQuitMessage, RegisterClassA, SetWindowLongPtrA, TranslateMessage,
+    UnregisterClassA, GWLP_USERDATA, MSG, PM_REMOVE, WINDOW_EX_STYLE, WINDOW_STYLE, WM_DESTROY,
+    WM_NCCREATE, WNDCLASSA,
 };
 
 use integration::*;
-
-
-
 
 use crate::util::WinApiError;
 

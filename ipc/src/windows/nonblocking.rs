@@ -3,16 +3,11 @@ use std::marker::PhantomData;
 
 use bincode::serde::Compat;
 use windows::Win32::Foundation::{
-    CloseHandle, GetLastError,
-    ERROR_IO_INCOMPLETE, ERROR_IO_PENDING, ERROR_NO_DATA,
+    CloseHandle, GetLastError, ERROR_IO_INCOMPLETE, ERROR_IO_PENDING, ERROR_NO_DATA,
     ERROR_PIPE_CONNECTED, HANDLE,
 };
-use windows::Win32::Storage::FileSystem::{
-    ReadFile, WriteFile,
-};
-use windows::Win32::System::Pipes::{
-    ConnectNamedPipe, DisconnectNamedPipe,
-};
+use windows::Win32::Storage::FileSystem::{ReadFile, WriteFile};
+use windows::Win32::System::Pipes::{ConnectNamedPipe, DisconnectNamedPipe};
 use windows::Win32::System::IO::{CancelIo, GetOverlappedResult, OVERLAPPED};
 
 use buffer::IPCBuffer;
