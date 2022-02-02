@@ -95,10 +95,10 @@ where
                     module,
                     new_configuration,
                 }) => {
-                    log::trace!(
+                    /* log::trace!(
                         "Received configuration change request: {:#?}",
                         new_configuration
-                    );
+                    ); */
                     let new_configuration = new_configuration.into_json();
 
                     self.container
@@ -169,7 +169,7 @@ where
 
     /// Dispatches an IPC message and logs in case of an error
     fn dispatch_message(&mut self, message: ServerMessage) {
-        log::trace!("Dispatching IPC message {:#?}", message);
+        // log::trace!("Dispatching IPC message {:#?}", message);
         if let Err(err) = self.ipc.nonblocking_write(message) {
             log::warn!("Failed to write IPC message: {}", err);
         }

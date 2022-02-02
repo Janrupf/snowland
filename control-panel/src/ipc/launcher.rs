@@ -3,7 +3,7 @@ use std::process::{Command, Stdio};
 use thiserror::Error;
 
 #[cfg(target_os = "windows")]
-const SNOWLAND_DAEMON_EXE_NAME: &str = "snowland-windows-host.exe";
+const SNOWLAND_DAEMON_EXE_NAME: &str = "snowland-win-host.exe";
 
 #[cfg(target_os = "linux")]
 const SNOWLAND_DAEMON_EXE_NAME: &str = "snowland-linux-host";

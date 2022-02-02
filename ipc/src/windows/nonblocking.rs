@@ -18,14 +18,13 @@ use windows::Win32::System::Pipes::{
 };
 use windows::Win32::System::IO::{CancelIo, GetOverlappedResult, OVERLAPPED};
 
-use crate::platform::buffer::IPCBuffer;
+use buffer::IPCBuffer;
+use common::WindowsPipeIo;
+
 use crate::{ClientMessage, IPCMessage, ServerMessage, SnowlandIPCError};
 
 mod buffer;
-
-const PIPE_NAME: &str = "\\\\.\\pipe\\snowland";
-const BINCODE_CONFIGURATION: bincode::config::Configuration =
-    bincode::config::Configuration::standard();
+mod common;
 
 pub struct SnowlandIPCBackend<S, R>
 where
@@ -44,27 +43,7 @@ where
 impl SnowlandIPCBackend<ServerMessage, ClientMessage> {
     pub fn create_server() -> Result<Self, SnowlandIPCError> {
         // Create a named pipe the client will later connect to
-        let handle = unsafe {
-            CreateNamedPipeA(
-                PIPE_NAME,
-                PIPE_ACCESS_DUPLEX | FILE_FLAG_FIRST_PIPE_INSTANCE | FILE_FLAG_OVERLAPPED,
-                // TODO: Maybe this can actually be a message pipe?
-                PIPE_TYPE_BYTE | PIPE_READMODE_BYTE | PIPE_REJECT_REMOTE_CLIENTS,
-                1,
-                8192,
-                8192,
-                0,
-                std::ptr::null(),
-            )
-        };
-
-        // Check for creation failures, either snowland is running already or another error occurred
-        if handle == INVALID_HANDLE_VALUE {
-            return Err(Self::translate_open_error(
-                /* to duplicated if */ ERROR_ACCESS_DENIED,
-                None,
-            ));
-        }
+        let handle = WindowsPipeIo::create_pipe()?;
 
         Ok(Self {
             pipe: handle,
@@ -81,24 +60,7 @@ impl SnowlandIPCBackend<ServerMessage, ClientMessage> {
 impl SnowlandIPCBackend<ClientMessage, ServerMessage> {
     pub fn connect_client() -> Result<Self, SnowlandIPCError> {
         // Attempt to connect to the named pipe
-        let handle = unsafe {
-            CreateFileA(
-                PIPE_NAME,
-                FILE_GENERIC_READ | FILE_GENERIC_WRITE,
-                FILE_SHARE_NONE,
-                std::ptr::null(),
-                OPEN_EXISTING,
-                FILE_FLAG_OVERLAPPED,
-                None,
-            )
-        };
-
-        if handle == INVALID_HANDLE_VALUE {
-            return Err(Self::translate_open_error(
-                /* to duplicated if */ ERROR_PIPE_BUSY,
-                /* to disconnected if */ Some(ERROR_FILE_NOT_FOUND),
-            ));
-        }
+        let handle = WindowsPipeIo::connect_pipe()?;
 
         Ok(Self {
             pipe: handle,
@@ -182,20 +144,11 @@ where
             return match (completed, unsafe { GetLastError() }) {
                 (true, _) => {
                     // Operation completed!
+                    log::trace!("Nonblocking read {} bytes asynchronously!", transferred);
                     self.buffer.mark_transferred(transferred as _);
                     self.current_read_overlapped = None;
 
-                    self.buffer
-                        .decode_available_messages(BINCODE_CONFIGURATION)
-                        .map_err(|decode_err| {
-                            log::error!(
-                                "Disconnecting because corrupted messages were received: {}",
-                                decode_err
-                            );
-                            self.do_disconnect();
-
-                            decode_err.into()
-                        })
+                    self.decode_available()
                 }
                 (false, ERROR_IO_PENDING) | (false, ERROR_IO_INCOMPLETE) => {
                     // We are still transferring...
@@ -230,14 +183,40 @@ where
         }
         .as_bool();
 
-        assert!(!result, "Asynchronous ReadFile should never return TRUE!");
+        match (result, unsafe { GetLastError() }) {
+            // Transfer completed!
+            (true, _) => {
+                let mut read_count = 0;
 
-        match unsafe { GetLastError() } {
+                let completed =
+                    unsafe { GetOverlappedResult(self.pipe, overlapped, &mut read_count, false) }
+                        .as_bool();
+
+                assert!(
+                    completed,
+                    "ReadFile returned true without operation being completed!"
+                );
+
+                self.current_read_overlapped = None;
+
+                log::trace!("Nonblocking read {} bytes synchronously", read_count);
+                self.buffer.mark_transferred(read_count as _);
+
+                self.decode_available()
+            }
+
             // Transfer started!
-            ERROR_IO_PENDING => Ok(Vec::new()),
+            (false, ERROR_IO_PENDING) => {
+                log::trace!(
+                    "Started async transfer of max {} bytes",
+                    transfer_buffer.len()
+                );
+
+                Ok(Vec::new())
+            }
 
             // Something went wrong...
-            err => {
+            (false, err) => {
                 log::error!(
                     "Disconnecting because asynchronous read operation failed: 0x{:X}",
                     err.0
@@ -259,7 +238,7 @@ where
         self.process_pending_writes()?;
 
         let mut overlapped = OVERLAPPED::default();
-        let encoded = bincode::encode_to_vec(Compat(message), BINCODE_CONFIGURATION)?;
+        let encoded = bincode::encode_to_vec(Compat(message), common::BINCODE_CONFIGURATION)?;
 
         let result = unsafe {
             WriteFile(
@@ -300,6 +279,23 @@ where
 
     pub fn is_connected(&self) -> bool {
         self.connected
+    }
+
+    fn decode_available(&mut self) -> Result<Vec<R>, SnowlandIPCError>
+    where
+        R: for<'de> serde::Deserialize<'de>,
+    {
+        self.buffer
+            .decode_available_messages(common::BINCODE_CONFIGURATION)
+            .map_err(|decode_err| {
+                log::error!(
+                    "Disconnecting because corrupted messages were received: {}",
+                    decode_err
+                );
+                self.do_disconnect();
+
+                decode_err.into()
+            })
     }
 
     fn process_pending_writes(&mut self) -> Result<(), SnowlandIPCError> {
@@ -353,19 +349,6 @@ where
             }
         } else {
             unsafe { CloseHandle(self.pipe) };
-        }
-    }
-
-    fn translate_open_error(
-        duplicated_error: WIN32_ERROR,
-        disconnected_error: Option<WIN32_ERROR>,
-    ) -> SnowlandIPCError {
-        let last_error = unsafe { GetLastError() };
-
-        match last_error {
-            e if e == duplicated_error => SnowlandIPCError::Duplicated,
-            e if Some(e) == disconnected_error => SnowlandIPCError::Disconnected,
-            e => SnowlandIPCError::Io(std::io::Error::from_raw_os_error(e.0 as _)),
         }
     }
 }

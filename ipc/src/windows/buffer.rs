@@ -81,4 +81,8 @@ impl IPCBuffer {
 
         Ok(decoded)
     }
+
+    pub fn stored(&self) -> usize {
+        self.real_size
+    }
 }

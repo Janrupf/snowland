@@ -205,7 +205,7 @@ fn invoke_dart_method<V: Serialize + Send>(
             .borrow()
             .get_method_invoker(engine, "snowland_native_to_dart");
 
-        log::trace!("Invoking dart method {} with argument {:#?}", name, value);
+        // log::trace!("Invoking dart method {} with argument {:#?}", name, value);
 
         if let Err(err) = invoker.call_method(&name, value, handle_call_result) {
             log::error!("Failed to invoke dart method {}: {}", name, err);
