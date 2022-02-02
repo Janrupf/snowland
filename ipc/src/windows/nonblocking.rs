@@ -1,20 +1,17 @@
-use std::fmt::{Debug, Formatter, Pointer};
+use std::fmt::{Debug, Formatter};
 use std::marker::PhantomData;
 
 use bincode::serde::Compat;
 use windows::Win32::Foundation::{
-    CloseHandle, GetLastError, BOOL, ERROR_ACCESS_DENIED, ERROR_FILE_NOT_FOUND,
-    ERROR_IO_INCOMPLETE, ERROR_IO_PENDING, ERROR_NOT_FOUND, ERROR_NO_DATA, ERROR_PIPE_BUSY,
-    ERROR_PIPE_CONNECTED, HANDLE, INVALID_HANDLE_VALUE, WIN32_ERROR,
+    CloseHandle, GetLastError,
+    ERROR_IO_INCOMPLETE, ERROR_IO_PENDING, ERROR_NO_DATA,
+    ERROR_PIPE_CONNECTED, HANDLE,
 };
 use windows::Win32::Storage::FileSystem::{
-    CreateFileA, ReadFile, WriteFile, FH_OVERLAPPED, FILE_FLAG_FIRST_PIPE_INSTANCE,
-    FILE_FLAG_OVERLAPPED, FILE_GENERIC_READ, FILE_GENERIC_WRITE, FILE_SHARE_NONE, OPEN_EXISTING,
-    PIPE_ACCESS_DUPLEX,
+    ReadFile, WriteFile,
 };
 use windows::Win32::System::Pipes::{
-    ConnectNamedPipe, CreateNamedPipeA, DisconnectNamedPipe, PIPE_READMODE_BYTE,
-    PIPE_REJECT_REMOTE_CLIENTS, PIPE_TYPE_BYTE,
+    ConnectNamedPipe, DisconnectNamedPipe,
 };
 use windows::Win32::System::IO::{CancelIo, GetOverlappedResult, OVERLAPPED};
 

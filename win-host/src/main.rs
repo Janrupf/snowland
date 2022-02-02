@@ -3,7 +3,7 @@
 use snowland_core::Snowland;
 
 use crate::graphics::SkiaWGLSnowlandRender;
-use crate::shell::{Error, ShellIntegrationWindow};
+use crate::shell::{ShellIntegrationWindow};
 
 mod graphics;
 mod progman;

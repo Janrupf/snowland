@@ -1,4 +1,4 @@
-use crate::{IPCMessage, SnowlandIPCError};
+use crate::IPCMessage;
 use bincode::error::DecodeError;
 use bincode::serde::Compat;
 
@@ -21,6 +21,7 @@ impl IPCBuffer {
         self.real_size = 0;
     }
 
+    #[allow(unused)] // Only used with certain feature configurations, but always available
     pub fn read_using<F>(&mut self, mut read_callback: F) -> Result<(), std::io::Error>
     where
         F: FnMut(&mut [u8]) -> Result<usize, std::io::Error>,
@@ -80,9 +81,5 @@ impl IPCBuffer {
         }
 
         Ok(decoded)
-    }
-
-    pub fn stored(&self) -> usize {
-        self.real_size
     }
 }

@@ -86,7 +86,7 @@ where
             &mut self.pipe,
             tokens::CLIENT,
             mio::Interest::READABLE | mio::Interest::WRITABLE,
-        );
+        )?;
 
         Ok(())
     }
@@ -155,28 +155,26 @@ where
 
                             decode_err.into()
                         })
-                } else {
-                    if event.is_writable() {
-                        if self.server {
-                            log::info!("IPC client connected!");
-                            self.connected = true;
+                } else if event.is_writable() {
+                    if self.server {
+                        log::info!("IPC client connected!");
+                        self.connected = true;
 
-                            Ok(Vec::new())
-                        } else {
-                            log::trace!("Client pipe writable!");
-                            match self.write_out_buffer() {
-                                Ok(()) => Ok(Vec::new()),
-                                Err(err) => {
-                                    log::error!("Disconnecting due to write error: {}", err);
-                                    self.do_disconnect(registry);
+                        Ok(Vec::new())
+                    } else {
+                        log::trace!("Client pipe writable!");
+                        match self.write_out_buffer() {
+                            Ok(()) => Ok(Vec::new()),
+                            Err(err) => {
+                                log::error!("Disconnecting due to write error: {}", err);
+                                self.do_disconnect(registry);
 
-                                    Err(err)
-                                }
+                                Err(err)
                             }
                         }
-                    } else {
-                        Ok(Vec::new())
                     }
+                } else {
+                    Ok(Vec::new())
                 }
             }
 

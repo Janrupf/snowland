@@ -11,13 +11,12 @@ use windows::Win32::UI::Shell::{
     NIM_SETVERSION, NOTIFYICONDATAA, NOTIFYICONDATAA_0, NOTIFYICON_VERSION_4,
 };
 use windows::Win32::UI::WindowsAndMessaging::{
-    AppendMenuA, CreatePopupMenu, DefWindowProcA, DestroyMenu, GetCursorPos, PostQuitMessage,
-    SendNotifyMessageA, SetForegroundWindow, TrackPopupMenu, HICON, HMENU, MF_STRING, TPM_NONOTIFY,
+    AppendMenuA, CreatePopupMenu, DefWindowProcA, DestroyMenu, GetCursorPos, PostQuitMessage, SetForegroundWindow, TrackPopupMenu, HICON, HMENU, MF_STRING, TPM_NONOTIFY,
     TPM_RETURNCMD, WM_CREATE, WM_DESTROY, WM_DISPLAYCHANGE, WM_USER,
 };
 
 use snowland_core::control::ControlMessage;
-use snowland_core::util::{Notifier, NotifierImpl};
+
 
 use crate::util::WinApiError;
 

@@ -2,23 +2,23 @@
 
 use std::ffi::CString;
 use std::ops::Not;
-use std::ptr::NonNull;
-use std::thread::JoinHandle;
+
+
 
 use thiserror::Error;
 use windows::Win32::Foundation::{HINSTANCE, HWND, LPARAM, LRESULT, PSTR, WPARAM};
 use windows::Win32::System::LibraryLoader::GetModuleHandleA;
 use windows::Win32::UI::WindowsAndMessaging::{
-    CreateWindowExA, DefWindowProcA, DestroyWindow, DispatchMessageA, GetMessageA,
+    CreateWindowExA, DefWindowProcA, DestroyWindow, DispatchMessageA,
     GetWindowLongPtrA, PeekMessageA, PostQuitMessage, RegisterClassA, SetWindowLongPtrA,
-    TranslateMessage, UnregisterClassA, CREATESTRUCTA, GWLP_USERDATA, MSG, PM_REMOVE,
+    TranslateMessage, UnregisterClassA, GWLP_USERDATA, MSG, PM_REMOVE,
     WINDOW_EX_STYLE, WINDOW_STYLE, WM_DESTROY, WM_NCCREATE, WNDCLASSA,
 };
 
 use integration::*;
-use snowland_core::control::ControlMessage;
-use snowland_core::util::Notifier;
-use snowland_misc::delayed::{Delayed, DelayedResolver};
+
+
+
 
 use crate::util::WinApiError;
 
