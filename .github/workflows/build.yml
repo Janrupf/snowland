@@ -43,12 +43,17 @@ jobs:
         with:
           repository: flutter/flutter
           path: ${{ github.workspace }}/flutter
-          ref: 3f775d864e0ee999d880d199563055188add96cd
 
       - name: Add flutter to path
         shell: bash
         run: |
           echo "${GITHUB_WORKSPACE}/flutter/bin" >> $GITHUB_PATH
+
+      - name: Switch flutter channel and checkout commit
+        run: |
+          flutter channel master
+          cd ${{ github.workspace }}/flutter
+          git checkout 3f775d864e0ee999d880d199563055188add96cd
 
       - name: Enable flutter desktop
         run: flutter config --enable-${{ matrix.platform }}-desktop
