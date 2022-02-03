@@ -90,7 +90,7 @@ fn do_package_os_specific(target_dir: &Path, packager: &mut Packager) -> Result<
 
 #[cfg(snowland_workflow_linux_build)]
 fn do_package_os_specific(target_dir: &Path, packager: &mut Packager) -> Result<(), PackagerError> {
-    packager.collect_file(target_dir.join("lib"))?;
+    packager.collect_dir(target_dir.join("lib"))?;
     packager.collect_file(target_dir.join("snowland-control-panel"))?;
     packager.collect_file(target_dir.join("snowland-linux-host"))?;
 
