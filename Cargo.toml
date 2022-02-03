@@ -9,7 +9,9 @@ members = [
     "libraries/misc",
     "libraries/core",
     "libraries/ipc",
-    "libraries/x11-wrapper"
+    "libraries/x11-wrapper",
+
+    "workflow"
 ]
 
 [profile.release]
