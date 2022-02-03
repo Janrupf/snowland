@@ -44,7 +44,7 @@ jobs:
         uses: Swatinem/rust-cache@v1
 
       - name: Package software
-        run: cargo run snowland-workflow
+        run: cargo run --bin snowland-workflow --package snowland-workflow
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v2
