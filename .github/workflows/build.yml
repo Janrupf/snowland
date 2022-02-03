@@ -17,7 +17,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v2
 
-      - name: Build Rust
+      - name: Package software
         run: cargo build --release --package snowland-win-host
 
       - name: Upload artifacts

@@ -62,7 +62,11 @@ fn main() {
         .into_std_path_buf()
         .join("release");
 
-    let mut packager = Packager::new(&target_dir).unwrap_or_fail_build();
+    let package_name =
+        std::env::var("SNOWLAND_PACKAGE_NAME").unwrap_or_else(|_| "package.zip".into());
+
+    let mut packager = Packager::new(&target_dir, &package_name).unwrap_or_fail_build();
+
     println!("-- Starting packaging, this may take some time...");
     do_package(&target_dir, &mut packager).unwrap_or_fail_build();
     do_package_os_specific(&target_dir, &mut packager).unwrap_or_fail_build();

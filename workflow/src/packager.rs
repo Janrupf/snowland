@@ -14,8 +14,8 @@ pub struct Packager {
 }
 
 impl Packager {
-    pub fn new<P: AsRef<Path>>(target_dir: P) -> Result<Self, PackagerError> {
-        let target_path = target_dir.as_ref().join("package.zip");
+    pub fn new<P: AsRef<Path>>(target_dir: P, package_name: &str) -> Result<Self, PackagerError> {
+        let target_path = target_dir.as_ref().join(package_name);
         let target_file = File::create(target_path)?;
 
         Ok(Self {
