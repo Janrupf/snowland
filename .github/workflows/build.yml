@@ -22,6 +22,18 @@ jobs:
       SNOWLAND_PACKAGE_NAME: snowland-${{ matrix.platform }}.zip
 
     steps:
+      - name: Update system repositories
+        if: runner.os == 'Linux'
+        run: sudo apt update
+
+      - name: Upgrade system
+        if: runner.os == 'Linux'
+        run: sudo apt full-upgrade
+
+      - name: Install required dependencies
+        if: runner.os == 'Linux'
+        run: sudo apt install libgl1-mesa-dev libxrandr-dev
+
       - name: Checkout repository
         uses: actions/checkout@v2
 
