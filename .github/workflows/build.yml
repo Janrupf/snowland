@@ -33,6 +33,7 @@ jobs:
           ref: 3f775d864e0ee999d880d199563055188add96cd
 
       - name: Add flutter to path
+        shell: bash
         run: |
           echo "${GITHUB_WORKSPACE}/flutter/bin" >> $GITHUB_PATH
 
