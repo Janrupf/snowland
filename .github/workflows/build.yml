@@ -29,12 +29,12 @@ jobs:
         uses: actions/checkout@v2
         with:
           repository: flutter/flutter
-          path: ${{ github.workspace }}/../flutter
+          path: ${{ github.workspace }}/flutter
           ref: 3f775d864e0ee999d880d199563055188add96cd
 
       - name: Add flutter to path
         run: |
-          echo "${GITHUB_WORKSPACE}/../flutter/bin" >> $GITHUB_PATH
+          echo "${GITHUB_WORKSPACE}/flutter/bin" >> $GITHUB_PATH
 
       - name: Enable flutter desktop
         run: flutter config --enable-${{ matrix.platform }}-desktop
