@@ -10,7 +10,7 @@ use windows::Win32::UI::WindowsAndMessaging::{
     CreateWindowExA, DefWindowProcA, DestroyWindow, DispatchMessageA, GetWindowLongPtrA,
     PeekMessageA, PostQuitMessage, RegisterClassA, SetWindowLongPtrA, TranslateMessage,
     UnregisterClassA, GWLP_USERDATA, MSG, PM_REMOVE, WINDOW_EX_STYLE, WINDOW_STYLE, WM_DESTROY,
-    WM_NCCREATE, WNDCLASSA,
+    WM_NCCREATE, WM_QUIT, WNDCLASSA,
 };
 
 use integration::*;
@@ -159,15 +159,21 @@ impl ShellIntegrationWindow {
     }
 
     /// Process all messages in the message queue and then returns control.
-    pub fn process_messages(&self) {
+    pub fn process_messages(&self) -> bool {
         let mut msg = MSG::default();
 
         unsafe {
             while PeekMessageA(&mut msg, None, 0, 0, PM_REMOVE).as_bool() {
                 log::debug!("Dispatching message: {:?}", msg);
+                if msg.message == WM_QUIT {
+                    return false;
+                }
+
                 TranslateMessage(&msg);
                 DispatchMessageA(&msg);
             }
+
+            true
         }
     }
 }

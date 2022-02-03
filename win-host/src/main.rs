@@ -55,7 +55,10 @@ fn main() {
         snowland.tick_ipc().expect("Failed to tick IPC");
 
         if let Some(integration) = &shell_integration {
-            integration.process_messages();
+            if !integration.process_messages() {
+                log::debug!("process_messages signaled exit!");
+                break;
+            }
         }
     }
 }

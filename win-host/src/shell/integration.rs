@@ -16,8 +16,6 @@ use windows::Win32::UI::WindowsAndMessaging::{
     WM_CREATE, WM_DESTROY, WM_DISPLAYCHANGE, WM_USER,
 };
 
-use snowland_core::control::ControlMessage;
-
 use crate::util::WinApiError;
 
 /// Shell integration of Snowland.
@@ -29,9 +27,6 @@ pub struct ShellIntegration {
     menu: HMENU,
     icon_data: NOTIFYICONDATAA,
 }
-
-/// Window message sent by the Snowland host thread to notify that a message is in the messenger.
-pub const WM_SNOWLAND_MESSENGER: u32 = WM_USER + 1;
 
 /// Window message sent by the Snowland notification system tay.
 const WM_SNOWLAND_NOTIFICATION: u32 = WM_USER + 2;
@@ -66,7 +61,7 @@ back_to_enum! {
     #[derive(Debug)]
     enum MenuItem {
         Exit,
-        ShowUI,
+        // ShowUI, // TODO: bring back support!
     }
 }
 
@@ -83,7 +78,7 @@ impl ShellIntegration {
             }
 
             AppendMenuA(menu, MF_STRING, MenuItem::Exit as _, "Exit");
-            AppendMenuA(menu, MF_STRING, MenuItem::ShowUI as _, "Show UI");
+            // AppendMenuA(menu, MF_STRING, MenuItem::ShowUI as _, "Show UI");
 
             menu
         };
@@ -135,10 +130,6 @@ impl ShellIntegration {
                 // TODO: Handle!
                 Ok(LRESULT(0))
             }
-
-            WM_SNOWLAND_MESSENGER => self
-                .process_control_message(*unsafe { Box::from_raw(w_param.0 as _) })
-                .map(|()| LRESULT(0)),
 
             WM_SNOWLAND_NOTIFICATION => self
                 .process_notification_message(w_param, l_param)
@@ -210,16 +201,10 @@ impl ShellIntegration {
             };
 
             log::debug!("User clicked menu item {:?}", click_result);
-            // TODO: Handle!
-        }
 
-        Ok(())
-    }
-
-    /// Processes a core control message.
-    fn process_control_message(&mut self, message: ControlMessage) -> Result<(), Error> {
-        if matches!(message, ControlMessage::Exit) {
-            unsafe { PostQuitMessage(0) };
+            match click_result {
+                MenuItem::Exit => unsafe { PostQuitMessage(0) },
+            }
         }
 
         Ok(())
