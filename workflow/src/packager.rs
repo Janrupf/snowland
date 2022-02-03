@@ -73,12 +73,16 @@ impl Packager {
         let mut entry_file = File::open(path)?;
         entry_file.read_to_end(&mut self.buffer)?;
         self.writer.write_all(&self.buffer)?;
+        self.buffer.clear();
 
         Ok(())
     }
 
-    pub fn finish(self) {
+    pub fn finish(mut self) -> Result<(), PackagerError> {
+        self.writer.finish()?;
         drop(self);
+
+        Ok(())
     }
 }
 

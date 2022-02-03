@@ -70,7 +70,7 @@ fn main() {
     println!("-- Starting packaging, this may take some time...");
     do_package(&target_dir, &mut packager).unwrap_or_fail_build();
     do_package_os_specific(&target_dir, &mut packager).unwrap_or_fail_build();
-    packager.finish();
+    packager.finish().unwrap_or_fail_build();
     println!("-- Packaging finished!");
 }
 
@@ -84,6 +84,7 @@ fn do_package(target_dir: &Path, packager: &mut Packager) -> Result<(), Packager
 fn do_package_os_specific(target_dir: &Path, packager: &mut Packager) -> Result<(), PackagerError> {
     packager.collect_file(target_dir.join("snowland-control-panel.exe"))?;
     packager.collect_file(target_dir.join("snowland-win-host.exe"))?;
+    packager.collect_file(target_dir.join("flutter_windows.dll"))?;
 
     Ok(())
 }
