@@ -61,6 +61,10 @@ jobs:
       - name: Run flutter doctor
         run: flutter doctor -v
 
+      - name: Update flutter packages
+        working-directory: control-panel/implementation
+        run: flutter pub get
+
       - name: Cache Rust
         uses: Swatinem/rust-cache@v1
 
