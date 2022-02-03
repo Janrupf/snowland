@@ -7,43 +7,41 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  build-windows:
-    runs-on: windows-latest
+  build:
+    strategy:
+      matrix:
+        platform: [windows, linux]
+        include:
+          - platform: windows
+            runner: windows-latest
+          - platform: linux
+            runner: ubuntu-latest
+
+    runs-on: ${{ matrix.runner }}
+    env:
+      SNOWLAND_PACKAGE_NAME: snowland-${{ matrix.platform }}.zip
 
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
       - name: Cache Rust
         uses: Swatinem/rust-cache@v1
 
-      - name: Checkout repository
-        uses: actions/checkout@v2
+      - name: Install flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 3f775d864e0ee999d880d199563055188add96cd
+          cache: true
+
+      - name: Enable flutter desktop
+        run: flutter config --enable-${{ matrix.platform }}-desktop
 
       - name: Package software
-        run: cargo build --release --package snowland-win-host
+        run: cargo run snowland-workflow
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v2
         with:
-          name: Snowland Windows Host
-          path: target/release/snowland-win-host.exe
-
-  build-linux:
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Install required packages
-        run: sudo apt install libgl1-mesa-dev libxrandr-dev
-
-      - name: Cache Rust
-        uses: Swatinem/rust-cache@v1
-
-      - name: Checkout repository
-        uses: actions/checkout@v2
-
-      - name: Build Rust
-        run: cargo build --release --package snowland-linux-host
-
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v2
-        with:
-          name: Snowland Linux Host
-          path: target/release/snowland-linux-host
+          name: ${{ matrix.platform }} package
+          path: target/release/snowland-${{ matrix.platform }}.zip
