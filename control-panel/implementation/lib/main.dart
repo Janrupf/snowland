@@ -50,8 +50,9 @@ class SnowlandControlPanel extends StatelessWidget {
 
 class SnowlandControlPanelState extends WindowState {
   @override
-  Future<void> initializeWindow(Size contentSize) {
-    return super.initializeWindow(const Size(640, 480));
+  Future<void> initializeWindow(Size contentSize) async {
+    await window.setTitle("Snowland control panel");
+    return await super.initializeWindow(const Size(640, 480));
   }
 
   @override

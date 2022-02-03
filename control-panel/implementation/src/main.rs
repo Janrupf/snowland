@@ -1,13 +1,17 @@
-mod com;
-mod ipc;
-mod util;
+#![windows_subsystem = "windows"]
+
+use nativeshell::shell::ContextOptions;
+use nativeshell::Context;
 
 pub use snowland_control_panel_macro as mcr;
 
 use crate::com::{DartToNativeChannel, IpcDisplayEventChannel, IpcStateEventChannel};
 use crate::ipc::IPCHandle;
-use nativeshell::shell::ContextOptions;
-use nativeshell::Context;
+
+mod com;
+mod ipc;
+mod util;
+mod window_extras;
 
 nativeshell::include_flutter_plugins!();
 
@@ -61,14 +65,19 @@ fn main() {
      */
     let init_data = InitData::collect();
 
-    if let Err(err) = context
+    let window_handle = match context
         .window_manager
         .borrow_mut()
         .create_window(util::reserialize(init_data).unwrap(), None)
     {
-        log::error!("Failed to create main window: {}", err);
-        std::process::exit(1);
-    }
+        Ok(v) => v,
+        Err(err) => {
+            log::error!("Failed to create main window: {}", err);
+            std::process::exit(1);
+        }
+    };
+
+    window_extras::set_window_icon(&context, window_handle);
 
     // Create the ipc setup
     let mut ipc_handle = IPCHandle::new(context.run_loop.borrow().new_sender());

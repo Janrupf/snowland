@@ -2521,6 +2521,8 @@ dependencies = [
  "snowland-ipc",
  "snowland-misc",
  "thiserror",
+ "windows",
+ "winres",
 ]
 
 [[package]]
