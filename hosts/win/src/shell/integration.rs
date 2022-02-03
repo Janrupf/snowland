@@ -60,7 +60,7 @@ back_to_enum! {
     #[repr(usize)]
     #[derive(Debug)]
     enum MenuItem {
-        Exit,
+        Exit = 1,
         // ShowUI, // TODO: bring back support!
     }
 }
