@@ -10,7 +10,7 @@ pretty_env_logger = "0.4.0"
 clap = { version = "3.0.0-rc.9", features = ["derive"] }
 skia-safe = { version = "0.45.1", features = ["gl"] }
 
-snowland-core = { path = "../core" }
-snowland-x11-wrapper = { path = "../x11-wrapper" }
+snowland-core = { path = "../../libraries/core" }
+snowland-x11-wrapper = { path = "../../libraries/x11-wrapper" }
 
 libc = "0.2.112"

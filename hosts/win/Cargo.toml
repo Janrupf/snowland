@@ -15,8 +15,8 @@ winit = "0.25.0"
 raw-window-handle = "0.4.1"
 rand = "0.8.4"
 
-snowland-core = { path = "../core" }
-snowland-misc = { path = "../misc" }
+snowland-core = { path = "../../libraries/core" }
+snowland-misc = { path = "../../libraries/misc" }
 
 [dependencies.windows]
 version = "0.28.0"

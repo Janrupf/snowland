@@ -1,5 +1,16 @@
 [workspace]
-members = ["control-panel", "control-panel-macro", "ipc", "misc", "win-host", "linux-host", "x11-wrapper", "core"]
+members = [
+    "control-panel/implementation",
+    "control-panel/macro",
+
+    "hosts/linux",
+    "hosts/win",
+
+    "libraries/misc",
+    "libraries/core",
+    "libraries/ipc",
+    "libraries/x11-wrapper"
+]
 
 [profile.release]
 lto = true
