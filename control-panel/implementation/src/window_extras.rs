@@ -31,4 +31,4 @@ pub fn set_window_icon(context: &ContextRef, window: WindowHandle) {
 }
 
 #[cfg(not(windows))]
-pub fn set_window_icon(context: ContextRef, window: WindowHandle) {}
+pub fn set_window_icon(context: &ContextRef, window: WindowHandle) {}
