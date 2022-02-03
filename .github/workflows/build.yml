@@ -25,17 +25,22 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v2
 
-      - name: Cache Rust
-        uses: Swatinem/rust-cache@v1
-
-      - name: Install flutter
-        uses: subosito/flutter-action@v2
+      - name: Checkout flutter
+        uses: actions/checkout@v2
         with:
-          channel: 3f775d864e0ee999d880d199563055188add96cd
-          cache: true
+          repository: flutter/flutter
+          path: ${{ github.workspace }}/../flutter
+          ref: 3f775d864e0ee999d880d199563055188add96cd
+
+      - name: Add flutter to path
+        run: |
+          echo "${GITHUB_WORKSPACE}/../flutter/bin" >> $GITHUB_PATH
 
       - name: Enable flutter desktop
         run: flutter config --enable-${{ matrix.platform }}-desktop
+
+      - name: Cache Rust
+        uses: Swatinem/rust-cache@v1
 
       - name: Package software
         run: cargo run snowland-workflow
