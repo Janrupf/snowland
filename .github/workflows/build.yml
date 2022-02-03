@@ -53,6 +53,9 @@ jobs:
       - name: Enable flutter desktop
         run: flutter config --enable-${{ matrix.platform }}-desktop
 
+      - name: Run flutter doctor
+        run: flutter doctor -v
+
       - name: Cache Rust
         uses: Swatinem/rust-cache@v1
 
