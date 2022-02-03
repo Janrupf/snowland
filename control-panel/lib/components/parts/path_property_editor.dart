@@ -1,5 +1,5 @@
-import 'package:file_selector_platform_interface/file_selector_platform_interface.dart';
 import 'package:flutter/material.dart';
+import 'package:snowland_control_panel/com/dart_to_native.dart';
 import 'package:snowland_control_panel/data/property.dart';
 
 class PathPropertyEditor extends StatefulWidget {
@@ -35,34 +35,27 @@ class _PathPropertyEditorState extends State<PathPropertyEditor> {
       );
 
   void _onChoosePressed() {
-    FileSelectorPlatform.instance.openFile(
-      acceptedTypeGroups: [
-        XTypeGroup(
-          label: "Images",
-          mimeTypes: [
-            "image/bmp",
-            "image/gif",
-            "image/x-icon",
-            "image/vnd.microsoft.icon",
-            "image/heic",
-            "image/heif",
-            "image/jpe",
-            "image/jpg",
-            "image/jpeg",
-            "image/png",
-            "image/vnd.wap.wbmp",
-            "image/webp"
-          ]
-        ),
-        XTypeGroup(
-          label: "All files",
-          extensions: ["*"]
-        )
-      ]
-    ).then((selected) {
-      if(selected != null && mounted) {
+    DartToNativeCommunicator.instance.openSingleFile([
+      const FileDialogFilter(
+        name: "Images",
+        extensions: [
+          "bmp",
+          "gif",
+          "ico",
+          "heic",
+          "heif",
+          "jpe",
+          "jpeg",
+          "jpg",
+          "png",
+          "wbmp",
+          "webp"
+        ],
+      ),
+    ]).then((selected) {
+      if (selected != null && mounted) {
         setState(() {
-          _controller.text = selected.path;
+          _controller.text = selected;
           widget.property.set(context, _controller.text);
         });
       }

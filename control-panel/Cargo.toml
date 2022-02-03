@@ -15,6 +15,7 @@ snowland-control-panel-macro = { path = "../control-panel-macro" }
 snowland-ipc = { path = "../ipc", features = ["poll"] }
 snowland-misc = { path = "../misc" }
 mio-misc = "2.0.0"
+native-dialog = "0.6.3"
 
 [build-dependencies]
 cargo-emit = "0.2.1"

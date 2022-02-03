@@ -1,8 +1,11 @@
+use native_dialog::FileDialog;
+use nativeshell::shell::{ContextRef, EngineHandle, MethodChannel};
+
+use snowland_ipc::protocol::{ChangeConfiguration, ClientMessage};
+
 use crate::com::{Responder, ThreadSafeInnerResponder};
 use crate::ipc::{IPCDispatcherError, IPCHandle};
 use crate::mcr;
-use nativeshell::shell::{ContextRef, EngineHandle, MethodChannel};
-use snowland_ipc::protocol::{ChangeConfiguration, ClientMessage};
 
 pub struct DartToNativeChannel {
     ipc_handle: IPCHandle,
@@ -39,6 +42,12 @@ impl LogLevel {
             LogLevel::Error => log::Level::Error,
         }
     }
+}
+
+#[derive(Debug, serde::Deserialize)]
+pub struct FileDialogFilter {
+    pub name: String,
+    pub extensions: Vec<String>,
 }
 
 #[mcr::method_channel_call_handler]
@@ -127,5 +136,30 @@ impl DartToNativeChannel {
             let start_result = crate::ipc::launcher::start_daemon();
             responder.result(start_result);
         });
+    }
+
+    /// Shows an open file dialog.
+    pub fn open_single_file(
+        filters: Vec<FileDialogFilter>,
+    ) -> Result<Option<String>, native_dialog::Error> {
+        // We need to convert the filters vector into a vector of &str and &[&str]
+        let filters = filters
+            .iter()
+            .map(|FileDialogFilter { name, extensions }| {
+                (
+                    name.as_ref(),
+                    extensions.iter().map(|s| s.as_ref()).collect::<Vec<&str>>(),
+                )
+            })
+            .collect::<Vec<_>>();
+
+        let mut dialog = FileDialog::new();
+        for (name, extensions) in &filters {
+            dialog = dialog.add_filter(name, extensions);
+        }
+
+        let path = dialog.show_open_single_file()?;
+
+        Ok(path.map(|p| p.to_string_lossy().into_owned()))
     }
 }
