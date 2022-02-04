@@ -65,8 +65,8 @@ jobs:
         working-directory: control-panel/implementation
         run: flutter pub get
 
-      - name: Cache Rust
-        uses: Swatinem/rust-cache@v1
+#      - name: Cache Rust
+#        uses: Swatinem/rust-cache@v1
 
       - name: Package software
         run: cargo run --bin snowland-workflow --package snowland-workflow
