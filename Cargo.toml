@@ -1,7 +1,6 @@
 [workspace]
 members = [
     "control-panel/api",
-    "control-panel/implementation",
     "control-panel/macro",
 
     "hosts/linux",

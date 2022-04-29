@@ -30,7 +30,6 @@ dependencies:
   flutter:
     sdk: flutter
 
-  nativeshell: ^0.1.10
   flex_color_picker: ^2.2.0
   intl: ^0.17.0
 

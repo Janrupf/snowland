@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:nativeshell/nativeshell.dart';
 import 'package:snowland_control_panel/logger.dart';
 import 'package:snowland_control_panel/theme/dark.dart';
 import 'package:snowland_control_panel/view/main_view_wrapper.dart';
@@ -31,29 +30,8 @@ ZoneSpecification _buildRootZone() =>
 /// Main logger for everything in this file.
 const mainLogger = Logger("main");
 
-/// Main widget which provides the required integration with
-/// nativeshell.
 class SnowlandControlPanel extends StatelessWidget {
   const SnowlandControlPanel({Key? key}) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) => Container(
-      color: Colors.white,
-      child: WindowWidget(onCreateState: (initData) {
-        mainLogger.debug("Received init data: $initData");
-
-        WindowState? state;
-        state ??= SnowlandControlPanelState();
-        return state;
-      }));
-}
-
-class SnowlandControlPanelState extends WindowState {
-  @override
-  Future<void> initializeWindow(Size contentSize) async {
-    await window.setTitle("Snowland control panel");
-    return await super.initializeWindow(const Size(640, 480));
-  }
 
   @override
   Widget build(BuildContext context) => MaterialApp(
@@ -66,7 +44,4 @@ class SnowlandControlPanelState extends WindowState {
         ),
         child: Scaffold(body: MainViewWrapper()),
       ));
-
-  @override
-  WindowSizingMode get windowSizingMode => WindowSizingMode.manual;
 }
