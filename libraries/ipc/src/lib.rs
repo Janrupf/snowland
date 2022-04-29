@@ -1,5 +1,11 @@
 //! Snowland desktop IPC.
 
+#[cfg(feature = "poll")]
+pub use mio as snowland_mio;
+
+#[cfg(feature = "poll")]
+pub use mio_misc as snowland_mio_misc;
+
 #[path = "unix.rs"]
 #[cfg(unix)]
 mod platform;
