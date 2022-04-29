@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:snowland_control_panel/com/dart_to_native.dart';
 import 'package:snowland_control_panel/data/property.dart';
 
 class PathPropertyEditor extends StatefulWidget {
@@ -35,7 +34,8 @@ class _PathPropertyEditorState extends State<PathPropertyEditor> {
       );
 
   void _onChoosePressed() {
-    DartToNativeCommunicator.instance.openSingleFile([
+    // TODO: Open file
+    /* DartToNativeCommunicator.instance.openSingleFile([
       const FileDialogFilter(
         name: "Images",
         extensions: [
@@ -59,7 +59,7 @@ class _PathPropertyEditorState extends State<PathPropertyEditor> {
           widget.property.set(context, _controller.text);
         });
       }
-    });
+    }); */
   }
 
   void _onChanged(String newValue) {

@@ -1,6 +1,7 @@
 use snowland_ipc::{snowland_mio, snowland_mio_misc, SnowlandIPC};
 use std::collections::hash_map::Entry;
 use std::collections::HashMap;
+use std::ffi::CStr;
 use std::sync::mpsc::Receiver;
 use std::sync::Arc;
 
@@ -262,6 +263,7 @@ pub unsafe extern "C" fn snowland_api_connect(sender: *mut SnowlandMessageSender
 ///
 /// # Safety
 /// This function may only be called with a valid sender pointer.
+#[no_mangle]
 pub unsafe extern "C" fn snowland_api_disconnect(
     sender: *mut SnowlandMessageSender,
     instance: usize,
@@ -277,7 +279,43 @@ pub unsafe extern "C" fn snowland_api_disconnect(
 /// # Safety
 /// This function may only be called with a valid sender pointer, the function then takes ownership
 /// of the pointer.
+#[no_mangle]
 pub unsafe extern "C" fn snowland_api_shutdown(sender: *mut SnowlandMessageSender) {
     let sender = Box::from_raw(sender);
     drop(sender);
+}
+
+/// Initializes logging
+#[no_mangle]
+pub extern "C" fn snowland_api_init_logging() {
+    pretty_env_logger::init_timed();
+}
+
+/// Logs a message using the snowland logger.
+///
+/// # Safety
+/// This function may only be called with all pointers being valid UTF-8 c strings.
+#[no_mangle]
+pub unsafe extern "C" fn snowland_api_log(
+    component: *const std::os::raw::c_char,
+    level: *const std::os::raw::c_char,
+    message: *const std::os::raw::c_char,
+) {
+    let component = CStr::from_ptr(component).to_string_lossy();
+    let level = CStr::from_ptr(level).to_string_lossy();
+    let level = match level.as_ref() {
+        "trace" => log::Level::Trace,
+        "debug" => log::Level::Debug,
+        "info" => log::Level::Info,
+        "warn" => log::Level::Warn,
+        "error" => log::Level::Error,
+        _ => log::Level::Error,
+    };
+
+    let message = CStr::from_ptr(message).to_string_lossy();
+    let target = format!("[[dart]]::{}", component);
+
+    if log::log_enabled!(target: &target, level) {
+        log::log!(target: &target, level, "{}", message);
+    }
 }

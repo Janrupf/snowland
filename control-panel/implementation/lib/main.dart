@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:snowland_control_panel/ffi/control_panel_api.dart';
 import 'package:snowland_control_panel/logger.dart';
 import 'package:snowland_control_panel/theme/dark.dart';
 import 'package:snowland_control_panel/view/main_view_wrapper.dart';
@@ -10,8 +11,12 @@ import 'package:snowland_control_panel/view/main_view_wrapper.dart';
 ///
 /// The main function here takes care of setting up a zone, in which
 /// we catch print messages and delegate them to a rust logger.
-void main() => runZoned(() => runApp(const SnowlandControlPanel()),
-    zoneSpecification: _buildRootZone());
+void main() => runZoned(() {
+      ControlPanelAPI.initMainIsolate();
+      mainLogger.debug("Native API has been loaded!");
+
+      runApp(const SnowlandControlPanel());
+    }, zoneSpecification: _buildRootZone());
 
 /// Global logger which catches messages printed using [print].
 const printLogger = Logger("print");

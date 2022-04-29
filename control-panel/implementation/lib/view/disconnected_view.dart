@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:snowland_control_panel/com/dart_to_native.dart';
 
 /// View which is displayed when the snowland IPC is not connected.
 class DisconnectedView extends StatelessWidget {
@@ -50,11 +49,13 @@ class DisconnectedView extends StatelessWidget {
   }
 
   void _onConnectPressed() {
-    DartToNativeCommunicator.instance.connectToIpc();
+    // TODO: Connect
+    // DartToNativeCommunicator.instance.connectToIpc();
   }
 
   void _onStartPressed(BuildContext context) {
-    DartToNativeCommunicator.instance.startDaemon().then((value) {
+    // TODO: Start daemon
+    /* DartToNativeCommunicator.instance.startDaemon().then((value) {
       const snackBar = SnackBar(content: Text("Daemon started!"));
       ScaffoldMessenger.of(context).showSnackBar(snackBar);
 
@@ -64,6 +65,6 @@ class DisconnectedView extends StatelessWidget {
         content: Text("Failed to start daemon: $error"),
       );
       ScaffoldMessenger.of(context).showSnackBar(snackBar);
-    });
+    }); */
   }
 }

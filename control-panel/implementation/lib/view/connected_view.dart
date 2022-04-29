@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:snowland_control_panel/com/dart_to_native.dart';
-import 'package:snowland_control_panel/com/native_to_dart.dart';
 import 'package:snowland_control_panel/components/module_list.dart';
 import 'package:snowland_control_panel/components/modules/module_registry.dart';
 import 'package:snowland_control_panel/components/routes/add_module_route.dart';
@@ -18,7 +16,11 @@ class ConnectedView extends StatefulWidget {
 }
 
 class _ConnectedViewState extends State<ConnectedView> {
+  // TODO: implement connected view
   @override
+  Widget build(BuildContext context) => throw UnimplementedError();
+
+  /* @override
   Widget build(BuildContext context) => Container(
         color: Theme.of(context).backgroundColor,
         child: NativeCallReceiver(
@@ -35,7 +37,7 @@ class _ConnectedViewState extends State<ConnectedView> {
                 );
               }
             }),
-      );
+      ); */
 
   Widget _buildWaitingForConfiguration() =>
       // TODO: The progress indicator seems to block the event loop sometimes,
@@ -159,7 +161,8 @@ class _ConnectedViewConfigurationContainerState
 
   void _onModuleReorder(int oldIndex, int newIndex) {
     logger.debug("Moving module from position $oldIndex to $newIndex");
-    DartToNativeCommunicator.instance.reorderModules(oldIndex, newIndex);
+    // TODO: move module
+    // DartToNativeCommunicator.instance.reorderModules(oldIndex, newIndex);
   }
 
   void _onConfigurationChanged() {
@@ -177,8 +180,9 @@ class _ConnectedViewConfigurationContainerState
     }
 
     logger.trace("Configuration changed for module ${_selectedModule!.type}");
-    DartToNativeCommunicator.instance
-        .updateConfiguration(idx, _selectedModule!.configuration);
+    // TODO: Update configuration
+    // DartToNativeCommunicator.instance
+    //     .updateConfiguration(idx, _selectedModule!.configuration);
   }
 
   void _onAddModuleClicked(BuildContext context) {
@@ -193,7 +197,8 @@ class _ConnectedViewConfigurationContainerState
           _listRebuildKey++;
         });
 
-        DartToNativeCommunicator.instance.addModule(moduleToAdd);
+        // TODO: Add module
+        // DartToNativeCommunicator.instance.addModule(moduleToAdd);
       }
     });
   }
@@ -206,7 +211,8 @@ class _ConnectedViewConfigurationContainerState
       return;
     }
 
-    DartToNativeCommunicator.instance.removeModule(idx);
+    // TODO: remove module
+    // DartToNativeCommunicator.instance.removeModule(idx);
 
     setState(() {
       _selectedModule = null;
