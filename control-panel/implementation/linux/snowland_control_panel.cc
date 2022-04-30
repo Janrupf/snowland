@@ -17,6 +17,24 @@ struct _SnowlandControlPanel {
 
 G_DEFINE_TYPE(SnowlandControlPanel, snowland_control_panel, GTK_TYPE_APPLICATION)
 
+static gboolean on_window_delete(GtkWidget *window, GdkEvent *event, gpointer data) {
+    printf("Sending shutdown to event channel!\n");
+
+    g_autoptr(FlEventChannel) channel = FL_EVENT_CHANNEL(data);
+    g_autoptr(FlValue) value = fl_value_new_string("shutdown");
+
+    fl_event_channel_send(
+            channel,
+            value,
+            nullptr,
+            nullptr
+    );
+
+    fl_event_channel_send_end_of_stream(channel, nullptr, nullptr);
+
+    return FALSE;
+}
+
 // Implements GApplication::activate.
 static void snowland_control_panel_activate(GApplication *application) {
     SnowlandControlPanel *self = SNOWLAND_CONTROL_PANEL(application);
@@ -50,13 +68,24 @@ static void snowland_control_panel_activate(GApplication *application) {
         gtk_window_set_title(window, "Snowland control panel");
     }
 
-    gtk_window_set_default_size(window, 1280, 720);
-    gtk_widget_show(GTK_WIDGET(window));
-
     g_autoptr(FlDartProject) project = fl_dart_project_new();
     fl_dart_project_set_dart_entrypoint_arguments(project, self->dart_entrypoint_arguments);
-
     FlView *view = fl_view_new(project);
+
+    FlEngine *engine = fl_view_get_engine(view);
+    g_autoptr(FlBinaryMessenger) messenger = fl_engine_get_binary_messenger(engine);
+    g_autoptr(FlStandardMethodCodec) codec = fl_standard_method_codec_new();
+    FlEventChannel *platform_channel = fl_event_channel_new(
+            messenger,
+            "native_platform_events",
+            FL_METHOD_CODEC(codec)
+    );
+
+    gtk_window_set_default_size(window, 1280, 720);
+    g_signal_connect(G_OBJECT(window), "delete-event", G_CALLBACK(on_window_delete), platform_channel);
+
+    gtk_widget_show(GTK_WIDGET(window));
+
     gtk_widget_show(GTK_WIDGET(view));
     gtk_container_add(GTK_CONTAINER(window), GTK_WIDGET(view));
 

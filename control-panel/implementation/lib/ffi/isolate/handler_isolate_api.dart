@@ -35,6 +35,8 @@ class HandlerIsolateAPI {
       return;
     }
 
+    bool keepRunning = true;
+
     try {
       final count = _ffi.eventCount(events);
 
@@ -43,30 +45,46 @@ class HandlerIsolateAPI {
         final data = _ffi.getEventData(events, i);
 
         final event = data.ref.decode();
-        _handleEvent(connection, event);
+        keepRunning &= _handleEvent(connection, event);
       }
     } finally {
       _ffi.freeEvents(events);
     }
 
-    // Self schedule polling to be run
-    Future(_runLoopPoll);
+    if (keepRunning) {
+      // Self schedule polling to be run
+      Future(_runLoopPoll);
+    }
+
+    _logger.trace("Ending handler isolate");
+    _ffi.free(_api);
   }
 
-  void _handleEvent(int connection, snowland_ffi.SnowlandAPIEvent event) {
+  bool _handleEvent(int connection, snowland_ffi.SnowlandAPIEvent event) {
     _logger.trace("Received event for connection $connection: $event");
 
     if (connection == 0) {
-      _handleControlEvent(event);
+      return _handleControlEvent(event);
     }
+
+    return true;
   }
 
-  void _handleControlEvent(snowland_ffi.SnowlandAPIEvent event) {
+  bool _handleControlEvent(snowland_ffi.SnowlandAPIEvent event) {
     if (event is snowland_ffi.SnowlandAPIEventAliveConnections) {
       _dartMessageSender.send({
         "messageType": "aliveConnections",
-        "data": event.alive
+        "data": event.alive,
       });
+    } else if (event is snowland_ffi.SnowlandAPIEventShutdown) {
+      _dartMessageSender.send({
+        "messageType": "shutdown",
+        "data": null,
+      });
+
+      return false;
     }
+
+    return true;
   }
 }

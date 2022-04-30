@@ -65,6 +65,9 @@ class SnowlandAPIEventNative extends ffi.Struct {
           }
         }
 
+      case 3:
+        return SnowlandAPIEventShutdown._();
+
       default:
         throw UnimplementedError("Got invalid SnowlandAPI event tag $_tag");
     }
@@ -123,6 +126,11 @@ enum SnowlandAPIEventConnectionState implements SnowlandAPIEvent {
 
   /// The connection disconnected and is inoperable
   disconnected
+}
+
+/// Dart friendly representation of the shutdown event
+class SnowlandAPIEventShutdown implements SnowlandAPIEvent {
+  SnowlandAPIEventShutdown._();
 }
 
 /*
@@ -248,6 +256,13 @@ typedef SnowlandAPIShutdownFn = void Function(
 
 /*
  * Type declarations for
+ * void snowland_api_free(struct SnowlandAPI *api);
+ */
+typedef _SnowlandAPIFreeFnNative = ffi.Void Function(ffi.Pointer<SnowlandAPI>);
+typedef SnowlandAPIFreeFn = void Function(ffi.Pointer<SnowlandAPI>);
+
+/*
+ * Type declarations for
  * void snowland_api_init_logging();
  */
 typedef _SnowlandAPIInitLoggingFnNative = ffi.Void Function();
@@ -310,6 +325,10 @@ class ControlPanelAPIFFI {
     final shutdown = library.lookupFunction<_SnowlandAPIShutdownFnNative,
         SnowlandAPIShutdownFn>("snowland_api_shutdown");
 
+    final free =
+        library.lookupFunction<_SnowlandAPIFreeFnNative, SnowlandAPIFreeFn>(
+            "snowland_api_free");
+
     final initLogging = library.lookupFunction<_SnowlandAPIInitLoggingFnNative,
         SnowlandAPIInitLoggingFn>("snowland_api_init_logging");
 
@@ -329,6 +348,7 @@ class ControlPanelAPIFFI {
       connect: connect,
       disconnect: disconnect,
       shutdown: shutdown,
+      free: free,
       initLogging: initLogging,
       log: log,
     );
@@ -346,6 +366,7 @@ class ControlPanelAPIFFI {
     required this.connect,
     required this.disconnect,
     required this.shutdown,
+    required this.free,
     required this.initLogging,
     required this.log,
   });
@@ -361,6 +382,7 @@ class ControlPanelAPIFFI {
   final SnowlandAPIConnectFn connect;
   final SnowlandAPIDisconnectFn disconnect;
   final SnowlandAPIShutdownFn shutdown;
+  final SnowlandAPIFreeFn free;
   final SnowlandAPIInitLoggingFn initLogging;
   final SnowlandAPILogFn log;
 }

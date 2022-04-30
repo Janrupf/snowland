@@ -45,6 +45,9 @@ pub enum SnowlandAPIEvent {
 
     /// The state of some connection changed
     ConnectionStateChanged(SnowlandAPIConnectionState),
+
+    /// Shutdown has been requested
+    Shutdown,
 }
 
 /// Type wrapper for event structure returned by the polling api
@@ -82,6 +85,7 @@ enum SnowlandAPIMessage {
     ListAlive,
     Connect(usize),
     Disconnect(usize),
+    Shutdown,
 }
 
 /// Message sender to be used to dispatch message to the API.
@@ -180,6 +184,7 @@ pub unsafe extern "C" fn snowland_api_poll(api: *mut SnowlandAPI) -> *mut Snowla
     );
 
     let mut api_events = Vec::new();
+    let mut shutdown = false;
 
     for event in &api.events {
         if event.token() == MESSAGE_CHANNEL_TOKEN {
@@ -248,6 +253,8 @@ pub unsafe extern "C" fn snowland_api_poll(api: *mut SnowlandAPI) -> *mut Snowla
                         drop(v); // TODO: Maybe add a close call?
                     }
                 },
+
+                SnowlandAPIMessage::Shutdown => shutdown = true,
             }
         }
 
@@ -273,6 +280,10 @@ pub unsafe extern "C" fn snowland_api_poll(api: *mut SnowlandAPI) -> *mut Snowla
                 entry.remove();
             }
         }
+    }
+
+    if shutdown {
+        api_events.push((0, SnowlandAPIEvent::Shutdown));
     }
 
     let events = SnowlandAPIEvents { inner: api_events };
@@ -363,13 +374,28 @@ pub unsafe extern "C" fn snowland_api_disconnect(
 
 /// Shuts down the entire api
 ///
+/// The api handler then should call [`snowland_api_free`] on the api pointer.
+///
 /// # Safety
 /// This function may only be called with a valid sender pointer, the function then takes ownership
 /// of the pointer.
 #[no_mangle]
 pub unsafe extern "C" fn snowland_api_shutdown(sender: *mut SnowlandMessageSender) {
     let sender = Box::from_raw(sender);
+    sender.inner.send(SnowlandAPIMessage::Shutdown).unwrap();
     drop(sender);
+}
+
+/// Free's the api
+///
+/// Should always be called after the sender has called [`snowland_api_shutdown`].
+///
+/// # Safety
+/// This function may only be called with a valid api pointer, the function then takes ownership
+/// of the pointer.
+#[no_mangle]
+pub unsafe extern "C" fn snowland_api_free(api: *mut SnowlandAPI) {
+    drop(Box::from_raw(api));
 }
 
 /// Initializes logging

@@ -80,11 +80,15 @@ class ControlPanelAPI {
 
   /// Starts the handler isolate maintaining connections in the background
   void startHandlerIsolate() {
-    Isolate.spawn(_handlerIsolateMain, _ensureMain().exportForHandler());
+    Isolate.spawn(_handlerIsolateMain, _ensureMain().exportForHandler(),
+        debugName: "apiEventDriver");
   }
 
   /// Lists all alive snowland connections
   Future<List<int>> listAlive() => _ensureMain().listAlive();
+
+  /// Stops the handler isolate and shuts down all connections
+  Future<void> stopHandlerIsolate() => _ensureMain().shutdown();
 }
 
 void _handlerIsolateMain(Map<String, dynamic> data) {

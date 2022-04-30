@@ -1,10 +1,13 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:snowland_control_panel/ffi/control_panel_api.dart';
 import 'package:snowland_control_panel/logger.dart';
 import 'package:snowland_control_panel/theme/dark.dart';
 import 'package:snowland_control_panel/view/main_view_wrapper.dart';
+
+const _nativePlatformChannel = EventChannel("native_platform_events");
 
 /// Entry point of the application, runs **after** rust has started
 /// executing!
@@ -12,14 +15,28 @@ import 'package:snowland_control_panel/view/main_view_wrapper.dart';
 /// The main function here takes care of setting up a zone, in which
 /// we catch print messages and delegate them to a rust logger.
 void main() => runZoned(() {
+      WidgetsFlutterBinding.ensureInitialized();
+
       ControlPanelAPI.initMainIsolate();
       mainLogger.debug("Native API has been loaded!");
 
       ControlPanelAPI.instance.startHandlerIsolate();
+      _nativePlatformChannel
+          .receiveBroadcastStream()
+          .listen(_onNativePlatformEvent);
 
       runApp(const SnowlandControlPanel());
     }, zoneSpecification: _buildRootZone());
 
+void _onNativePlatformEvent(dynamic event) {
+  mainLogger.debug("Received native platform event $event");
+
+  if (event == "shutdown") {
+    ControlPanelAPI.instance.stopHandlerIsolate().then((_) {
+      mainLogger.debug("Handler isolate shut down");
+    });
+  }
+}
 
 /// Global logger which catches messages printed using [print].
 const printLogger = Logger("print");

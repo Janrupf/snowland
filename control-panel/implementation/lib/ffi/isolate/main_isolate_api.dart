@@ -10,16 +10,26 @@ const _logger = Logger("main_handler");
 /// API available on the main isolate
 class MainIsolateAPI {
   final snowland_ffi.ControlPanelAPIFFI _ffi;
-  final ffi.Pointer<snowland_ffi.SnowlandMessageSender> _sender;
+  final ffi.Pointer<snowland_ffi.SnowlandMessageSender>? _sender;
   ffi.Pointer<snowland_ffi.SnowlandAPI>? _api;
 
   final ReceivePort _dartMessageReceiver;
 
   Completer<List<int>>? _aliveCompleter;
+  final Completer<void> _shutdownCompleter;
 
   MainIsolateAPI(this._ffi, this._sender, this._api)
-      : _dartMessageReceiver = ReceivePort("ffi-dart-message-receiver") {
+      : _dartMessageReceiver = ReceivePort("ffi-dart-message-receiver"),
+        _shutdownCompleter = Completer() {
     _dartMessageReceiver.forEach(_handleControlMessage);
+  }
+
+  ffi.Pointer<snowland_ffi.SnowlandMessageSender> _ensureSender() {
+    if (_sender == null) {
+      throw StateError("API has been shut down already");
+    }
+
+    return _sender!;
   }
 
   /// Exports the internal data so it can be re-imported by the
@@ -44,9 +54,17 @@ class MainIsolateAPI {
     }
 
     _aliveCompleter = Completer();
-    _ffi.listAlive(_sender);
+    _ffi.listAlive(_ensureSender());
 
     return _aliveCompleter!.future;
+  }
+
+  Future<void> shutdown() {
+    if (_sender != null) {
+      _ffi.shutdown(_sender!);
+    }
+
+    return _shutdownCompleter.future;
   }
 
   void _handleControlMessage(dynamic controlData) {
@@ -68,6 +86,16 @@ class MainIsolateAPI {
           _aliveCompleter = null;
           break;
         }
+
+      case "shutdown":
+        {
+          _shutdownCompleter.complete();
+          break;
+        }
+
+      default:
+        _logger.warn("Received unknown control message $messageType: $data");
+        break;
     }
   }
 }
