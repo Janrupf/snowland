@@ -15,8 +15,11 @@ void main() => runZoned(() {
       ControlPanelAPI.initMainIsolate();
       mainLogger.debug("Native API has been loaded!");
 
+      ControlPanelAPI.instance.startHandlerIsolate();
+
       runApp(const SnowlandControlPanel());
     }, zoneSpecification: _buildRootZone());
+
 
 /// Global logger which catches messages printed using [print].
 const printLogger = Logger("print");

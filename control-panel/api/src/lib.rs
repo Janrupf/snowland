@@ -1,7 +1,9 @@
+use snowland_ipc::protocol::{ClientMessage, ServerMessage};
 use snowland_ipc::{snowland_mio, snowland_mio_misc, SnowlandIPC};
 use std::collections::hash_map::Entry;
 use std::collections::HashMap;
 use std::ffi::CStr;
+use std::mem::ManuallyDrop;
 use std::sync::mpsc::Receiver;
 use std::sync::Arc;
 
@@ -13,7 +15,7 @@ pub type SnowlandAPICallback =
 const MESSAGE_CHANNEL_TOKEN: snowland_mio::Token = snowland_mio::Token(1);
 
 /// The state of a snowland api connection.
-#[repr(C)]
+#[repr(usize)]
 pub enum SnowlandAPIConnectionState {
     /// The connection is connected
     Connected,
@@ -25,8 +27,11 @@ pub enum SnowlandAPIConnectionState {
 /// Cover type for all events that may be emitted by the API.
 ///
 /// An event is sent every time the api user needs to be notified of a change.
-#[repr(C)]
+#[repr(C, usize)]
 pub enum SnowlandAPIEvent {
+    /// The API finished a poll and now gives the calling runtime some time to process events
+    DispatchRuntimeEvent,
+
     /// The API determined the instance id's of all alive daemons
     ///
     /// This event is always sent on the instance id 0.
@@ -40,6 +45,23 @@ pub enum SnowlandAPIEvent {
 
     /// The state of some connection changed
     ConnectionStateChanged(SnowlandAPIConnectionState),
+}
+
+/// Type wrapper for event structure returned by the polling api
+pub struct SnowlandAPIEvents {
+    inner: Vec<(usize, SnowlandAPIEvent)>,
+}
+
+impl From<Vec<(usize, SnowlandAPIEvent)>> for SnowlandAPIEvents {
+    fn from(events: Vec<(usize, SnowlandAPIEvent)>) -> Self {
+        Self { inner: events }
+    }
+}
+
+impl From<SnowlandAPIEvents> for Vec<(usize, SnowlandAPIEvent)> {
+    fn from(events: SnowlandAPIEvents) -> Self {
+        events.inner
+    }
 }
 
 /// Wrapper type for the initial creation of the API.
@@ -73,6 +95,8 @@ pub struct SnowlandAPI {
     channel_id: snowland_mio_misc::NotificationId,
     poll: snowland_mio::Poll,
     data: *mut std::ffi::c_void,
+    events: snowland_mio::Events,
+    connections: HashMap<usize, SnowlandIPC<ClientMessage, ServerMessage>>,
 }
 
 /// Creates a new snowland api instance and returns a message sender and the created
@@ -99,6 +123,8 @@ pub extern "C" fn snowland_api_new(data: *mut std::ffi::c_void) -> ExternalSnowl
         channel_id,
         poll,
         data,
+        events: snowland_mio::Events::with_capacity(1024),
+        connections: HashMap::new(),
     });
 
     let sender = Box::new(SnowlandMessageSender { inner: sender });
@@ -116,127 +142,188 @@ pub extern "C" fn snowland_api_new(data: *mut std::ffi::c_void) -> ExternalSnowl
 /// ownership of the api is transferred to this function.
 #[no_mangle]
 pub unsafe extern "C" fn snowland_api_run(api: *mut SnowlandAPI, callback: SnowlandAPICallback) {
-    // Bring all variables into scope, we no longer need the entire API
-    let SnowlandAPI {
-        receiver,
-        channel_queue,
-        channel_id,
-        mut poll,
-        data,
-    } = *Box::from_raw(api);
-
-    // Loop storage
-    let mut events = snowland_mio::Events::with_capacity(1024);
-    let mut connections = HashMap::new();
-
     loop {
-        // Check for new events at each loop iteration
-        poll.poll(&mut events, None).unwrap();
+        let events = snowland_api_poll(api);
+        if events.is_null() {
+            continue;
+        }
 
-        for event in &events {
-            if event.token() == MESSAGE_CHANNEL_TOKEN {
-                // We only have one message channel, so we should have received a message on it
-                assert_eq!(channel_queue.pop(), Some(channel_id));
+        let events = Box::from_raw(events);
 
-                // Receive the message, this should never fail
-                let message = receiver.recv().unwrap();
+        for (instance, event) in events.inner {
+            callback((*api).data, instance, event);
+        }
+    }
+}
 
-                match message {
-                    SnowlandAPIMessage::ListAlive => {
-                        // Currently only instance id 1 is supported, so for now we return this
-                        // static data
-                        let connections = [1];
+const ALIVE_CONNECTIONS: [usize; 1] = [1];
 
-                        let response = SnowlandAPIEvent::AliveConnections {
-                            count: connections.len(),
-                            data: connections.as_ptr(),
-                        };
+/// Polls for events a single time
+///
+/// # Safety
+/// This function may only be called with a valid api pointer.
+#[no_mangle]
+pub unsafe extern "C" fn snowland_api_poll(api: *mut SnowlandAPI) -> *mut SnowlandAPIEvents {
+    let mut api = ManuallyDrop::new(Box::from_raw(api));
+    let api = api.as_mut(); // We need to aid the borrow checker a bit
 
-                        callback(data, 0, response);
+    // Check for new events at each loop iteration
+    if let Err(err) = api.poll.poll(&mut api.events, None) {
+        if err.kind() == std::io::ErrorKind::Interrupted {
+            return std::ptr::null_mut();
+        }
+    }
+
+    log::trace!(
+        "Polling succeeded, processing {} events",
+        api.events.iter().count()
+    );
+
+    let mut api_events = Vec::new();
+
+    for event in &api.events {
+        if event.token() == MESSAGE_CHANNEL_TOKEN {
+            // We only have one message channel, so we should have received a message on it
+            assert_eq!(api.channel_queue.pop(), Some(api.channel_id));
+
+            // Receive the message, this should never fail
+            let message = api.receiver.recv().unwrap();
+
+            match message {
+                SnowlandAPIMessage::ListAlive => {
+                    // Currently only instance id 1 is supported, so for now we return this
+                    // static data
+                    let response = SnowlandAPIEvent::AliveConnections {
+                        count: ALIVE_CONNECTIONS.len(),
+                        data: ALIVE_CONNECTIONS.as_ptr(),
+                    };
+
+                    api_events.push((0, response));
+                }
+                SnowlandAPIMessage::Connect(instance) => {
+                    if instance != 1 {
+                        log::warn!(
+                            "Attempted to connect to unsupported instance id {}",
+                            instance
+                        );
+
+                        // Only instance id 1 is supported for now
+                        api_events.push((
+                            instance,
+                            SnowlandAPIEvent::ConnectionStateChanged(
+                                SnowlandAPIConnectionState::Disconnected,
+                            ),
+                        ));
+
+                        continue;
                     }
-                    SnowlandAPIMessage::Connect(instance) => {
-                        if instance != 1 {
-                            log::warn!(
-                                "Attempted to connect to unsupported instance id {}",
-                                instance
-                            );
 
-                            // Only instance id 1 is supported for now
-                            callback(
-                                data,
+                    // Connect the client
+                    let mut ipc = match SnowlandIPC::connect_client() {
+                        Err(err) => {
+                            log::error!("Failed to connect to IPC instance {}: {}", instance, err);
+                            api_events.push((
                                 instance,
                                 SnowlandAPIEvent::ConnectionStateChanged(
                                     SnowlandAPIConnectionState::Disconnected,
                                 ),
-                            );
+                            ));
 
                             continue;
                         }
+                        Ok(v) => v,
+                    };
 
-                        // Connect the client
-                        let mut ipc = match SnowlandIPC::connect_client() {
-                            Err(err) => {
-                                log::error!(
-                                    "Failed to connect to IPC instance {}: {}",
-                                    instance,
-                                    err
-                                );
-
-                                // Nope, didn't work
-                                callback(
-                                    data,
-                                    instance,
-                                    SnowlandAPIEvent::ConnectionStateChanged(
-                                        SnowlandAPIConnectionState::Disconnected,
-                                    ),
-                                );
-
-                                continue;
-                            }
-                            Ok(v) => v,
-                        };
-
-                        // Register the IPC channel with our registry so we can receive events
-                        ipc.register(poll.registry()).unwrap();
-                        connections.insert(instance, ipc);
-                    }
-
-                    SnowlandAPIMessage::Disconnect(instance) => match connections.remove(&instance)
-                    {
-                        None => {
-                            log::warn!("Tried to close connection to instance {}, but there was no open connection to this instance", instance);
-                        }
-                        Some(v) => {
-                            drop(v); // TODO: Maybe add a close call?
-                        }
-                    },
+                    // Register the IPC channel with our registry so we can receive events
+                    ipc.register(api.poll.registry()).unwrap();
+                    api.connections.insert(instance, ipc);
                 }
+
+                SnowlandAPIMessage::Disconnect(instance) => match api.connections.remove(&instance)
+                {
+                    None => {
+                        log::warn!("Tried to close connection to instance {}, but there was no open connection to this instance", instance);
+                    }
+                    Some(v) => {
+                        drop(v); // TODO: Maybe add a close call?
+                    }
+                },
             }
+        }
 
-            if let Entry::Occupied(mut entry) = connections.entry(1) {
-                // Found an IPC instance
-                let remove = {
-                    let ipc = entry.get_mut();
-                    if !ipc.consumes_event(event) {
-                        // No need to remove the instance if it didn't even process the event
-                        false
-                    } else if let Err(err) = ipc.process_event(event, poll.registry()) {
-                        // The instance failed to process the event
-                        log::error!("IPC instance {} failed to process event: {}", 1, err);
-                        true
-                    } else {
-                        // Event has been processed successfully
-                        false
-                    }
-                };
-
-                if remove {
-                    // Clear the entry after an error
-                    entry.remove();
+        if let Entry::Occupied(mut entry) = api.connections.entry(1) {
+            // Found an IPC instance
+            let remove = {
+                let ipc = entry.get_mut();
+                if !ipc.consumes_event(event) {
+                    // No need to remove the instance if it didn't even process the event
+                    false
+                } else if let Err(err) = ipc.process_event(event, api.poll.registry()) {
+                    // The instance failed to process the event
+                    log::error!("IPC instance {} failed to process event: {}", 1, err);
+                    true
+                } else {
+                    // Event has been processed successfully
+                    false
                 }
+            };
+
+            if remove {
+                // Clear the entry after an error
+                entry.remove();
             }
         }
     }
+
+    let events = SnowlandAPIEvents { inner: api_events };
+
+    Box::into_raw(Box::new(events))
+}
+
+/// Determines the amount of events stored in the structure
+///
+/// # Safety
+/// This function may only be called with a null or valid events pointer.
+#[no_mangle]
+pub unsafe extern "C" fn snowland_api_event_count(events: *mut SnowlandAPIEvents) -> usize {
+    if events.is_null() {
+        return 0;
+    }
+
+    (*events).inner.len()
+}
+
+/// Retrieves the connection id for an event at a specific index in the event list
+///
+/// # Safety
+/// This function may only be called with a valid events pointer and index.
+#[no_mangle]
+pub unsafe extern "C" fn snowland_api_get_event_connection_id(
+    events: *mut SnowlandAPIEvents,
+    index: usize,
+) -> usize {
+    (*events).inner[index].0
+}
+
+/// Retrieves the event data for an event at a specific index in the event list
+///
+/// # Safety
+/// This function may only be called with a valid events pointer and index.
+#[no_mangle]
+pub unsafe extern "C" fn snowland_api_get_event_data(
+    events: *mut SnowlandAPIEvents,
+    index: usize,
+) -> *const SnowlandAPIEvent {
+    &(*events).inner[index].1
+}
+
+/// Free's the event data.
+///
+/// # Safety
+/// This function may only be called with a valid events pointer and then takes ownership.
+#[no_mangle]
+pub unsafe extern "C" fn snowland_api_free_events(events: *mut SnowlandAPIEvents) {
+    drop(Box::from_raw(events));
 }
 
 /// Requests a list of all alive snowland daemons.
