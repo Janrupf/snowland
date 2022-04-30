@@ -12,6 +12,7 @@ use mio::net::{UnixListener, UnixStream};
 
 #[cfg(feature = "poll")]
 use std::io::Write;
+use std::num::ParseIntError;
 
 use crate::protocol::{ClientMessage, IPCMessage, ServerMessage};
 use bincode::error::DecodeError;
@@ -44,9 +45,18 @@ pub mod tokens {
 impl SnowlandIPCBackend<ServerMessage, ClientMessage> {
     /// Creates the IPC server and socket.
     pub fn create_server() -> Result<Self, SnowlandIPCError> {
-        let socket_path = Self::determine_socket_path();
+        let instances = Self::list_alive_instances();
+        let instance = (1..).find(|i| !instances.contains(i)).unwrap();
+
+        let socket_path = Self::determine_socket_path(instance);
+
+        if !socket_path.parent().map(|p| p.exists()).unwrap_or(true) {
+            std::fs::create_dir_all(socket_path.parent().unwrap())?;
+        }
 
         if socket_path.exists() {
+            // TODO: Due to our instance id check this should never happen anymore
+
             /* Now this _could_ be a problem...
              * there are 2 possible scenarios:
              * 1. Snowland is running already
@@ -91,8 +101,8 @@ impl SnowlandIPCBackend<ServerMessage, ClientMessage> {
 
 impl SnowlandIPCBackend<ClientMessage, ServerMessage> {
     /// Connects the IPC client.
-    pub fn connect_client() -> Result<Self, SnowlandIPCError> {
-        let socket_path = Self::determine_socket_path();
+    pub fn connect_client(instance: usize) -> Result<Self, SnowlandIPCError> {
+        let socket_path = Self::determine_socket_path(instance);
         let stream = UnixStream::connect(&socket_path).map_err(|e| {
             if e.kind() == std::io::ErrorKind::NotFound {
                 SnowlandIPCError::Disconnected
@@ -120,17 +130,77 @@ where
     S: IPCMessage,
     R: IPCMessage,
 {
-    fn determine_socket_path() -> PathBuf {
+    fn determine_socket_path(instance: usize) -> PathBuf {
+        let mut socket_dir = Self::determine_socket_dir();
+        socket_dir.push(format!("host-ipc-{}.socket", instance));
+
+        log::debug!("Determined socket path to be {}", socket_dir.display());
+
+        socket_dir
+    }
+
+    fn determine_socket_dir() -> PathBuf {
         let temp_dir = std::env::var("XDG_RUNTIME_DIR")
             .or_else(|_| std::env::var("TMP"))
             .unwrap_or_else(|_| String::from("/tmp"));
 
-        let mut socket_path = PathBuf::from(temp_dir);
-        socket_path.push("snowland-ipc");
+        let mut socket_dir = PathBuf::from(temp_dir);
+        socket_dir.push("snowland");
 
-        log::debug!("Determined socket path to be {}", socket_path.display());
+        socket_dir
+    }
 
-        socket_path
+    pub fn list_alive_instances() -> Vec<usize> {
+        let socket_dir = Self::determine_socket_dir();
+        if !socket_dir.exists() {
+            return Vec::new();
+        }
+
+        let files = match socket_dir.read_dir() {
+            Ok(v) => v,
+            Err(err) => {
+                log::warn!(
+                    "Failed to check directory {} for alive hosts, assuming none: {}",
+                    socket_dir.display(),
+                    err
+                );
+                return Vec::new();
+            }
+        };
+
+        let mut instances = Vec::new();
+
+        for file_result in files {
+            let file = match file_result {
+                Ok(v) => v,
+                Err(err) => {
+                    log::warn!("Skipping failed entry in {}: {}", socket_dir.display(), err);
+                    continue;
+                }
+            };
+
+            if let Some(name) = file.path().file_name() {
+                if let Some(name) = name.to_str() {
+                    if name.starts_with("host-ipc-") && name.ends_with(".socket") {
+                        log::trace!("Found candidate socket file {}", name);
+                        let instance_str = &name[10..name.len() - 7];
+
+                        let instance = match instance_str.parse::<usize>() {
+                            Ok(v) => v,
+                            Err(err) => {
+                                log::warn!("Failed to parse instance id from {}: {}", name, err);
+                                continue;
+                            }
+                        };
+
+                        log::debug!("Found instance {}", instance);
+                        instances.push(instance);
+                    }
+                }
+            }
+        }
+
+        instances
     }
 
     #[cfg(feature = "poll")]

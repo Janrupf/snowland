@@ -48,9 +48,9 @@ impl SnowlandIPC<ServerMessage, ClientMessage> {
 
 impl SnowlandIPC<ClientMessage, ServerMessage> {
     /// Attempts to connect the IPC client to the server.
-    pub fn connect_client() -> Result<Self, SnowlandIPCError> {
+    pub fn connect_client(instance: usize) -> Result<Self, SnowlandIPCError> {
         Ok(Self {
-            backend: SnowlandIPCBackend::connect_client()?,
+            backend: SnowlandIPCBackend::connect_client(instance)?,
         })
     }
 }
