@@ -84,7 +84,7 @@ class ControlPanelAPI {
         debugName: "apiEventDriver");
   }
 
-  /// Lists all alive snowland connections
+  /// Lists all alive snowland instances
   Future<List<int>> listAlive() => _ensureMain().listAlive();
 
   /// Stops the handler isolate and shuts down all connections

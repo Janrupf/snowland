@@ -53,6 +53,11 @@ impl SnowlandIPC<ClientMessage, ServerMessage> {
             backend: SnowlandIPCBackend::connect_client(instance)?,
         })
     }
+
+    /// Lists all probably alive snowland instances
+    pub fn list_alive_instances() -> Vec<usize> {
+        SnowlandIPCBackend::<ClientMessage, ServerMessage>::list_alive_instances()
+    }
 }
 
 impl<S, R> SnowlandIPC<S, R>

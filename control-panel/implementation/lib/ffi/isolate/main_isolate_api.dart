@@ -74,11 +74,11 @@ class MainIsolateAPI {
     final data = map["data"];
 
     switch (messageType) {
-      case "aliveConnections":
+      case "aliveInstances":
         {
           if (_aliveCompleter == null) {
             _logger.warn(
-                "Received aliveConnections message without requesting it!");
+                "Received aliveInstances message without requesting it!");
             return;
           }
 

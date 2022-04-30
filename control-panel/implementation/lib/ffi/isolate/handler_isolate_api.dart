@@ -54,6 +54,7 @@ class HandlerIsolateAPI {
     if (keepRunning) {
       // Self schedule polling to be run
       Future(_runLoopPoll);
+      return;
     }
 
     _logger.trace("Ending handler isolate");
@@ -71,9 +72,9 @@ class HandlerIsolateAPI {
   }
 
   bool _handleControlEvent(snowland_ffi.SnowlandAPIEvent event) {
-    if (event is snowland_ffi.SnowlandAPIEventAliveConnections) {
+    if (event is snowland_ffi.SnowlandAPIEventAliveInstances) {
       _dartMessageSender.send({
-        "messageType": "aliveConnections",
+        "messageType": "aliveInstances",
         "data": event.alive,
       });
     } else if (event is snowland_ffi.SnowlandAPIEventShutdown) {

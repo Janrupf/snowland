@@ -12,7 +12,6 @@ use mio::net::{UnixListener, UnixStream};
 
 #[cfg(feature = "poll")]
 use std::io::Write;
-use std::num::ParseIntError;
 
 use crate::protocol::{ClientMessage, IPCMessage, ServerMessage};
 use bincode::error::DecodeError;
@@ -183,7 +182,7 @@ where
                 if let Some(name) = name.to_str() {
                     if name.starts_with("host-ipc-") && name.ends_with(".socket") {
                         log::trace!("Found candidate socket file {}", name);
-                        let instance_str = &name[10..name.len() - 7];
+                        let instance_str = &name[9..name.len() - 7];
 
                         let instance = match instance_str.parse::<usize>() {
                             Ok(v) => v,

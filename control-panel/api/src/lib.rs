@@ -35,7 +35,7 @@ pub enum SnowlandAPIEvent {
     /// The API determined the instance id's of all alive daemons
     ///
     /// This event is always sent on the instance id 0.
-    AliveConnections {
+    AliveInstances {
         /// The amount of id's stored in the data array
         count: usize,
 
@@ -101,6 +101,7 @@ pub struct SnowlandAPI {
     data: *mut std::ffi::c_void,
     events: snowland_mio::Events,
     connections: HashMap<usize, SnowlandIPC<ClientMessage, ServerMessage>>,
+    alive: Vec<usize>,
 }
 
 /// Creates a new snowland api instance and returns a message sender and the created
@@ -129,6 +130,7 @@ pub extern "C" fn snowland_api_new(data: *mut std::ffi::c_void) -> ExternalSnowl
         data,
         events: snowland_mio::Events::with_capacity(1024),
         connections: HashMap::new(),
+        alive: Vec::new(),
     });
 
     let sender = Box::new(SnowlandMessageSender { inner: sender });
@@ -160,8 +162,6 @@ pub unsafe extern "C" fn snowland_api_run(api: *mut SnowlandAPI, callback: Snowl
     }
 }
 
-const ALIVE_CONNECTIONS: [usize; 1] = [1];
-
 /// Polls for events a single time
 ///
 /// # Safety
@@ -170,6 +170,8 @@ const ALIVE_CONNECTIONS: [usize; 1] = [1];
 pub unsafe extern "C" fn snowland_api_poll(api: *mut SnowlandAPI) -> *mut SnowlandAPIEvents {
     let mut api = ManuallyDrop::new(Box::from_raw(api));
     let api = api.as_mut(); // We need to aid the borrow checker a bit
+
+    api.alive.clear();
 
     // Check for new events at each loop iteration
     if let Err(err) = api.poll.poll(&mut api.events, None) {
@@ -196,35 +198,18 @@ pub unsafe extern "C" fn snowland_api_poll(api: *mut SnowlandAPI) -> *mut Snowla
 
             match message {
                 SnowlandAPIMessage::ListAlive => {
-                    // Currently only instance id 1 is supported, so for now we return this
-                    // static data
-                    let response = SnowlandAPIEvent::AliveConnections {
-                        count: ALIVE_CONNECTIONS.len(),
-                        data: ALIVE_CONNECTIONS.as_ptr(),
+                    api.alive = SnowlandIPC::list_alive_instances();
+
+                    let response = SnowlandAPIEvent::AliveInstances {
+                        count: api.alive.len(),
+                        data: api.alive.as_ptr(),
                     };
 
                     api_events.push((0, response));
                 }
                 SnowlandAPIMessage::Connect(instance) => {
-                    if instance != 1 {
-                        log::warn!(
-                            "Attempted to connect to unsupported instance id {}",
-                            instance
-                        );
-
-                        // Only instance id 1 is supported for now
-                        api_events.push((
-                            instance,
-                            SnowlandAPIEvent::ConnectionStateChanged(
-                                SnowlandAPIConnectionState::Disconnected,
-                            ),
-                        ));
-
-                        continue;
-                    }
-
                     // Connect the client
-                    let mut ipc = match SnowlandIPC::connect_client() {
+                    let mut ipc = match SnowlandIPC::connect_client(instance) {
                         Err(err) => {
                             log::error!("Failed to connect to IPC instance {}: {}", instance, err);
                             api_events.push((

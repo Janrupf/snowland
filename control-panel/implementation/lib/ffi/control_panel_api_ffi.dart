@@ -41,10 +41,10 @@ class SnowlandAPIEventNative extends ffi.Struct {
       case 1:
         {
           // Re-assemble the native array
-          final data = _data._aliveConnections;
+          final data = _data._aliveInstances;
           final alive = List.generate(data._count, (i) => data._data[i]);
 
-          return SnowlandAPIEventAliveConnections._(alive);
+          return SnowlandAPIEventAliveInstances._(alive);
         }
 
       case 2:
@@ -76,8 +76,8 @@ class SnowlandAPIEventNative extends ffi.Struct {
 
 /// Inner data union of a [SnowlandAPIEventNative]
 class _SnowlandAPIEventData extends ffi.Union {
-  /// Data received for alive connection events
-  external SnowlandAPIEventAliveConnectionsNative _aliveConnections;
+  /// Data received for alive instances events
+  external SnowlandAPIEventAliveInstancesNative _aliveInstances;
 
   /// Data received for connection state changes
   @ffi.IntPtr()
@@ -100,7 +100,7 @@ class SnowlandAPIEventDispatchRuntimeEvents implements SnowlandAPIEvent {
 
 /// Native event received when a listing of alive connections was
 /// requested
-class SnowlandAPIEventAliveConnectionsNative extends ffi.Struct {
+class SnowlandAPIEventAliveInstancesNative extends ffi.Struct {
   /// The count of elements in the array pointed to by [_data]
   @ffi.IntPtr()
   external int _count;
@@ -109,13 +109,13 @@ class SnowlandAPIEventAliveConnectionsNative extends ffi.Struct {
   external ffi.Pointer<ffi.IntPtr> _data;
 }
 
-/// Dart friendly representation of the alive connections event
-class SnowlandAPIEventAliveConnections implements SnowlandAPIEvent {
+/// Dart friendly representation of the alive instances event
+class SnowlandAPIEventAliveInstances implements SnowlandAPIEvent {
   final List<int> _alive;
 
-  SnowlandAPIEventAliveConnections._(this._alive);
+  SnowlandAPIEventAliveInstances._(this._alive);
 
-  /// Retrieves a list of all alive snowland connections
+  /// Retrieves a list of all alive snowland instances
   UnmodifiableListView<int> get alive => UnmodifiableListView(_alive);
 }
 
