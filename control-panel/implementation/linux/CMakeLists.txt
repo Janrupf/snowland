@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.10)
-project(runner LANGUAGES CXX)
+project(snowland-control-panel LANGUAGES CXX)
 
 set(BINARY_NAME "snowland-control-panel")
 set(APPLICATION_ID "net.janrupf.snowland.control-panel")
