@@ -7,6 +7,7 @@ import 'dart:ffi' as ffi;
 import 'package:ffi/ffi.dart' as ffi;
 import 'package:snowland_control_panel/api/isolate/handler_isolate_api.dart';
 import 'package:snowland_control_panel/api/isolate/main_isolate_api.dart';
+import 'package:snowland_control_panel/api/snowland_connection.dart';
 
 /// External representation of the opaque snowland API handle
 typedef SnowlandAPI = ffi.Pointer<snowland_ffi.SnowlandAPI>;
@@ -86,6 +87,11 @@ class ControlPanelAPI {
 
   /// Stops the handler isolate and shuts down all connections
   Future<void> stopHandlerIsolate() => _ensureMain().shutdown();
+
+  /// Initiates a connection to a specific snowland [instance]
+  Future<SnowlandConnection> connect(int instance) => _ensureMain()
+      .connect(instance)
+      .then((events) => SnowlandConnection(instance, _mainAPI!, events));
 }
 
 void _handlerIsolateMain(Map<String, dynamic> data) {

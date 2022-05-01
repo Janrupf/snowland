@@ -25,6 +25,12 @@ void main() => runZoned(() {
           .receiveBroadcastStream()
           .listen(_onNativePlatformEvent);
 
+      ControlPanelAPI.instance.connect(1).then((value) {
+        mainLogger.debug("Connected to instance 1!");
+      }).catchError((err) {
+        mainLogger.error("Failed to connect to instance 1!");
+      });
+
       runApp(const SnowlandControlPanel());
     }, zoneSpecification: _buildRootZone());
 

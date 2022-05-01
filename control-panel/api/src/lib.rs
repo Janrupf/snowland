@@ -180,11 +180,6 @@ pub unsafe extern "C" fn snowland_api_poll(api: *mut SnowlandAPI) -> *mut Snowla
         }
     }
 
-    log::trace!(
-        "Polling succeeded, processing {} events",
-        api.events.iter().count()
-    );
-
     let mut api_events = Vec::new();
     let mut shutdown = false;
 
@@ -227,6 +222,14 @@ pub unsafe extern "C" fn snowland_api_poll(api: *mut SnowlandAPI) -> *mut Snowla
                     // Register the IPC channel with our registry so we can receive events
                     ipc.register(api.poll.registry()).unwrap();
                     api.connections.insert(instance, ipc);
+
+                    // Notify about the established connection
+                    api_events.push((
+                        instance,
+                        SnowlandAPIEvent::ConnectionStateChanged(
+                            SnowlandAPIConnectionState::Connected,
+                        ),
+                    ));
                 }
 
                 SnowlandAPIMessage::Disconnect(instance) => match api.connections.remove(&instance)
