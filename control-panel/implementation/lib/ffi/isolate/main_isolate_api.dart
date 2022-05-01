@@ -68,34 +68,29 @@ class MainIsolateAPI {
   }
 
   void _handleControlMessage(dynamic controlData) {
-    final map = controlData as Map<String, dynamic>;
+    final data = controlData as Map<String, dynamic>;
 
-    final messageType = map["messageType"];
-    final data = map["data"];
+    final connection = data["connection"] as int;
+    final event = data["event"] as snowland_ffi.SnowlandAPIEvent;
 
-    switch (messageType) {
-      case "aliveInstances":
-        {
-          if (_aliveCompleter == null) {
-            _logger.warn(
-                "Received aliveInstances message without requesting it!");
-            return;
-          }
+    if (connection == 0) {
+      _handleControlEvent(event);
+    }
+  }
 
-          _aliveCompleter!.complete(data);
-          _aliveCompleter = null;
-          break;
-        }
+  void _handleControlEvent(snowland_ffi.SnowlandAPIEvent event) {
+    if (event is snowland_ffi.SnowlandAPIEventShutdown) {
+      if (!_shutdownCompleter.isCompleted) {
+        _shutdownCompleter.complete();
+      }
+    } else if (event is snowland_ffi.SnowlandAPIEventAliveInstances) {
+      if (_aliveCompleter == null) {
+        _logger.warn("Received alive instances event without requesting it!");
+        return;
+      }
 
-      case "shutdown":
-        {
-          _shutdownCompleter.complete();
-          break;
-        }
-
-      default:
-        _logger.warn("Received unknown control message $messageType: $data");
-        break;
+      _aliveCompleter!.complete(event.alive);
+      _aliveCompleter = null;
     }
   }
 }

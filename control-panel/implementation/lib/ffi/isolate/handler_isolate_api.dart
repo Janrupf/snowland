@@ -63,29 +63,11 @@ class HandlerIsolateAPI {
 
   bool _handleEvent(int connection, snowland_ffi.SnowlandAPIEvent event) {
     _logger.trace("Received event for connection $connection: $event");
+    _dartMessageSender.send({
+      "connection": connection,
+      "event": event
+    });
 
-    if (connection == 0) {
-      return _handleControlEvent(event);
-    }
-
-    return true;
-  }
-
-  bool _handleControlEvent(snowland_ffi.SnowlandAPIEvent event) {
-    if (event is snowland_ffi.SnowlandAPIEventAliveInstances) {
-      _dartMessageSender.send({
-        "messageType": "aliveInstances",
-        "data": event.alive,
-      });
-    } else if (event is snowland_ffi.SnowlandAPIEventShutdown) {
-      _dartMessageSender.send({
-        "messageType": "shutdown",
-        "data": null,
-      });
-
-      return false;
-    }
-
-    return true;
+    return event is! snowland_ffi.SnowlandAPIEventShutdown;
   }
 }

@@ -11,9 +11,6 @@ import 'package:snowland_control_panel/ffi/isolate/main_isolate_api.dart';
 /// External representation of the opaque snowland API handle
 typedef SnowlandAPI = ffi.Pointer<snowland_ffi.SnowlandAPI>;
 
-/// Re-export of the dart friendly API event
-typedef SnowlandAPIEvent = snowland_ffi.SnowlandAPIEvent;
-
 class ControlPanelAPI {
   static late final ControlPanelAPI _instance;
 
