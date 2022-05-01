@@ -1,4 +1,4 @@
-import 'package:snowland_control_panel/ffi/control_panel_api.dart';
+import 'package:snowland_control_panel/api/control_panel_api.dart';
 
 /// Simple helper for logging.
 ///

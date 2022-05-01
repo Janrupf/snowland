@@ -1,6 +1,6 @@
 import 'dart:ffi' as ffi;
 import 'dart:isolate';
-import 'package:snowland_control_panel/ffi/control_panel_api_ffi.dart'
+import 'package:snowland_control_panel/api/control_panel_api_ffi.dart'
     as snowland_ffi;
 import 'package:snowland_control_panel/logger.dart';
 

@@ -2,7 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:snowland_control_panel/ffi/control_panel_api.dart';
+import 'package:snowland_control_panel/api/control_panel_api.dart';
 import 'package:snowland_control_panel/logger.dart';
 import 'package:snowland_control_panel/theme/dark.dart';
 import 'package:snowland_control_panel/view/main_view_wrapper.dart';

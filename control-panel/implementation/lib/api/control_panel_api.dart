@@ -1,12 +1,12 @@
 import 'dart:isolate';
 
-import 'package:snowland_control_panel/ffi/control_panel_api_ffi.dart'
+import 'package:snowland_control_panel/api/control_panel_api_ffi.dart'
     as snowland_ffi;
 
 import 'dart:ffi' as ffi;
 import 'package:ffi/ffi.dart' as ffi;
-import 'package:snowland_control_panel/ffi/isolate/handler_isolate_api.dart';
-import 'package:snowland_control_panel/ffi/isolate/main_isolate_api.dart';
+import 'package:snowland_control_panel/api/isolate/handler_isolate_api.dart';
+import 'package:snowland_control_panel/api/isolate/main_isolate_api.dart';
 
 /// External representation of the opaque snowland API handle
 typedef SnowlandAPI = ffi.Pointer<snowland_ffi.SnowlandAPI>;
