@@ -44,10 +44,8 @@ pub mod tokens {
 impl SnowlandIPCBackend<ServerMessage, ClientMessage> {
     /// Creates the IPC server and socket.
     pub fn create_server() -> Result<Self, SnowlandIPCError> {
-        let instances = Self::list_alive_instances();
-        let instance = (1..).find(|i| !instances.contains(i)).unwrap();
-
-        let socket_path = Self::determine_socket_path(instance);
+        let instance = std::process::id();
+        let socket_path = Self::determine_socket_path(instance as _);
 
         if !socket_path.parent().map(|p| p.exists()).unwrap_or(true) {
             std::fs::create_dir_all(socket_path.parent().unwrap())?;
