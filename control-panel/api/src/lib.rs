@@ -84,6 +84,7 @@ pub struct ExternalSnowlandAPI {
 enum SnowlandAPIMessage {
     ListAlive,
     Connect(usize),
+    StartHost,
     Disconnect(usize),
     Shutdown,
 }
@@ -232,6 +233,10 @@ pub unsafe extern "C" fn snowland_api_poll(api: *mut SnowlandAPI) -> *mut Snowla
                     ));
                 }
 
+                SnowlandAPIMessage::StartHost => {
+                    log::debug!("Attempting to start new instance...");
+                }
+
                 SnowlandAPIMessage::Disconnect(instance) => match api.connections.remove(&instance)
                 {
                     None => {
@@ -246,6 +251,7 @@ pub unsafe extern "C" fn snowland_api_poll(api: *mut SnowlandAPI) -> *mut Snowla
             }
         }
 
+        // TODO: Multi instance support
         if let Entry::Occupied(mut entry) = api.connections.entry(1) {
             // Found an IPC instance
             let remove = {
@@ -358,6 +364,15 @@ pub unsafe extern "C" fn snowland_api_disconnect(
     sender
         .send(SnowlandAPIMessage::Disconnect(instance))
         .unwrap();
+}
+
+/// Starts a new snowland host.
+///
+/// # Safety
+/// This function may only be called with a valid sender pointer.
+pub unsafe extern "C" fn snowland_start_host(sender: *mut SnowlandMessageSender) {
+    let sender = &(*sender).inner;
+    sender.send(SnowlandAPIMessage::StartHost).unwrap();
 }
 
 /// Shuts down the entire api

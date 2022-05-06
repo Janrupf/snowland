@@ -6,6 +6,7 @@ import 'package:snowland_control_panel/api/control_panel_api.dart';
 import 'package:snowland_control_panel/logger.dart';
 import 'package:snowland_control_panel/theme/dark.dart';
 import 'package:snowland_control_panel/view/main_view_wrapper.dart';
+import 'package:snowland_control_panel/view/startup_view.dart';
 
 const _nativePlatformChannel = EventChannel("native_platform_events");
 
@@ -24,12 +25,6 @@ void main() => runZoned(() {
       _nativePlatformChannel
           .receiveBroadcastStream()
           .listen(_onNativePlatformEvent);
-
-      ControlPanelAPI.instance.connect(1).then((value) {
-        mainLogger.debug("Connected to instance 1!");
-      }).catchError((err) {
-        mainLogger.error("Failed to connect to instance 1!");
-      });
 
       runApp(const SnowlandControlPanel());
     }, zoneSpecification: _buildRootZone());
@@ -73,6 +68,6 @@ class SnowlandControlPanel extends StatelessWidget {
         style: TextStyle(
           fontSize: 14,
         ),
-        child: Scaffold(body: MainViewWrapper()),
+        child: Scaffold(body: StartupView()),
       ));
 }
