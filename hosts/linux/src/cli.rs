@@ -1,4 +1,4 @@
-use clap::{App, IntoApp, Parser};
+use clap::{Command, IntoApp, Parser};
 
 use std::num::ParseIntError;
 use std::str::FromStr;
@@ -22,8 +22,8 @@ fn parse_maybe_hex(input: &str) -> Result<u64, ParseIntError> {
 }
 
 #[allow(dead_code)]
-pub fn as_app() -> App<'static> {
-    Cli::into_app()
+pub fn build_cli() -> Command<'static> {
+    Cli::command()
 }
 
 pub fn parse() -> Cli {
