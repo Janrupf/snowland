@@ -12,6 +12,17 @@ import 'package:snowland_control_panel/api/snowland_connection.dart';
 /// External representation of the opaque snowland API handle
 typedef SnowlandAPI = ffi.Pointer<snowland_ffi.SnowlandAPI>;
 
+/// Exception thrown when starting a host instance failed.
+class HostStartException implements Exception {
+  /// The exception message
+  final String message;
+
+  const HostStartException(this.message);
+
+  @override
+  String toString() => "HostStartException: $message";
+}
+
 class ControlPanelAPI {
   static late final ControlPanelAPI _instance;
 
@@ -84,6 +95,14 @@ class ControlPanelAPI {
 
   /// Lists all alive snowland instances
   Future<List<int>> listAlive() => _ensureMain().listAlive();
+
+  /// Starts a new snowland instance and connects to it
+  Future<SnowlandConnection> startNewHost() =>
+      _ensureMain().startNewHost().then((host) => SnowlandConnection(
+            host.instance,
+            _mainAPI!,
+            host.events,
+          ));
 
   /// Stops the handler isolate and shuts down all connections
   Future<void> stopHandlerIsolate() => _ensureMain().shutdown();

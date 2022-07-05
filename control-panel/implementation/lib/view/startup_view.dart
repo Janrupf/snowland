@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:snowland_control_panel/api/control_panel_api.dart';
+import 'package:snowland_control_panel/logger.dart';
+
+const _logger = Logger("startup_view");
 
 class StartupView extends StatefulWidget {
   const StartupView({Key? key}) : super(key: key);
@@ -64,7 +67,7 @@ class _StartupViewState extends State<StartupView> {
                   width: 5,
                 ),
                 ElevatedButton(
-                  onPressed: () {},
+                  onPressed: _startNewHost,
                   child: const Text("Start new instance"),
                 )
               ],
@@ -79,5 +82,13 @@ class _StartupViewState extends State<StartupView> {
     });
 
     ControlPanelAPI.instance.listAlive().then(_onAliveListing);
+  }
+
+  void _startNewHost() {
+    ControlPanelAPI.instance.startNewHost().then((value) {
+      _logger.debug("Started new host successfully!");
+    }, onError: (error) {
+      _logger.error("Failed to start new host: $error");
+    });
   }
 }

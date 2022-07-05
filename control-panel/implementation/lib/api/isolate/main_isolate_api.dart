@@ -2,12 +2,24 @@ import 'dart:async';
 import 'dart:collection';
 import 'dart:ffi' as ffi;
 import 'dart:isolate';
+import 'package:snowland_control_panel/api/control_panel_api.dart';
 import 'package:snowland_control_panel/api/control_panel_api_ffi.dart'
     as snowland_ffi;
 import 'package:snowland_control_panel/api/snowland_connection.dart';
 import 'package:snowland_control_panel/logger.dart';
 
 const _logger = Logger("main_handler");
+
+/// Representation of a just started and connected host
+class StartedHost {
+  /// The id of the started host
+  final int instance;
+
+  /// The event stream of the host connection
+  final Stream<snowland_ffi.SnowlandAPIEvent> events;
+
+  StartedHost._(this.instance, this.events);
+}
 
 /// API available on the main isolate
 ///
@@ -22,6 +34,7 @@ class MainIsolateAPI {
   final ReceivePort _dartMessageReceiver;
 
   Completer<List<int>>? _aliveCompleter;
+  Completer<StartedHost>? _startHostCompleter;
   final Completer<void> _shutdownCompleter;
   final Map<int, Completer<Stream<snowland_ffi.SnowlandAPIEvent>>>
       _pendingConnections;
@@ -69,6 +82,19 @@ class MainIsolateAPI {
     _ffi.listAlive(_ensureSender());
 
     return _aliveCompleter!.future;
+  }
+
+  Future<StartedHost> startNewHost() {
+    final sender = _ensureSender();
+
+    if (_startHostCompleter != null) {
+      return Future.error(StateError("An instance is already starting"));
+    }
+
+    _startHostCompleter = Completer();
+    _ffi.startHost(sender);
+
+    return _startHostCompleter!.future;
   }
 
   Future<void> shutdown() {
@@ -130,6 +156,29 @@ class MainIsolateAPI {
 
       _aliveCompleter!.complete(event.alive);
       _aliveCompleter = null;
+    } else if (event is snowland_ffi.SnowlandAPIHostStartFailed) {
+      if (_startHostCompleter == null) {
+        _logger
+            .warn("Received host start failed event without starting a host!");
+        return;
+      }
+
+      _startHostCompleter!
+          .completeError(const HostStartException("Failed to start host"));
+      _startHostCompleter = null;
+    } else if (event is snowland_ffi.SnowlandAPIHostStartSucceeded) {
+      if (_startHostCompleter == null) {
+        _logger.warn(
+            "Received host start succeeded event without starting a host!");
+        return;
+      }
+
+      connect(event.instance).then((events) {
+        final startedHost = StartedHost._(event.instance, events);
+        _startHostCompleter!.complete(startedHost);
+      }, onError: (error, trace) {
+        _startHostCompleter!.completeError(error, trace);
+      });
     } else {
       // Possibly incompatible native library version? This should really not
       // be triggered

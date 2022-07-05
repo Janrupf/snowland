@@ -28,6 +28,7 @@ where
     R: IPCMessage,
 {
     socket_path: PathBuf,
+    instance: usize,
     listener: Option<UnixListener>,
     stream: Option<UnixStream>,
     read_buffer_real_size: usize,
@@ -87,6 +88,7 @@ impl SnowlandIPCBackend<ServerMessage, ClientMessage> {
 
         Ok(Self {
             socket_path,
+            instance: instance as _,
             listener: Some(listener),
             stream: None,
             read_buffer_real_size: 0,
@@ -113,6 +115,7 @@ impl SnowlandIPCBackend<ClientMessage, ServerMessage> {
 
         Ok(Self {
             socket_path,
+            instance,
             listener: None,
             stream: Some(stream),
             read_buffer_real_size: 0,
@@ -198,6 +201,10 @@ where
         }
 
         instances
+    }
+
+    pub fn instance(&self) -> usize {
+        self.instance
     }
 
     #[cfg(feature = "poll")]

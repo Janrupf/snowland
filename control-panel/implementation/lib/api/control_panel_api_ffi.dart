@@ -68,6 +68,23 @@ class SnowlandAPIEventNative extends ffi.Struct {
       case 3:
         return SnowlandAPIEventShutdown._();
 
+      case 4:
+        {
+          final data = _data._hostStartResult;
+
+          switch (data._tag) {
+            case 0:
+              return SnowlandAPIHostStartSucceeded._(data._data._succeeded);
+
+            case 1:
+              return SnowlandAPIHostStartFailed._();
+
+            default:
+              throw UnimplementedError(
+                  "Got invalid SnowlandAPIHostStartResult event tag ${data._tag}");
+          }
+        }
+
       default:
         throw UnimplementedError("Got invalid SnowlandAPI event tag $_tag");
     }
@@ -82,6 +99,9 @@ class _SnowlandAPIEventData extends ffi.Union {
   /// Data received for connection state changes
   @ffi.IntPtr()
   external int _connectionState;
+
+  /// Data received for host start finished events
+  external SnowlandAPIHostStartResultNative _hostStartResult;
 }
 
 /// Base class for the dart representation of all API events
@@ -131,6 +151,36 @@ enum SnowlandAPIEventConnectionState implements SnowlandAPIEvent {
 /// Dart friendly representation of the shutdown event
 class SnowlandAPIEventShutdown implements SnowlandAPIEvent {
   SnowlandAPIEventShutdown._();
+}
+
+/// Native event received when host start was requested
+class SnowlandAPIHostStartResultNative extends ffi.Struct {
+  /// Tag identifying the union content
+  @ffi.IntPtr()
+  external int _tag;
+
+  /// The underlying union data
+  external SnowlandAPIHostStartResultDataNative _data;
+}
+
+/// Inner data union of a [SnowlandAPIHostStartResultNative]
+class SnowlandAPIHostStartResultDataNative extends ffi.Union {
+  /// The new instance id
+  @ffi.IntPtr()
+  external int _succeeded;
+}
+
+/// Dart friendly representation of an successful host start event
+class SnowlandAPIHostStartSucceeded implements SnowlandAPIEvent {
+  /// The id of the newly started host
+  final int instance;
+
+  const SnowlandAPIHostStartSucceeded._(this.instance);
+}
+
+/// Dart friendly representation of a failed host start event
+class SnowlandAPIHostStartFailed implements SnowlandAPIEvent {
+  SnowlandAPIHostStartFailed._();
 }
 
 /*
@@ -219,6 +269,15 @@ typedef SnowlandAPIFreeEventsFn = void Function(
 typedef _SnowlandAPIListAliveFnNative = ffi.Void Function(
     ffi.Pointer<SnowlandMessageSender>);
 typedef SnowlandAPIListAliveFn = void Function(
+    ffi.Pointer<SnowlandMessageSender>);
+
+/*
+ * Type declarations for
+ * void snowland_api_start_host(struct SnowlandMessageSender *sender);
+ */
+typedef _SnowlandAPIStartHostFnNative = ffi.Void Function(
+    ffi.Pointer<SnowlandMessageSender>);
+typedef SnowlandAPIStartHostFn = void Function(
     ffi.Pointer<SnowlandMessageSender>);
 
 /*
@@ -316,6 +375,9 @@ class ControlPanelAPIFFI {
     final listAlive = library.lookupFunction<_SnowlandAPIListAliveFnNative,
         SnowlandAPIListAliveFn>("snowland_api_list_alive");
 
+    final startHost = library.lookupFunction<_SnowlandAPIStartHostFnNative,
+        SnowlandAPIStartHostFn>("snowland_api_start_host");
+
     final connect = library.lookupFunction<_SnowlandAPIConnectFnNative,
         SnowlandAPIConnectFn>("snowland_api_connect");
 
@@ -345,6 +407,7 @@ class ControlPanelAPIFFI {
       getEventData: getEventData,
       freeEvents: freeEvents,
       listAlive: listAlive,
+      startHost: startHost,
       connect: connect,
       disconnect: disconnect,
       shutdown: shutdown,
@@ -363,6 +426,7 @@ class ControlPanelAPIFFI {
     required this.getEventData,
     required this.freeEvents,
     required this.listAlive,
+    required this.startHost,
     required this.connect,
     required this.disconnect,
     required this.shutdown,
@@ -379,6 +443,7 @@ class ControlPanelAPIFFI {
   final SnowlandAPIGetEventDataFn getEventData;
   final SnowlandAPIFreeEventsFn freeEvents;
   final SnowlandAPIListAliveFn listAlive;
+  final SnowlandAPIStartHostFn startHost;
   final SnowlandAPIConnectFn connect;
   final SnowlandAPIDisconnectFn disconnect;
   final SnowlandAPIShutdownFn shutdown;

@@ -1,3 +1,4 @@
+#![feature(read_initializer)]
 //! Snowland desktop IPC.
 
 #[cfg(feature = "poll")]
@@ -21,6 +22,7 @@ mod platform;
 use platform::SnowlandIPCBackend;
 
 pub mod protocol;
+pub mod startup;
 
 #[cfg(feature = "poll")]
 pub use mio;
@@ -65,6 +67,11 @@ where
     S: IPCMessage,
     R: IPCMessage,
 {
+    /// Retrieves the instance id of this IPC instance.
+    pub fn instance(&self) -> usize {
+        self.backend.instance()
+    }
+
     /// Registers the IPC instance with the given registry for receiving read/write
     /// events.
     #[cfg(feature = "poll")]

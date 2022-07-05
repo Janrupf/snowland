@@ -7,7 +7,9 @@ use crate::rendering::RendererContainer;
 use crate::scene::module::ModuleConfigError;
 use snowland_ipc::protocol::ChangeConfiguration;
 use snowland_ipc::protocol::{ClientMessage, Configuration, InstalledModule, ServerMessage};
+use snowland_ipc::startup::{StartupShare, StartupShareError};
 use snowland_ipc::{SnowlandIPC, SnowlandIPCError};
+use snowland_misc::serialization::BitSerializable;
 use std::any::Any;
 use std::ops::Add;
 use std::time::{Duration, Instant, SystemTimeError};
@@ -38,6 +40,16 @@ where
     pub fn create(renderer: R) -> Result<Self, Error<R::Error>> {
         let container = RendererContainer::new(renderer).map_err(Error::RendererError)?;
         let ipc = SnowlandIPC::create_server()?;
+        let instance = ipc.instance();
+        log::debug!("Started IPC server with id {}", instance);
+
+        let instance_id_data = instance.into_buffer();
+        match StartupShare::fulfill_current(&instance_id_data) {
+            Ok(()) => log::debug!("Instance id sent to startup share!"),
+            Err(StartupShareError::NotPresent) => log::info!("No startup share present."),
+            Err(err) => log::warn!("Failed to send data to startup share: {}", err),
+        }
+
         Ok(Self {
             container,
             ipc,

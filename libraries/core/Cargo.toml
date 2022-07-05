@@ -13,6 +13,7 @@ rand = "0.8.4"
 chrono = "0.4.19"
 
 snowland-ipc = { path = "../ipc" }
+snowland-misc = { path = "../misc" }
 
 glium = "0.30.2"
 serde = { version = "1.0.130", features = ["derive"] }

@@ -1,5 +1,10 @@
+mod starter;
+
+use snowland_ipc::mio::Interest;
 use snowland_ipc::protocol::{ClientMessage, ServerMessage};
+use snowland_ipc::startup::StartupShare;
 use snowland_ipc::{snowland_mio, snowland_mio_misc, SnowlandIPC};
+use snowland_misc::serialization::BitSerializableUsizeBuffer;
 use std::collections::hash_map::Entry;
 use std::collections::HashMap;
 use std::ffi::CStr;
@@ -13,6 +18,7 @@ pub type SnowlandAPICallback =
     unsafe extern "C" fn(data: *mut std::ffi::c_void, connection: usize, message: SnowlandAPIEvent);
 
 const MESSAGE_CHANNEL_TOKEN: snowland_mio::Token = snowland_mio::Token(1);
+const STARTUP_SHARE_TOKEN: snowland_mio::Token = snowland_mio::Token(2);
 
 /// The state of a snowland api connection.
 #[repr(usize)]
@@ -22,6 +28,16 @@ pub enum SnowlandAPIConnectionState {
 
     /// The connection is disconnected
     Disconnected,
+}
+
+/// The result of a host start request.
+#[repr(C, usize)]
+pub enum SnowlandAPIHostStartResult {
+    /// The host started successfully and is now available with the given instance id.
+    Succeeded(usize),
+
+    /// Starting the host failed.
+    Failed,
 }
 
 /// Cover type for all events that may be emitted by the API.
@@ -48,6 +64,9 @@ pub enum SnowlandAPIEvent {
 
     /// Shutdown has been requested
     Shutdown,
+
+    /// The request to start a host process has finished
+    HostStartFinished(SnowlandAPIHostStartResult),
 }
 
 /// Type wrapper for event structure returned by the polling api
@@ -103,6 +122,8 @@ pub struct SnowlandAPI {
     events: snowland_mio::Events,
     connections: HashMap<usize, SnowlandIPC<ClientMessage, ServerMessage>>,
     alive: Vec<usize>,
+    startup_share: Option<StartupShare>,
+    startup_share_id: BitSerializableUsizeBuffer,
 }
 
 /// Creates a new snowland api instance and returns a message sender and the created
@@ -132,6 +153,8 @@ pub extern "C" fn snowland_api_new(data: *mut std::ffi::c_void) -> ExternalSnowl
         events: snowland_mio::Events::with_capacity(1024),
         connections: HashMap::new(),
         alive: Vec::new(),
+        startup_share: None,
+        startup_share_id: BitSerializableUsizeBuffer::new(),
     });
 
     let sender = Box::new(SnowlandMessageSender { inner: sender });
@@ -234,7 +257,37 @@ pub unsafe extern "C" fn snowland_api_poll(api: *mut SnowlandAPI) -> *mut Snowla
                 }
 
                 SnowlandAPIMessage::StartHost => {
+                    assert!(api.startup_share.is_none(), "already starting an instance");
+
                     log::debug!("Attempting to start new instance...");
+                    match starter::start_new_host() {
+                        Ok(mut v) => {
+                            if let Err(err) = api.poll.registry().register(
+                                &mut v,
+                                STARTUP_SHARE_TOKEN,
+                                Interest::READABLE,
+                            ) {
+                                log::error!("Failed to register startup share poll: {}", err);
+                                api_events.push((
+                                    0,
+                                    SnowlandAPIEvent::HostStartFinished(
+                                        SnowlandAPIHostStartResult::Failed,
+                                    ),
+                                ));
+                            } else {
+                                api.startup_share = Some(v);
+                            }
+                        }
+                        Err(err) => {
+                            log::error!("Failed to start new instance: {}", err);
+                            api_events.push((
+                                0,
+                                SnowlandAPIEvent::HostStartFinished(
+                                    SnowlandAPIHostStartResult::Failed,
+                                ),
+                            ));
+                        }
+                    }
                 }
 
                 SnowlandAPIMessage::Disconnect(instance) => match api.connections.remove(&instance)
@@ -248,6 +301,36 @@ pub unsafe extern "C" fn snowland_api_poll(api: *mut SnowlandAPI) -> *mut Snowla
                 },
 
                 SnowlandAPIMessage::Shutdown => shutdown = true,
+            }
+        } else if event.token() == STARTUP_SHARE_TOKEN {
+            if let Some(startup_share) = api.startup_share.as_mut() {
+                match api.startup_share_id.read_from(startup_share) {
+                    Ok(None) => {
+                        log::trace!("Partially read from startup share");
+                    }
+                    Ok(Some(v)) => {
+                        api.startup_share = None;
+                        api.startup_share_id.clear();
+
+                        log::info!("Successfully started new host with id {}", v);
+                        api_events.push((
+                            0,
+                            SnowlandAPIEvent::HostStartFinished(
+                                SnowlandAPIHostStartResult::Succeeded(v),
+                            ),
+                        ));
+                    }
+                    Err(err) => {
+                        log::error!("Failed to read from startup share: {}", err);
+                        api.startup_share = None;
+                        api.startup_share_id.clear();
+
+                        api_events.push((
+                            0,
+                            SnowlandAPIEvent::HostStartFinished(SnowlandAPIHostStartResult::Failed),
+                        ));
+                    }
+                }
             }
         }
 
@@ -341,6 +424,16 @@ pub unsafe extern "C" fn snowland_api_list_alive(sender: *mut SnowlandMessageSen
     sender.send(SnowlandAPIMessage::ListAlive).unwrap();
 }
 
+/// Starts a new snowland host.
+///
+/// # Safety
+/// This function may only be called with a valid sender pointer.
+#[no_mangle]
+pub unsafe extern "C" fn snowland_api_start_host(sender: *mut SnowlandMessageSender) {
+    let sender = &(*sender).inner;
+    sender.send(SnowlandAPIMessage::StartHost).unwrap();
+}
+
 /// Initiates a connection with the specified instance id.
 ///
 /// # Safety
@@ -364,15 +457,6 @@ pub unsafe extern "C" fn snowland_api_disconnect(
     sender
         .send(SnowlandAPIMessage::Disconnect(instance))
         .unwrap();
-}
-
-/// Starts a new snowland host.
-///
-/// # Safety
-/// This function may only be called with a valid sender pointer.
-pub unsafe extern "C" fn snowland_start_host(sender: *mut SnowlandMessageSender) {
-    let sender = &(*sender).inner;
-    sender.send(SnowlandAPIMessage::StartHost).unwrap();
 }
 
 /// Shuts down the entire api

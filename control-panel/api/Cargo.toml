@@ -8,6 +8,7 @@ crate-type = ["cdylib"]
 
 [dependencies]
 snowland-ipc = { path = "../../libraries/ipc", features = ["poll"] }
+snowland-misc = { path = "../../libraries/misc" }
 log = "0.4.16"
 pretty_env_logger = "0.4.0"
 
