@@ -18,8 +18,7 @@ use bincode::error::DecodeError;
 use bincode::serde::Compat;
 use std::path::PathBuf;
 
-const BINCODE_CONFIGURATION: bincode::config::Configuration =
-    bincode::config::Configuration::standard();
+const BINCODE_CONFIGURATION: bincode::config::Configuration = bincode::config::standard();
 
 #[derive(Debug)]
 pub struct SnowlandIPCBackend<S, R>
