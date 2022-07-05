@@ -108,7 +108,7 @@ fn get_render_target<'a>(screen: &'a XScreen<'a>, cli: &Cli) -> (XWindow<'a>, bo
     }
 }
 
-unsafe extern "system" fn sigint_handler(
+unsafe extern "system" fn shutdown_signal_handler(
     _signal: libc::c_int,
     _info: *mut libc::siginfo_t,
     _data: *mut libc::c_void,
@@ -120,10 +120,11 @@ fn setup_signal_handler() {
     unsafe {
         let mut action: libc::sigaction = MaybeUninit::zeroed().assume_init();
         // This assigns sa_handler, which is not there in the libc crate...
-        action.sa_sigaction = sigint_handler as _;
+        action.sa_sigaction = shutdown_signal_handler as _;
         libc::sigemptyset(&mut action.sa_mask);
         action.sa_flags = 0;
 
         libc::sigaction(libc::SIGINT, &action, std::ptr::null_mut());
+        libc::sigaction(libc::SIGTERM, &action, std::ptr::null_mut());
     }
 }
